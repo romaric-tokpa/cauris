@@ -1022,3 +1022,20 @@
   background: var(--panel-2);
   color: var(--ink-soft);
 }
+
+/* ---- a11y : focus visible (couche projet, hors wireframe) ----
+   Le wireframe ne définit pas de style de focus ; on l'ajoute sans toucher au
+   rendu normal (visible uniquement au clavier via :focus-visible). */
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.chip:focus-visible,
+.nav-item:focus-visible,
+.tab:focus-visible,
+.card-link:focus-visible,
+.seg button:focus-visible,
+.seg-full button:focus-visible,
+.choice:focus-visible,
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -9,9 +9,12 @@ import {
   ICONS,
   type IconName,
 } from '../../components/primitives'
+import { Card, Button, Badge, Tag, KpiTile, Drawer, BottomSheet, Modal } from '../../components/ui'
 import { money } from '../../lib/money'
 import { formatDateFR } from '../../lib/date'
 import styles from './PrimitivesGallery.module.css'
+
+type OpenOverlay = 'drawer' | 'sheet' | 'modal' | null
 
 /* Galerie TEMPORAIRE de revue (Bloc 1) : visualise les primitives portées en
    clair/sombre/glass/accent. Remplacée par le shell au Bloc 3. */
@@ -35,7 +38,7 @@ const CASHFLOW = [
 const SPARK = [60, 58, 63, 61, 67, 64, 70, 68, 74, 72, 78, 80]
 const REF = new Date(2026, 4, 31)
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className={`wf-card wf-pad ${styles.section}`}>
       <h2 className={styles.sectionTitle}>{title}</h2>
@@ -48,6 +51,8 @@ export default function PrimitivesGallery() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [glass, setGlass] = useState(false)
   const [accent, setAccent] = useState<string | null>(null)
+  const [overlay, setOverlay] = useState<OpenOverlay>(null)
+  const close = () => setOverlay(null)
 
   const root = document.documentElement
   root.setAttribute('data-theme', theme)
@@ -98,7 +103,7 @@ export default function PrimitivesGallery() {
       </div>
 
       <div className={styles.grid}>
-        <Card title={`Icon — ${Object.keys(ICONS).length} glyphes`}>
+        <Panel title={`Icon — ${Object.keys(ICONS).length} glyphes`}>
           <div className={styles.iconGrid}>
             {(Object.keys(ICONS) as IconName[]).map((name) => (
               <div key={name} className={styles.iconCell}>
@@ -107,42 +112,42 @@ export default function PrimitivesGallery() {
               </div>
             ))}
           </div>
-        </Card>
+        </Panel>
 
-        <Card title="Donut">
+        <Panel title="Donut">
           <div className={styles.center}>
             <Donut segments={REPARTITION} label="612 000" sub="dépensé" />
           </div>
-        </Card>
+        </Panel>
 
-        <Card title="Gauge (ok / warn / over)">
+        <Panel title="Gauge (ok / warn / over)">
           <div className={styles.center}>
             <Gauge pct={76} tone="ok" />
             <Gauge pct={92} tone="warn" />
             <Gauge pct={108} tone="over" />
           </div>
-        </Card>
+        </Panel>
 
-        <Card title="Bars — cashflow">
+        <Panel title="Bars — cashflow">
           <Bars data={CASHFLOW} />
-        </Card>
+        </Panel>
 
-        <Card title="Spark">
+        <Panel title="Spark">
           <div className={styles.center}>
             <Spark pts={SPARK} w={240} h={56} />
           </div>
-        </Card>
+        </Panel>
 
-        <Card title="Progress (défaut / ok / warn / over)">
+        <Panel title="Progress (défaut / ok / warn / over)">
           <div className={styles.stack}>
             <Progress pct={45} />
             <Progress pct={76} tone="ok" />
             <Progress pct={92} tone="warn" />
             <Progress pct={108} tone="over" />
           </div>
-        </Card>
+        </Panel>
 
-        <Card title="money() + dates FR">
+        <Panel title="money() + dates FR">
           <div className={styles.stack}>
             <div>
               <span className={styles.amount}>{money(2480000)}</span>
@@ -159,8 +164,131 @@ export default function PrimitivesGallery() {
               {formatDateFR(new Date(2026, 4, 30), { reference: REF })}
             </div>
           </div>
-        </Card>
+        </Panel>
+
+        <Panel title="Button (default / primary / accent / block)">
+          <div className={`${styles.center} ${styles.left}`}>
+            <Button>Default</Button>
+            <Button variant="primary">Primary</Button>
+            <Button variant="accent">Accent</Button>
+            <Button disabled>Disabled</Button>
+          </div>
+          <Button variant="primary" block>
+            <Icon name="plus" size={16} /> Bloc pleine largeur
+          </Button>
+        </Panel>
+
+        <Panel title="Badge / Tag">
+          <div className={`${styles.center} ${styles.left}`}>
+            <Badge tone="ok">Payé</Badge>
+            <Badge tone="warn">À surveiller</Badge>
+            <Badge tone="over">Dépassé</Badge>
+            <Tag>Alimentation</Tag>
+            <Tag>Transport</Tag>
+          </div>
+        </Panel>
+
+        <Panel title="Card (pad / soft)">
+          <Card pad="pad-sm">
+            <div className="card-title">Carte standard</div>
+            <div className="t-faint" style={{ fontSize: 12, marginTop: 4 }}>
+              wf-card + wf-pad-sm
+            </div>
+          </Card>
+          <Card soft pad="pad-sm">
+            <div className="card-title">Carte soft</div>
+            <div className="t-faint" style={{ fontSize: 12, marginTop: 4 }}>
+              wf-card.soft
+            </div>
+          </Card>
+        </Panel>
+
+        <Panel title="KpiTile">
+          <KpiTile
+            label="Solde total"
+            value={2480000}
+            icon="wallet"
+            delta={{ label: '+3,2 % vs avril', positive: true }}
+          />
+          <KpiTile
+            label="Dépenses"
+            value={612000}
+            icon="exchange"
+            tone="neg"
+            note="Mis à jour aujourd’hui"
+          />
+        </Panel>
+
+        <Panel title="Overlays (a11y : focus piégé, Esc, scrim)">
+          <div className={`${styles.center} ${styles.left}`}>
+            <Button onClick={() => setOverlay('drawer')}>Ouvrir Drawer</Button>
+            <Button onClick={() => setOverlay('sheet')}>Ouvrir BottomSheet</Button>
+            <Button onClick={() => setOverlay('modal')}>Ouvrir Modal</Button>
+          </div>
+        </Panel>
       </div>
+
+      <Drawer
+        open={overlay === 'drawer'}
+        onClose={close}
+        title="Ajouter une transaction"
+        footer={
+          <>
+            <Button block onClick={close}>
+              Annuler
+            </Button>
+            <Button variant="primary" block onClick={close}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <div>
+          <span className="lbl">Montant</span>
+          <div className="inp big">
+            <span>25 000</span>
+            <span className="kpi-cur">FCFA</span>
+          </div>
+        </div>
+        <div>
+          <span className="lbl">Catégorie</span>
+          <div className="inp">
+            <span>Alimentation</span>
+            <Icon name="chevron" size={16} />
+          </div>
+        </div>
+      </Drawer>
+
+      <BottomSheet open={overlay === 'sheet'} onClose={close} title="Ajouter une transaction">
+        <div>
+          <span className="lbl">Montant</span>
+          <div className="inp big">
+            <span>25 000</span>
+            <span className="kpi-cur">FCFA</span>
+          </div>
+        </div>
+        <Button variant="primary" block onClick={close}>
+          Enregistrer
+        </Button>
+      </BottomSheet>
+
+      <Modal
+        open={overlay === 'modal'}
+        onClose={close}
+        title="Confirmer la suppression"
+        footer={
+          <>
+            <Button onClick={close}>Annuler</Button>
+            <Button variant="primary" onClick={close}>
+              Supprimer
+            </Button>
+          </>
+        }
+      >
+        <div className="t-muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+          Cette action est définitive. La transaction sera retirée de vos comptes.
+        </div>
+      </Modal>
     </div>
   )
 }

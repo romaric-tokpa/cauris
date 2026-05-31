@@ -1,0 +1,51 @@
+/* Couche modale projet (portail). Le scrim + .drawer/.sheet viennent de
+   components.css (positionnés en absolute par rapport à cette racine fixe).
+   Le panneau Modal centré est une construction projet (pas de modal au wireframe). */
+
+.overlayRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Modal centré (token-only) ---- */
+.modalPanel {
+  position: relative;
+  z-index: 6;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(var(--shadow-rgb), 0.22);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.modalTitle {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.modalFoot {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Bouton de fermeture : l'icône « plus » pivotée en × (le jeu n'a pas de croix). */
+.closeGlyph {
+  display: inline-flex;
+  transform: rotate(45deg);
+}

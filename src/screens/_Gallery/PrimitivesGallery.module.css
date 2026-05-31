@@ -99,6 +99,10 @@
   gap: 18px;
   flex-wrap: wrap;
 }
+.left {
+  justify-content: flex-start;
+  gap: 10px;
+}
 .stack {
   display: flex;
   flex-direction: column;
