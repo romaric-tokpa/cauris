@@ -1,20 +1,25 @@
 import { expect, type Page } from '@playwright/test'
 
 /**
- * Helper de régression visuelle réutilisable — prêt pour la Phase 1.
+ * Helper de RÉGRESSION visuelle réutilisable — prêt pour la Phase 1.
  *
- * Références de fidélité : les 8 captures de `design/wireframe/screenshots/`,
- * montées via le projet "fidelity" de `playwright.config.ts`
- * (snapshotPathTemplate → design/wireframe/screenshots/{arg}{ext}).
+ * Modèle de fidélité en DEUX niveaux (cf. PLAN §3.3 / CLAUDE.md « Fidélité ») :
  *
- * Principe : comparer le rendu d'un écran à SA capture de référence, en thème
- * clair ET sombre, aux largeurs 390 (mobile) et 1440 (desktop).
+ *  1. Régression (ICI) : baselines AUTO-GÉNÉRÉES, versionnées dans `e2e/baselines/`,
+ *     pour thème clair ET sombre × largeurs 390 (mobile) ET 1440 (desktop). Au
+ *     premier rendu validé d'un écran, Playwright écrit la baseline (et échoue ce
+ *     premier run pour forcer la revue/commit) ; ensuite elle détecte les dérives.
  *
- * SEUIL (volontairement SERRÉ — gate de fidélité pixel) :
+ *  2. Fidélité au wireframe (AILLEURS) : revue humaine du rendu vs le COMPOSANT
+ *     SOURCE `design/wireframe/*.jsx` (source de vérité), la capture desktop de
+ *     `design/wireframe/screenshots/` servant seulement de sanity visuelle.
+ *     Ces PNG NE sont PAS des baselines pixel (captures canvas desktop, pas de
+ *     mobile) — aucun couplage automatique vers ce dossier ici.
+ *
+ * SEUIL (volontairement SERRÉ — gate de régression) :
  *  - maxDiffPixelRatio 0.01 → au plus 1 % des pixels peuvent diverger ;
  *  - threshold 0.15        → faible tolérance colorimétrique par pixel.
- * Les mêmes valeurs sont posées par défaut dans playwright.config.ts ; elles
- * restent surchargeables au cas par cas via `options`.
+ * Mêmes valeurs par défaut dans playwright.config.ts ; surchargeables via `options`.
  */
 export const VISUAL_THRESHOLD = {
   maxDiffPixelRatio: 0.01,
@@ -42,38 +47,34 @@ export async function setWidth(page: Page, width: number): Promise<void> {
   await page.setViewportSize({ width, height: 1200 })
 }
 
-/**
- * Une variante de fidélité = un thème + une largeur + le fichier de référence
- * correspondant dans `design/wireframe/screenshots/` (ex. `full.png`).
- */
-export interface FidelityVariant {
-  theme: Theme
-  width: number
-  reference: string
+export interface FidelityOptions {
+  maxDiffPixelRatio?: number
+  threshold?: number
 }
 
 /**
- * Compare l'écran rendu à `url` à ses captures de référence, pour chaque
- * variante (thème × largeur). À utiliser dans les specs `*.fidelity.ts` de la
- * Phase 1 — exécutées sous le projet "fidelity".
+ * Valide (ou génère au premier passage) la baseline de RÉGRESSION d'un écran,
+ * pour chaque combinaison thème × largeur. Baselines stockées dans `e2e/baselines/`
+ * (projet "fidelity" de playwright.config.ts). À utiliser dans les specs
+ * `*.fidelity.ts` de la Phase 1.
  *
  * Exemple (Phase 1) :
- *   await expectFidelity(page, '/', [
- *     { theme: 'light', width: WIDTHS.desktop, reference: 'full.png' },
- *     { theme: 'dark',  width: WIDTHS.desktop, reference: 'dark.png' },
- *   ])
+ *   await expectFidelity(page, 'dashboard', '/dashboard')
+ *   // → e2e/baselines/dashboard-light-390-<platform>.png, …-dark-1440-…, etc.
  */
 export async function expectFidelity(
   page: Page,
-  url: string,
-  variants: FidelityVariant[],
-  options: { maxDiffPixelRatio?: number; threshold?: number } = {},
+  name: string,
+  url = '/',
+  options: FidelityOptions = {},
 ): Promise<void> {
   const opts = { ...VISUAL_THRESHOLD, ...options }
-  for (const variant of variants) {
-    await setWidth(page, variant.width)
-    await page.goto(url)
-    await applyTheme(page, variant.theme)
-    await expect(page).toHaveScreenshot(variant.reference, opts)
+  for (const theme of THEMES) {
+    for (const width of [WIDTHS.mobile, WIDTHS.desktop]) {
+      await setWidth(page, width)
+      await page.goto(url)
+      await applyTheme(page, theme)
+      await expect(page).toHaveScreenshot(`${name}-${theme}-${width}.png`, opts)
+    }
   }
 }

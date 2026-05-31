@@ -9,7 +9,7 @@ Tu vas scaffolder l'écran **$ARGUMENTS** pour Cauris, **fidèle à 100 % au wir
 
 - `PLAN-DEV-CAURIS.md` — parcours produit, inventaire des écrans (§1.7), navigation (§1.5), règles IA (§1.6).
 - `CLAUDE.md` — règles de rendu / formatage / domaine non négociables.
-- `design/wireframe/` — **référence de fidélité (ne pas modifier)** : les `.jsx` (`wf-lib.jsx`, `shell.jsx`, `screens-*.jsx`, `dashboard-*.jsx`) et les 8 captures `screenshots/`. Repère le ou les artboards correspondant à **$ARGUMENTS** et porte le rendu à l'identique.
+- `design/wireframe/` — **référence de fidélité (ne pas modifier)**. **Source de vérité : les `.jsx`** (`wf-lib.jsx`, `shell.jsx`, `screens-*.jsx`, `dashboard-*.jsx`) — porte le rendu depuis le composant d'origine de **$ARGUMENTS**. Les `screenshots/` sont une **sanity desktop uniquement** (pas de mobile, pas des baselines pixel).
 - `src/styles/tokens.css` — source de vérité des couleurs.
 
 ## Contraintes de réalisation
@@ -28,4 +28,4 @@ Tu vas scaffolder l'écran **$ARGUMENTS** pour Cauris, **fidèle à 100 % au wir
 
 - L'écran `$ARGUMENTS` rendu, branché sur des données (réelles ou mock selon la phase), avec ses états.
 - `npm run check` vert.
-- Terminer par `/revue-fidelite` puis `/snapshot` pour le gate visuel.
+- Terminer par `/revue-fidelite` (rendu vs source `.jsx`) puis `/snapshot` (baseline de régression dans `e2e/baselines/`).

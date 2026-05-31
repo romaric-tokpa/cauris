@@ -42,12 +42,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      // Gate de fidélité (Phase 1) : compare le rendu aux 8 captures du wireframe.
-      // Les références vivent dans design/wireframe/screenshots/ et sont la source de
-      // vérité visuelle — NE JAMAIS lancer `--update-snapshots` sur ce projet.
+      // Gate de RÉGRESSION visuelle (Phase 1+) : baselines AUTO-GÉNÉRÉES, stockées
+      // dans e2e/baselines/, pour clair+sombre × 390+1440. Elles détectent les
+      // dérives futures du rendu (≠ fidélité au wireframe, qui se fait par revue
+      // humaine du rendu vs composant source .jsx — voir /revue-fidelite).
+      //
+      // Les PNG de design/wireframe/screenshots/ NE sont PLUS des baselines :
+      // captures canvas desktop (chrome/scroll/overlays, pas de mobile), inutilisables
+      // au pixel. Aucun couplage automatique vers ce dossier ici.
+      //
+      // Le suffixe {platform} évite les faux positifs entre macOS (dev) et Linux (CI).
       name: 'fidelity',
       testMatch: /.*\.fidelity\.ts/,
-      snapshotPathTemplate: '{testDir}/../design/wireframe/screenshots/{arg}{ext}',
+      snapshotPathTemplate: '{testDir}/baselines/{arg}-{platform}{ext}',
       use: { ...devices['Desktop Chrome'] },
     },
   ],

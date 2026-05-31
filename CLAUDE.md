@@ -2,8 +2,6 @@
 
 Règles projet chargées à chaque session. **Source de vérité du rendu : `src/styles/tokens.css`.** En cas de doute sur la structure/parcours produit, voir `PLAN-DEV-CAURIS.md`.
 
-**Référence de fidélité : `design/wireframe/` (ne pas modifier).** Sources `.jsx`/`.html` du wireframe et les 8 captures `screenshots/` (références Playwright du gate visuel).
-
 ## Produit
 
 - App de finances personnelles **Cauris**, marché **Côte d'Ivoire**. Langue : **français**.
@@ -68,8 +66,9 @@ Règles projet chargées à chaque session. **Source de vérité du rendu : `src
 
 ## Fidélité au wireframe
 
-- Les captures de `screenshots/` sont des **références Playwright**. Un écran n'est « fini » qu'après passage du **snapshot visuel** (clair + sombre, 390 + 1440) sous le seuil de tolérance.
-- En fin de tâche d'écran : comparer à la capture + dérouler la checklist (couleurs/tokens, `money()`, états, navigation).
+- **Source de vérité : `design/wireframe/*.jsx`** (lecture seule). Porter chaque écran depuis son composant d'origine. Les PNG de `design/wireframe/screenshots/` sont des sanity visuelles **desktop uniquement** (pas de mobile ; fond canvas/scroll/bug d'échappement → **jamais** des baselines pixel).
+- Un écran est « fini » après : `/revue-fidelite` PASS (rendu vs source `.jsx` + checklist §6) **et** baseline de régression Playwright auto-générée (clair+sombre, 390+1440) dans `e2e/baselines/`.
+- En fin de tâche d'écran : dérouler la checklist (couleurs/tokens, `money()`/`\u202f`, états, navigation).
 
 ## Avant de considérer une tâche « finie »
 

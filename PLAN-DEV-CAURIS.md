@@ -99,13 +99,15 @@ Recommandation par défaut (un choix clair, alternatives notées) :
 - **Front** : **Vite + React 18 + TypeScript**. SPA, léger, rapide, sans friction — colle au wireframe qui est déjà du React client.
 - **Styling** : **`tokens.css` (variables CSS portées à l'identique) + CSS Modules**. Tailwind v4 _optionnel_ (il sait gérer `color-mix` et le theming par variables) — mais le `tokens.css` reste la **source de vérité** des couleurs.
 - **Données serveur** : **TanStack Query** (cache, états de chargement/erreur → utile pour les états « soignés »).
-- **Backend + Auth + DB** : **Supabase** (Postgres + Auth + Row Level Security + Edge Functions). L'Edge Function sert aussi de **proxy sécurisé vers l'API Anthropic** (la clé ne quitte jamais le serveur).
-  - _Alternative_ : **Next.js App Router** (route handlers comme backend + proxy IA dans le même repo) si tu préfères un seul codebase SSR.
-- **Couche IA** : **API Anthropic (Messages API)** appelée **côté serveur uniquement**, avec un modèle Claude courant. Réf. produit : `docs.claude.com`.
+- **Base de données** : **Turso** (libSQL / SQLite edge) + **Drizzle ORM** (`drizzle-orm/libsql`) + **drizzle-kit** pour les migrations (`db:generate` / `db:migrate` / `db:studio`). Connexion via `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` (jamais côté navigateur). **Dev = fichier SQLite local**, **prod = Turso**, même client libSQL.
+- **Backend (indispensable avec Turso)** : **Hono** — serveur léger (Node en dev, déployable edge) qui porte l'API : accès aux données Turso, authentification, et **proxy sécurisé vers l'API Anthropic** (la clé reste serveur).
+- **Authentification** : **Better Auth** (lib TypeScript framework-agnostic) avec son **adapter Drizzle** (`provider: "sqlite"`) et l'intégration **Hono**. Auto-hébergée, aucun service tiers. Variables : `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
+- **Contrôle d'accès** : pas de Row-Level Security façon Postgres → **portée par utilisateur appliquée dans la couche serveur/requêtes** (chaque requête scopée au `user_id` authentifié).
+- **Couche IA** : **API Anthropic (Messages API)** appelée **côté serveur uniquement** (route Hono), avec un modèle Claude courant. Réf. produit : `docs.claude.com`.
 - **Tests & fidélité** : **Vitest + React Testing Library** (unités), **Playwright** (e2e des 12 parcours **+ régression visuelle** contre les captures du wireframe — c'est le garde-fou de fidélité), **Storybook** _optionnel_ pour les primitives.
 - **Qualité** : ESLint + Prettier + TypeScript strict + Husky (pre-commit).
 
-> Décision à acter en Phase 0 et à figer dans `CLAUDE.md`. Si tu hésites Vite vs Next, par défaut **Vite + Supabase** = moins de surface, plus simple à piloter en CLI.
+> Décision à acter en Phase 0 et à figer dans `CLAUDE.md`. L'archi cible : **front Vite (SPA) + backend Hono + Turso (Drizzle)** — le backend est obligatoire dès qu'on parle de Turso (token DB serveur) et d'IA (clé Anthropic serveur).
 
 ---
 
@@ -144,9 +146,13 @@ Claude Code le charge **automatiquement** dans le contexte à chaque session. On
 
 ### 3.3 Gate de fidélité visuelle (clé du « 100 % fidèle »)
 
-- Importer les **8 captures** du dossier `screenshots/` comme **références Playwright**.
-- Chaque écran livré doit passer un test de **régression visuelle** (`toHaveScreenshot`) sous un seuil de tolérance serré, en clair **et** en sombre, à 390 px et 1440 px.
-- À chaque fin de phase : `/revue-fidelite` = sous-agent qui compare l'écran rendu à la capture + checklist tokens (§1.2) et formatage (§1.3).
+**Source de vérité = le code source du wireframe** (`design/wireframe/*.jsx`), pas les captures. Les 8 PNG sont des captures 1440×842 de l'outil canvas (fond quadrillé, libellés d'artboards, overlays, scroll partiel, et même le bug d'échappement `\u2014`) et **ne contiennent aucune vue mobile** → inutilisables comme baselines pixel.
+
+Modèle à deux niveaux :
+
+- **Intention (humain / `/revue-fidelite`)** : porter chaque écran depuis son composant `.jsx` d'origine ; juger le rendu contre ce source + la capture desktop correspondante comme sanity visuelle. Verdict PASS/FAIL sur la checklist §6.
+- **Régression (automatique)** : Playwright `toHaveScreenshot` avec baselines **auto-générées au premier rendu validé** de chaque écran (clair+sombre, 390+1440), stockées dans `e2e/baselines/`. Protègent des **dérives futures**, pas contre les PNG du canvas.
+- **Ne jamais** pointer `toHaveScreenshot` sur `design/wireframe/screenshots/` (échec garanti + zéro réf. mobile).
 
 ---
 
@@ -157,10 +163,10 @@ Chaque phase indique : **Objectif · Périmètre · Livrables · Definition of D
 ### Phase 0 — Fondations & cadrage _(socle Claude Code)_
 
 - **Objectif** : repo prêt, stack actée, garde-fous en place.
-- **Périmètre** : init Vite+TS, Supabase, lint/format/TS strict, Vitest+Playwright, CI minimale, `CLAUDE.md`, `tokens.css`, import des captures comme références visuelles, slash commands.
+- **Périmètre** : init Vite+TS, **backend Hono + Turso/Drizzle (client + drizzle-kit)**, lint/format/TS strict, Vitest+Playwright, CI minimale, `CLAUDE.md`, `tokens.css`, import des captures comme références visuelles, slash commands.
 - **Livrables** : projet qui build + `npm run check` (lint+types+tests) vert + pipeline Playwright qui sait charger les références.
 - **DoD / fidélité** : `tokens.css` reproduit **exactement** le `:root` et `[data-theme="dark"]` du wireframe ; polices chargées (Public Sans + Spline Sans Mono).
-- **Prompt CC** : _« Plan Mode. Initialise un projet Vite+React+TS avec Supabase, Vitest, Playwright, ESLint/Prettier. Crée `tokens.css` en copiant à l'identique les variables CSS de `Wireframes Dashboard.html`. Crée `CLAUDE.md` avec les règles du PLAN.md §3.1. Ne code pas d'écran encore. »_
+- **Prompt CC** : _« Plan Mode. Initialise un projet Vite+React+TS avec un backend Hono, Turso (client libSQL + Drizzle + drizzle-kit), Vitest, Playwright, ESLint/Prettier. Crée `tokens.css` en copiant à l'identique les variables CSS de `Wireframes Dashboard.html`. Crée `CLAUDE.md` avec les règles du PLAN.md §3.1. Ne code pas d'écran encore. »_
 
 ### Phase 1 — Design system & shell _(le squelette fidèle)_
 
@@ -173,16 +179,16 @@ Chaque phase indique : **Objectif · Périmètre · Livrables · Definition of D
 ### Phase 2 — Authentification & Onboarding _(parcours 1)_
 
 - **Objectif** : entrée dans l'app + paramétrage initial.
-- **Périmètre** : Connexion, Inscription, mot de passe oublié/réinit ; 5 étapes onboarding (profil → préférences → revenus/dépenses → 1er objectif → comptes initiaux) ; **auth Supabase** réelle ; redirection onboarding→dashboard.
+- **Périmètre** : Connexion, Inscription, mot de passe oublié/réinit ; 5 étapes onboarding (profil → préférences → revenus/dépenses → 1er objectif → comptes initiaux) ; **auth via Better Auth (adapter Drizzle/sqlite) montée sur Hono** ; redirection onboarding→dashboard.
 - **DoD / fidélité** : écrans 390 px conformes ; flux complet inscription→dashboard ; états d'erreur soignés.
-- **Prompt CC** : _« Plan Mode. Implémente l'auth Supabase (email) + les écrans auth/onboarding (parcours 1 du PLAN.md). Wizard 5 étapes avec persistance. Gate visuel mobile. »_
+- **Prompt CC** : _« Plan Mode. Implémente Better Auth (email) avec l'adapter Drizzle/sqlite monté sur Hono + les écrans auth/onboarding (parcours 1 du PLAN.md). Wizard 5 étapes avec persistance. Gate visuel mobile. »_
 
 ### Phase 3 — Modèle de données & socle métier _(le cœur invisible)_
 
 - **Objectif** : schéma + seed identique au wireframe, utilitaires.
-- **Périmètre** : tables `accounts, categories, transactions, budgets, goals, contributions, loans, amortization, loan_payments, notifications, recurrences`, + `ai_insights, ai_anomalies, ai_forecasts, ai_chat`. **RLS** par utilisateur. **Seed** avec les données exactes de `wf-lib.jsx` (Aïcha, NSIA/Ecobank/Orange Money/Wave, SODECI, CIE, prêt auto 3,2 M restant @9,5 %, objectifs Fonds d'urgence/Voyage Dakar/Ordinateur, etc.).
+- **Périmètre** : schéma **Drizzle (libSQL/SQLite)** : `accounts, categories, transactions, budgets, goals, contributions, loans, amortization, loan_payments, notifications, recurrences`, + `ai_insights, ai_anomalies, ai_forecasts, ai_chat`. **Contrôle d'accès applicatif** : toutes les requêtes scopées au `user_id` authentifié (pas de RLS Postgres). **Montants stockés en entiers FCFA** (pas de centimes), dates en ISO texte. **Migrations via drizzle-kit** + **seed** avec les données exactes de `wf-lib.jsx` (Aïcha, NSIA/Ecobank/Orange Money/Wave, SODECI, CIE, prêt auto 3,2 M restant @9,5 %, objectifs Fonds d'urgence/Voyage Dakar/Ordinateur, etc.).
 - **DoD / fidélité** : l'app, branchée sur la BDD seedée, **rend les mêmes chiffres** que le wireframe (solde 2 480 000, dépenses mai 612 000, budget Transport 108 %…).
-- **Prompt CC** : _« Plan Mode. Conçois le schéma Postgres + RLS pour Cauris (voir PLAN.md §4 Phase 3) et écris les migrations + un seed reprenant à l'identique les données de wf-lib.jsx. »_
+- **Prompt CC** : _« Plan Mode. Conçois le schéma Drizzle/libSQL pour Cauris (voir PLAN.md §4 Phase 3), montants en entiers FCFA, accès scopé au user_id côté serveur. Écris les migrations drizzle-kit + un seed reprenant à l'identique les données de wf-lib.jsx. »_
 
 ### Phase 4 — Dashboard _(cœur + liens transverses)_
 
@@ -237,14 +243,14 @@ Chaque phase indique : **Objectif · Périmètre · Livrables · Definition of D
 
 - **Objectif** : brancher l'intelligence, dans le respect strict des règles §1.6.
 - **Périmètre** :
-  - **Proxy serveur** vers l'API Anthropic (clé côté serveur), endpoints : catégorisation, détection d'anomalies, prévisions (budget/trésorerie), recommandations, **chat assistant** (avec les suggestions de questions), **simulateur** (« si j'épargne 25 000 de plus… »).
+  - **Proxy serveur** vers l'API Anthropic (**route Hono**, clé côté serveur), endpoints : catégorisation, détection d'anomalies, prévisions (budget/trésorerie), recommandations, **chat assistant** (avec les suggestions de questions), **simulateur** (« si j'épargne 25 000 de plus… »).
   - Écrans **Assistant IA** (chat + insights + alertes + simulations + historique) desktop & mobile.
   - **Parcours 9** validation catégorisation (badge → confirmer/corriger/refuser → mémorisation).
   - **Parcours 10** alerte dépense inhabituelle → explication vs historique → normal / à surveiller.
   - **Parcours 11** conseil contextualisé avec lien vers module source.
   - **Parcours 12** simulation intelligente reliée à objectif/prêt.
 - **DoD / fidélité** : aucune action financière déclenchée sans validation ; chaque prévision affiche horizon+confiance ; chaque anomalie est expliquée ; snapshot assistant ≈ capture assistant.
-- **Prompt CC** : _« Plan Mode. Couche IA : Edge Function proxy Anthropic (clé serveur), endpoints catégorisation/anomalies/prévisions/chat/simulation, écrans Assistant IA, flux parcours 9–12. Applique les règles métier IA du PLAN.md §1.6. »_
+- **Prompt CC** : _« Plan Mode. Couche IA : route Hono proxy Anthropic (clé serveur), endpoints catégorisation/anomalies/prévisions/chat/simulation, écrans Assistant IA, flux parcours 9–12. Applique les règles métier IA du PLAN.md §1.6. »_
 
 ### Phase 13 — Paramètres, états, polish, accessibilité, perf
 
@@ -253,7 +259,7 @@ Chaque phase indique : **Objectif · Périmètre · Livrables · Definition of D
 
 ### Phase 14 — Tests, fidélité globale, livraison
 
-- **Périmètre** : e2e Playwright des **12 parcours** ; suite complète de **régression visuelle** (les 8 captures, clair+sombre, 390+1440) ; couverture unités sur `money()`, calculs d'amortissement/simulation, agrégations dashboard ; CI verte ; build prod ; déploiement (Vercel/Netlify + Supabase) ; doc d'install.
+- **Périmètre** : e2e Playwright des **12 parcours** ; suite complète de **régression visuelle** (les 8 captures, clair+sombre, 390+1440) ; couverture unités sur `money()`, calculs d'amortissement/simulation, agrégations dashboard ; CI verte ; build prod ; déploiement (**front** Vercel/Netlify + **backend Hono** Vercel/Fly/Cloudflare + **Turso**) ; doc d'install.
 - **DoD / fidélité** : 100 % des parcours passent ; toute la suite visuelle au vert sous le seuil de tolérance.
 
 ---
@@ -287,7 +293,7 @@ P7/P8/P9/P10 sont **parallélisables** (worktrees) une fois P4 livré.
 
 - [ ] Couleurs = `tokens.css` (aucune couleur en dur ailleurs).
 - [ ] Chiffres en **mono**, montants via `money()` (espaces fines `\u202f`), suffixe `FCFA`.
-- [ ] Écran conforme à la capture de référence (clair **et** sombre, 390 **et** 1440).
+- [ ] Rendu conforme au composant source `.jsx` (et cohérent avec la capture desktop quand elle existe), en clair **et** sombre, 390 **et** 1440 ; baseline de régression auto-générée.
 - [ ] Primitives de graphes maison (pas de lib qui change le rendu).
 - [ ] États vide / succès / erreur présents.
 - [ ] Navigation : `vue → filtre → détail → action → retour` ; filtres persistants ; liens transverses fonctionnels.
