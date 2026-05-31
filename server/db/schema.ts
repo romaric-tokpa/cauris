@@ -1,10 +1,10 @@
 /**
- * Schéma Drizzle — VIDE à ce stade (Phase 0 : connexion uniquement).
+ * Schéma Drizzle.
  *
- * Le schéma métier complet (accounts, categories, transactions, budgets, goals,
- * contributions, loans, amortization, loan_payments, notifications, recurrences,
- * ai_*) ainsi que le seed des données d'Aïcha arrivent en **Phase 3**.
+ * Phase 2 : tables d'**authentification** (Better Auth) générées via la CLE
+ * (`server/db/auth-schema.ts`), re-exportées ici pour que `db` les connaisse.
  *
- * Ne rien ajouter ici avant la Phase 3.
+ * Le schéma **métier** (accounts, transactions, budgets, …) + le seed des données
+ * d'Aïcha arrivent en **Phase 3**. Aucune table métier ici.
  */
-export {}
+export * from './auth-schema'

@@ -2,14 +2,18 @@ import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { client } from './db/client'
+import { auth } from './auth'
 
 /**
- * Backend Cauris — squelette (Phase 0).
- *
- * Aucune authentification, aucune base de données, aucune table à ce stade :
- * uniquement un point de santé. L'API applicative se montera sous `/api`.
+ * Backend Cauris (Hono).
+ * - `/api/auth/*` : Better Auth (email + mot de passe).
+ * - `/health`, `/health/db` : points de santé.
+ * L'API métier se montera sous `/api` (Phase 3).
  */
 const app = new Hono()
+
+// Better Auth : délègue toutes les routes /api/auth/* au handler (Request/Response web).
+app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
 
 // Health check infra — accessible en direct (et via le proxy Vite /api/health).
 app.get('/health', (c) => c.json({ status: 'ok' }))
