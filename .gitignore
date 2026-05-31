@@ -31,6 +31,10 @@ cauris.zip
 .env.*
 !.env.example
 
+# Base de données SQLite locale (dev)
+local.db
+local.db-*
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json

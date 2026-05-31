@@ -1,5 +1,7 @@
+import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { client } from './db/client'
 
 /**
  * Backend Cauris — squelette (Phase 0).
@@ -11,6 +13,17 @@ const app = new Hono()
 
 // Health check infra — accessible en direct (et via le proxy Vite /api/health).
 app.get('/health', (c) => c.json({ status: 'ok' }))
+
+// Health check base de données : prouve la connexion via un SELECT 1.
+app.get('/health/db', async (c) => {
+  try {
+    await client.execute('select 1')
+    return c.json({ status: 'ok', db: 'up' })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ status: 'error', db: 'down', message }, 503)
+  }
+})
 
 // Point de montage de la future API applicative (vide pour l'instant).
 const api = new Hono()
