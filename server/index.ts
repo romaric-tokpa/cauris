@@ -1,7 +1,9 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
-import { client } from './db/client'
+import { eq } from 'drizzle-orm'
+import { client, db } from './db/client'
+import { user } from './db/auth-schema'
 import { auth } from './auth'
 
 /**
@@ -29,9 +31,19 @@ app.get('/health/db', async (c) => {
   }
 })
 
-// Point de montage de la future API applicative (vide pour l'instant).
+// API applicative.
 const api = new Hono()
 api.get('/health', (c) => c.json({ status: 'ok' }))
+
+// Marque l'onboarding terminé pour l'utilisateur de la SESSION (seul chemin pour
+// flipper onboarding_complete, cohérent avec input:false côté Better Auth).
+api.post('/onboarding/complete', async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  if (!session) return c.json({ error: 'unauthorized' }, 401)
+  await db.update(user).set({ onboardingComplete: true }).where(eq(user.id, session.user.id))
+  return c.json({ status: 'ok' })
+})
+
 app.route('/api', api)
 
 const port = Number(process.env.PORT ?? 8787)

@@ -781,6 +781,12 @@ button.tab {
 .inp.big > span:first-child {
   white-space: nowrap;
 }
+/* Champ montant .inp.big avec vrai <input> (mono, comme le wireframe statique). */
+.inp.big input {
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 600;
+}
 .seg-full {
   display: flex;
   background: var(--panel-2);
@@ -964,6 +970,17 @@ button.tab {
 .choice.on {
   border-color: var(--accent);
   background: var(--accent-wash);
+}
+/* Pastille set-ico d'un choix sélectionné (inline du wireframe → classe). */
+.choice.on .set-ico {
+  background: var(--paper);
+  color: var(--accent);
+}
+/* .choice porté sur un <button> réel (multi-sélection a11y) : reset natif. */
+button.choice {
+  width: 100%;
+  font-family: var(--sans);
+  text-align: left;
 }
 .checkbox {
   width: 22px;

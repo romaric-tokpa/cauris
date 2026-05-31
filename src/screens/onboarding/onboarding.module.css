@@ -1,0 +1,168 @@
+/* Wizard onboarding — plein écran centré (mobile-first 390, centré à 1440).
+   Valeurs recopiées de screens-onboarding.jsx (inline → classes). Tokens uniquement. */
+
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+.panel {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 26px;
+}
+
+/* OnbStep : colonne pleine hauteur (header / steps / titre / corps / CTA). */
+.step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-top: 4px;
+}
+.iconBtnSm {
+  width: 34px;
+  height: 34px;
+}
+.backGlyph {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+.count {
+  font-size: 12px;
+  font-weight: 600;
+}
+.skipLink {
+  font-size: 12.5px;
+}
+.skipSpacer {
+  width: 34px;
+}
+.stepsBar {
+  margin-bottom: 22px;
+}
+.titleBlock {
+  margin-bottom: 18px;
+}
+.title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.sub {
+  font-size: 13px;
+  margin-top: 5px;
+  line-height: 1.4;
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  flex: 1;
+}
+.cta {
+  padding: 14px;
+  font-size: 14px;
+}
+
+/* Choice (ligne) */
+.choiceText {
+  flex: 1;
+}
+.choiceLabel {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.choiceSub {
+  font-size: 11.5px;
+}
+
+/* Étape 1 — Profil */
+.avatarWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.avatarRel {
+  position: relative;
+}
+.avatarLg {
+  width: 76px;
+  height: 76px;
+  font-size: 28px;
+}
+.avatarEdit {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  background: var(--solid);
+  color: var(--on-solid);
+  border: none;
+}
+
+/* Étape 3 — Revenus / dépenses */
+.capacityCard {
+  gap: 11px;
+  margin-top: 4px;
+}
+.capacityText {
+  font-size: 12.5px;
+}
+.moneyInput {
+  text-align: left;
+}
+
+/* Étape 4 — Premier objectif */
+.cardRow {
+  display: flex;
+  gap: 10px;
+}
+.choiceCard {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cardIconOn {
+  color: var(--accent);
+}
+.cardLabel {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+/* Étape 5 — Comptes */
+.addBtn {
+  padding: 12px;
+  margin-top: 2px;
+}
+
+/* Masque visuel d'une checkbox réelle (a11y) */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Bannière d'erreur */
+.alertText {
+  font-size: 12.5px;
+  font-weight: 600;
+}
