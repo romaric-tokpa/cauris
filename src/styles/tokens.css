@@ -31,6 +31,15 @@
   --feature-ink: #ffffff;
   --mono: 'Spline Sans Mono', ui-monospace, monospace;
   --sans: 'Public Sans', system-ui, sans-serif;
+
+  /* couleurs en dur du wireframe tokenisées (rendu identique, thème-agnostiques)
+     - --on-accent  : blanc posé sur accent/solid (.btn.accent, knob, checkbox…)
+     - --scrim      : overlay des modales (rgba(25,22,18,.30) du wireframe)
+     - --shadow-rgb : base RGB des ombres rgba(...) du wireframe */
+  --on-accent: #ffffff;
+  --on-accent-rgb: 255, 255, 255;
+  --scrim: rgba(25, 22, 18, 0.3);
+  --shadow-rgb: 0, 0, 0;
 }
 [data-theme='dark'] {
   --paper: #1c1c21;

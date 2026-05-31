@@ -1,7 +1,7 @@
-import TokenDemo from './screens/TokenDemo.tsx'
+import PrimitivesGallery from './screens/_Gallery/PrimitivesGallery.tsx'
 
-// TEMPORAIRE : on monte la page de démo des tokens pour la vérif visuelle.
-// Sera remplacé par le shell / routeur à la Phase 1.
+// TEMPORAIRE (Bloc 1) : galerie de revue des primitives.
+// Remplacée par le shell + routeur au Bloc 3.
 export default function App() {
-  return <TokenDemo />
+  return <PrimitivesGallery />
 }
