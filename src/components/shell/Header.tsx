@@ -3,8 +3,8 @@ import { Icon } from '../primitives'
 import { ThemeControls } from '../../theme/ThemeControls'
 import styles from './Header.module.css'
 
-/** Header Cockpit — recherche, segment période (Semaine/Mois/Année, cf. CLAUDE.md),
- *  accès Apparence, notifications, profil. Porté de shell.jsx. */
+/** Header Cockpit — recherche, segment période (Jour/Semaine/Mois/Année, Mois actif,
+ *  recopié 1:1 de shell.jsx), accès Apparence, notifications, profil. */
 export function Header() {
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   return (
@@ -16,6 +16,7 @@ export function Header() {
 
       <div className={`r ${styles.actions}`}>
         <div className="seg">
+          <button type="button">Jour</button>
           <button type="button">Semaine</button>
           <button type="button" className="on">
             Mois

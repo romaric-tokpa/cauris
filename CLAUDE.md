@@ -43,7 +43,8 @@ Règles projet chargées à chaque session. **Source de vérité du rendu : `src
 
 ## Navigation
 
-- Pattern **A « Cockpit »** validé : sidebar gauche fixe + header (recherche, sélecteur période _Semaine/Mois/Année_, notifications, profil). Mobile : **barre basse + bouton flottant `+`**.
+- Pattern **A « Cockpit »** validé : sidebar gauche fixe + header (recherche, segment période, notifications, profil). Mobile : **barre basse + bouton flottant `+`**.
+- **Segment période = Jour / Semaine / Mois / Année (Mois actif), recopié de `shell.jsx`.**
 - Loi : **vue globale → filtre → détail → action → retour au contexte**. Les filtres **persistent** au retour de détail.
 - Les liens transverses sont **fonctionnels** : Dashboard→Transactions filtrées / détail budget / détail objectif / détail prêt / Assistant IA ; Budget→transactions liées ; Compte→opérations filtrées ; Analytics→catégorie filtrée ; Notification→écran contextuel ; Assistant IA→module source.
 - Formulaires courts → **drawer (desktop) / bottom sheet (mobile)** ; écrans complexes (détail budget, prêt, simulation) → **page pleine**.
