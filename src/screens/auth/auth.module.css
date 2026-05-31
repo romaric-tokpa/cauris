@@ -1,0 +1,156 @@
+/* Écrans auth — layout plein écran centré (mobile-first 390, centré à 1440).
+   Valeurs (gaps/tailles/marges) recopiées de screens-auth.jsx (inline → classes).
+   Couleurs uniquement via tokens. */
+
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+.panel {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 26px;
+}
+
+/* Le formulaire remplit le panneau ; contenu centré, footer en bas. */
+.form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+}
+.mainSignup {
+  gap: 20px;
+}
+
+/* Logo + titres (auth-logo global pour la structure) */
+.logoText {
+  align-items: center;
+  gap: 4px;
+}
+.authTitle {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.authSub {
+  font-size: 13px;
+}
+
+/* Bloc des champs */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.fieldsSignup {
+  gap: 13px;
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+}
+.linkSm {
+  font-size: 12.5px;
+}
+
+.btnSubmit {
+  padding: 14px;
+  font-size: 14px;
+}
+.mt4 {
+  margin-top: 4px;
+}
+
+/* Séparateur « ou » */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+.hr {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.btnBio {
+  padding: 13px;
+}
+
+/* Footer (bas du panneau) */
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+.footerLink {
+  font-size: 13px;
+}
+
+/* Bouton afficher/masquer le mot de passe (dans .inp) */
+.eyeBtn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+/* Bannière d'erreur (.alert over) */
+.alertText {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Conditions d'utilisation (inscription) */
+.termsRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+.termsText {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.termsLink {
+  color: var(--accent);
+  font-weight: 600;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Note de confirmation (mot de passe oublié / réinitialisation) */
+.note {
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}

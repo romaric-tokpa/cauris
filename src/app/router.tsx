@@ -3,6 +3,11 @@ import { AppShell } from '../components/shell'
 import { NAV_ALL } from '../components/shell/nav'
 import { ModulePage } from '../screens/ModulePage'
 import { FullScreenPlaceholder } from '../screens/FullScreenPlaceholder'
+import { AuthLayout } from '../screens/auth/AuthLayout'
+import { Login } from '../screens/auth/Login'
+import { Signup } from '../screens/auth/Signup'
+import { ForgotPassword } from '../screens/auth/ForgotPassword'
+import { ResetPassword } from '../screens/auth/ResetPassword'
 
 // Modules en routes enfants de l'AppShell, dérivés de NAV (libellés 1:1 du wireframe).
 const moduleRoutes: RouteObject[] = NAV_ALL.map((n) =>
@@ -17,15 +22,16 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: moduleRoutes,
   },
-  // HORS shell (plein écran) — contenu réel en Phase 2.
+  // HORS shell (plein écran). Gardes de route = sous-bloc D.
   {
     path: '/auth',
-    element: (
-      <FullScreenPlaceholder
-        title="Connexion"
-        text="L’authentification (connexion / inscription) arrive en Phase 2."
-      />
-    ),
+    element: <AuthLayout />,
+    children: [
+      { index: true, element: <Login /> },
+      { path: 'inscription', element: <Signup /> },
+      { path: 'mot-de-passe-oublie', element: <ForgotPassword /> },
+      { path: 'reinitialisation', element: <ResetPassword /> },
+    ],
   },
   {
     path: '/onboarding',
