@@ -2,6 +2,8 @@
 
 Règles projet chargées à chaque session. **Source de vérité du rendu : `src/styles/tokens.css`.** En cas de doute sur la structure/parcours produit, voir `PLAN-DEV-CAURIS.md`.
 
+**Référence de fidélité : `design/wireframe/` (ne pas modifier).** Sources `.jsx`/`.html` du wireframe et les 8 captures `screenshots/` (références Playwright du gate visuel).
+
 ## Produit
 
 - App de finances personnelles **Cauris**, marché **Côte d'Ivoire**. Langue : **français**.

@@ -6,8 +6,8 @@ import tseslint from 'typescript-eslint'
 import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  // Ne pas linter les artefacts de build / dépendances.
-  { ignores: ['dist', 'node_modules'] },
+  // Ne pas linter les artefacts de build / dépendances ni la référence wireframe.
+  { ignores: ['dist', 'node_modules', 'design/wireframe'] },
 
   // Code applicatif TypeScript + React (type-aware pour coller au TS strict).
   {
