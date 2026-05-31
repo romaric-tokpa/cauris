@@ -32,6 +32,14 @@
   flex: none;
 }
 
+/* Classes interactives rendues parfois en <a> (router) : pas de soulignement,
+   le wireframe les rend en <div>/<button>. */
+.btn,
+.nav-item,
+.card-link {
+  text-decoration: none;
+}
+
 /* ---- typography helpers ---- */
 .t-mono {
   font-family: var(--mono);

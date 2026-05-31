@@ -1,7 +1,11 @@
-import PrimitivesGallery from './screens/_Gallery/PrimitivesGallery.tsx'
+import { RouterProvider } from 'react-router-dom'
+import { ThemeProvider } from './theme/ThemeProvider'
+import { router } from './app/router'
 
-// TEMPORAIRE (Bloc 1) : galerie de revue des primitives.
-// Remplacée par le shell + routeur au Bloc 3.
 export default function App() {
-  return <PrimitivesGallery />
+  return (
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  )
 }

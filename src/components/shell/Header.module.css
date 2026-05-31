@@ -1,0 +1,14 @@
+/* Layout header — valeurs recopiées 1:1 de shell.jsx (inline → module). */
+
+.header {
+  padding: 16px 28px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.search {
+  width: 320px;
+}
+.actions {
+  gap: 12px;
+}

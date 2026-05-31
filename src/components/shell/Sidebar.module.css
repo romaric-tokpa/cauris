@@ -1,0 +1,26 @@
+/* Layout sidebar — valeurs recopiées 1:1 de shell.jsx (inline → module). */
+
+.sidebar {
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.logo {
+  padding: 0 6px 4px;
+}
+.user {
+  margin-top: auto;
+}
+.userMeta {
+  margin-left: 10px;
+  line-height: 1.25;
+}
+.userName {
+  font-weight: 700;
+  font-size: 13px;
+}
+.userSub {
+  font-size: 11px;
+}

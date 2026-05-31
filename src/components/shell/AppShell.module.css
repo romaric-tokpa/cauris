@@ -1,0 +1,22 @@
+/* Layout AppShell — grille + zone de contenu, valeurs 1:1 de shell.jsx.
+   (Le contenu défile : adaptation app réelle vs artboard à hauteur fixe.) */
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  background: var(--bg);
+  height: 100vh;
+}
+.main {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.content {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  overflow: auto;
+}
