@@ -14,7 +14,7 @@ export interface KpiTileProps {
   icon: IconName
   /** Suffixe rendu à part, en mono (défaut « FCFA »). */
   currency?: string
-  /** Ton de la pastille d'icône. */
+  /** Ton de la pastille d'icône (classe `.kpi-icon.pos`/`.neg`, sinon neutre). */
   tone?: 'pos' | 'neg' | ''
   delta?: KpiDelta
   /** Note affichée à défaut de delta. */
@@ -22,6 +22,7 @@ export interface KpiTileProps {
 }
 
 /** Tuile KPI — composée À L'IDENTIQUE du dashboard wireframe (kpi-label/icon/val/cur/delta).
+ *  Tailles, marges et ton de la pastille pilotés par classes (components.css `.kpi-tile`).
  *  Montant via `money()` en mono, suffixe `FCFA` à part. */
 export function KpiTile({
   label,
@@ -32,29 +33,23 @@ export function KpiTile({
   delta,
   note,
 }: KpiTileProps) {
-  const iconBg =
-    tone === 'pos' ? 'var(--pos-wash)' : tone === 'neg' ? 'var(--neg-wash)' : 'var(--panel-2)'
-  const iconColor =
-    tone === 'pos' ? 'var(--pos)' : tone === 'neg' ? 'var(--neg)' : 'var(--ink-soft)'
   return (
-    <Card>
+    <Card className="kpi-tile">
       <div className="r between">
         <div className="kpi-label">{label}</div>
-        <div className="kpi-icon" style={{ background: iconBg, color: iconColor }}>
+        <div className={`kpi-icon${tone ? ' ' + tone : ''}`}>
           <Icon name={icon} size={18} />
         </div>
       </div>
-      <div className="kpi-val" style={{ fontSize: 23, marginTop: 14 }}>
+      <div className="kpi-val">
         {money(value)} <span className="kpi-cur">{currency}</span>
       </div>
       {delta ? (
-        <div className={'delta ' + (delta.positive ? 't-pos' : 't-neg')} style={{ marginTop: 4 }}>
+        <div className={'delta ' + (delta.positive ? 't-pos' : 't-neg')}>
           <Icon name={delta.positive ? 'up' : 'down'} size={13} /> {delta.label}
         </div>
       ) : note ? (
-        <div className="t-faint" style={{ fontSize: 11.5, marginTop: 4 }}>
-          {note}
-        </div>
+        <div className="t-faint kpi-note">{note}</div>
       ) : null}
     </Card>
   )

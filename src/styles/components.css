@@ -359,6 +359,32 @@
   display: grid;
   place-items: center;
   flex: none;
+  /* ton neutre par défaut (inline du wireframe recopié en classe) */
+  background: var(--panel-2);
+  color: var(--ink-soft);
+}
+.kpi-icon.pos {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.kpi-icon.neg {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+
+/* Tuile KPI standard du dashboard — tailles/marges recopiées 1:1 du wireframe
+   (étaient inline : kpi-val 23/14, delta 4, note 11.5/4), scopées à la tuile
+   pour ne pas contraindre les autres usages de .kpi-val/.delta. */
+.kpi-tile .kpi-val {
+  font-size: 23px;
+  margin-top: 14px;
+}
+.kpi-tile .delta {
+  margin-top: 4px;
+}
+.kpi-tile .kpi-note {
+  font-size: 11.5px;
+  margin-top: 4px;
 }
 
 /* ---- progress ---- */
