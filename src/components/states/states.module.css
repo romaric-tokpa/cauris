@@ -1,0 +1,111 @@
+/* États vide / succès / erreur — portés de screens-states.jsx (inline → classes,
+   valeurs exactes). Couleurs uniquement via tokens. */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.empty {
+  justify-content: center;
+  flex: 1;
+  padding: 60px 10px;
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* pastilles big-ico par ton (inline du wireframe → classes) */
+.icoNeutral {
+  background: var(--panel-2);
+  color: var(--ink-faint);
+}
+.icoPos {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.icoNeg {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+
+.titleSm {
+  font-weight: 800;
+  font-size: 17px;
+}
+.titleLg {
+  font-weight: 800;
+  font-size: 19px;
+}
+.textEmpty {
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.5;
+  max-width: 250px;
+}
+.textSuccess {
+  font-size: 13px;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.textError {
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.5;
+  max-width: 260px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+  margin-top: 4px;
+}
+.actionsWide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pad13 {
+  padding: 13px;
+}
+.pad12 {
+  padding: 12px;
+}
+
+/* lignes de détail (SuccessState) — set-row resserré à 10px 0 */
+.row {
+  padding: 10px 0;
+}
+.rowLabel {
+  font-size: 12.5px;
+  flex: 1;
+}
+.rowVal {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.rowAmount {
+  font-weight: 600;
+}
+
+/* alerte (ErrorState) */
+.alertIco {
+  width: 34px;
+  height: 34px;
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+.alertName {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.alertSub {
+  font-size: 11px;
+}

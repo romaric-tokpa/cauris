@@ -1,4 +1,6 @@
 export { AppShell } from './AppShell'
 export { Sidebar } from './Sidebar'
 export { Header } from './Header'
-export { NAV_PILOTAGE, NAV_COMPTE, NAV_ALL, type NavItem } from './nav'
+export { MobileHeader } from './MobileHeader'
+export { MobileTabBar } from './MobileTabBar'
+export { NAV_PILOTAGE, NAV_COMPTE, NAV_ALL, findNavByPath, type NavItem } from './nav'

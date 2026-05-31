@@ -36,7 +36,9 @@
    le wireframe les rend en <div>/<button>. */
 .btn,
 .nav-item,
-.card-link {
+.card-link,
+.tab,
+.set-nav .si2 {
   text-decoration: none;
 }
 
@@ -593,6 +595,17 @@
   place-items: center;
   margin-top: -22px;
   box-shadow: 0 6px 16px rgba(var(--shadow-rgb), 0.18);
+  border: 0;
+  cursor: pointer;
+}
+
+/* .tab/.fab sont prévues pour des <div> dans le wireframe ; portées sur des
+   <button> réels (a11y), on neutralise le style natif du bouton. */
+button.tab {
+  background: transparent;
+  border: 0;
+  font-family: var(--sans);
+  cursor: pointer;
 }
 
 /* ---- scroll hint for mobile content ---- */

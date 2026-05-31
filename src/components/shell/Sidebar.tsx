@@ -20,9 +20,9 @@ function NavItems({ items }: { items: NavItem[] }) {
 }
 
 /** Sidebar Cockpit (pattern A) — portée 1:1 de shell.jsx. */
-export function Sidebar() {
+export function Sidebar({ className = '' }: { className?: string }) {
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${className}`}>
       <div className={`logo ${styles.logo}`}>
         <div className="logo-mark">C</div>
         <div className="logo-name">Cauris</div>

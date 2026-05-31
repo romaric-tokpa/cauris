@@ -1,16 +1,20 @@
-/* Layout AppShell — grille + zone de contenu, valeurs 1:1 de shell.jsx.
-   (Le contenu défile : adaptation app réelle vs artboard à hauteur fixe.) */
+/* Layout AppShell — desktop = grille (sidebar 240 / 1fr), mobile = colonne.
+   Valeurs 1:1 de shell.jsx ; le contenu défile (app réelle vs artboard fixe).
+   Les deux chrome (desktop / mobile) coexistent dans le DOM ; display:none retire
+   l'inactif de l'arbre d'accessibilité ET de l'ordre de tabulation (pas besoin
+   d'aria-hidden/inert) ; l'<Outlet/> est rendu UNE seule fois (aucun id dupliqué). */
 
 .shell {
   display: grid;
   grid-template-columns: 240px 1fr;
-  background: var(--bg);
   height: 100vh;
+  background: var(--bg);
 }
 .main {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .content {
   padding: 24px 28px;
@@ -19,4 +23,26 @@
   gap: 18px;
   flex: 1;
   overflow: auto;
+}
+
+/* Desktop : on masque le chrome mobile. */
+@media (min-width: 901px) {
+  .shell .mobileOnly {
+    display: none;
+  }
+}
+
+/* Mobile (≤ 900px) : colonne unique, on masque le chrome desktop. */
+@media (max-width: 900px) {
+  .shell {
+    display: flex;
+    flex-direction: column;
+  }
+  .shell .desktopOnly {
+    display: none;
+  }
+  .content {
+    padding: 0 18px 84px;
+    gap: 14px;
+  }
 }

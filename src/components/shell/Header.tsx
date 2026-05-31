@@ -5,10 +5,10 @@ import styles from './Header.module.css'
 
 /** Header Cockpit — recherche, segment période (Jour/Semaine/Mois/Année, Mois actif,
  *  recopié 1:1 de shell.jsx), accès Apparence, notifications, profil. */
-export function Header() {
+export function Header({ className = '' }: { className?: string }) {
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   return (
-    <header className={`r between ${styles.header}`}>
+    <header className={`r between ${styles.header} ${className}`}>
       <div className={`field ${styles.search}`}>
         <Icon name="search" size={17} />
         <input placeholder="Rechercher une transaction, un compte…" readOnly />

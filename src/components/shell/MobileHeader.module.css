@@ -1,0 +1,41 @@
+/* Header mobile — valeurs recopiées 1:1 de MobShell (shell.jsx). */
+
+.header {
+  padding: 8px 18px 14px;
+  flex: none;
+}
+.left {
+  gap: 11px;
+  min-width: 0;
+}
+.titles {
+  min-width: 0;
+}
+.sub {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.right {
+  gap: 10px;
+}
+.bell {
+  width: 36px;
+  height: 36px;
+}
+.backBtn {
+  width: 34px;
+  height: 34px;
+}
+/* chevron pivoté pour pointer à gauche (retour) */
+.backGlyph {
+  display: inline-flex;
+  transform: rotate(180deg);
+}

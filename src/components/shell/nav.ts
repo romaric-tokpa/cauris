@@ -28,3 +28,9 @@ export const NAV_COMPTE: NavItem[] = [
 ]
 
 export const NAV_ALL: NavItem[] = [...NAV_PILOTAGE, ...NAV_COMPTE]
+
+/** Item de nav correspondant au chemin courant (pour le titre du header mobile). */
+export function findNavByPath(pathname: string): NavItem | undefined {
+  if (pathname === '/') return NAV_ALL.find((n) => n.end)
+  return NAV_ALL.find((n) => n.path !== '/' && pathname.startsWith(n.path))
+}
