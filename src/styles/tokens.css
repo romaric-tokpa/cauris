@@ -1,0 +1,125 @@
+/* ============================================================================
+   tokens.css — SOURCE DE VÉRITÉ DU RENDU (Cauris)
+   Variables CSS portées À L'IDENTIQUE depuis « Wireframes Dashboard.html »
+   (:root + [data-theme="dark"]). Ne jamais coder une couleur en dur ailleurs :
+   si une couleur manque, l'ajouter ici comme token.
+   ========================================================================== */
+
+:root {
+  --paper: #ffffff;
+  --bg: #ecebe6;
+  --panel: #f5f5f2;
+  --panel-2: #efeeea;
+  --ink: #20201f;
+  --ink-soft: #5f5f63;
+  --ink-faint: #9a9a9e;
+  --line: #d8d7d2;
+  --line-soft: #e8e7e2;
+  --accent: #2f5d8c; /* muted blue (overridable by tweak) */
+  --pos: #2f7d57; /* positive green */
+  --neg: #b8462f; /* over/alert red */
+  --warn: #b07d18; /* warning amber */
+  /* washes derive from the signal + paper, so they adapt to dark automatically */
+  --accent-wash: color-mix(in srgb, var(--accent) 14%, var(--paper));
+  --pos-wash: color-mix(in srgb, var(--pos) 14%, var(--paper));
+  --neg-wash: color-mix(in srgb, var(--neg) 15%, var(--paper));
+  --warn-wash: color-mix(in srgb, var(--warn) 16%, var(--paper));
+  /* strong fill (primary buttons, active nav, logo) + feature/hero cards */
+  --solid: #1d1d1f;
+  --on-solid: #ffffff;
+  --feature: #1d1d1f;
+  --feature-ink: #ffffff;
+  --mono: 'Spline Sans Mono', ui-monospace, monospace;
+  --sans: 'Public Sans', system-ui, sans-serif;
+}
+[data-theme='dark'] {
+  --paper: #1c1c21;
+  --bg: #131316;
+  --panel: #232329;
+  --panel-2: #2d2d35;
+  --ink: #f2f2ef;
+  --ink-soft: #a8a8b0;
+  --ink-faint: #74747d;
+  --line: #34343d;
+  --line-soft: #292930;
+  --pos: #54c389;
+  --neg: #e3795f;
+  --warn: #d8a747;
+  --solid: #f1f1ee;
+  --on-solid: #19191c;
+  --feature: #26262d;
+  --feature-ink: #ffffff;
+}
+
+/* ---- Base : raccorde le document aux tokens (le wireframe le faisait via .wf) ---- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease;
+}
+
+/* Tous les chiffres / montants en police mono (cf. CLAUDE.md). */
+.mono {
+  font-family: var(--mono);
+}
+
+/* ---- Liquid Glass skin (toggle via data-glass="on") ----
+   Copié à l'identique du wireframe ; s'appliquera aux classes .wf / .wf-card…
+   une fois le shell et les composants portés (Phase 1). */
+[data-glass='on'] .wf {
+  background: var(--bg) !important;
+}
+[data-glass='on'] .wf-card,
+[data-glass='on'] .field,
+[data-glass='on'] .inp,
+[data-glass='on'] .ask,
+[data-glass='on'] .seg {
+  background: color-mix(in srgb, var(--paper) 48%, transparent) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  backdrop-filter: blur(20px) saturate(165%);
+  border-color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+}
+[data-glass='on'] .wf-card {
+  box-shadow:
+    0 10px 34px rgba(18, 18, 38, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+[data-glass='on'] .wf-card.soft {
+  background: color-mix(in srgb, var(--paper) 34%, transparent) !important;
+}
+[data-glass='on'] .wf > aside,
+[data-glass='on'] .wf > main > header,
+[data-glass='on'] .tabbar {
+  background: color-mix(in srgb, var(--paper) 42%, transparent) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+  backdrop-filter: blur(26px) saturate(165%);
+  border-color: color-mix(in srgb, #ffffff 42%, transparent) !important;
+}
+[data-glass='on'] .drawer,
+[data-glass='on'] .sheet {
+  background: color-mix(in srgb, var(--paper) 56%, transparent) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+}
+[data-glass='on'] .feature-card,
+[data-glass='on'] .pillnav {
+  background: color-mix(in srgb, var(--feature) 58%, transparent) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
