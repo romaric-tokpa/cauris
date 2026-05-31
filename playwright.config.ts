@@ -53,7 +53,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev -- --port 5173 --strictPort',
+    // Le smoke test n'a besoin que du front (pas du backend Hono).
+    command: 'npm run dev:web -- --port 5173 --strictPort',
     url: BASE_URL,
     reuseExistingServer: true,
     timeout: 120_000,
