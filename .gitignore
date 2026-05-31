@@ -17,6 +17,12 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Wireframe source bundle (référence locale, non versionnée)
 cauris.zip
 

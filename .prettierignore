@@ -2,6 +2,8 @@ dist
 node_modules
 package-lock.json
 *.tsbuildinfo
+test-results
+playwright-report
 
 # Référence de fidélité — ne pas modifier
 design/wireframe
