@@ -34,6 +34,15 @@ export function listAccounts(userId: string) {
     .orderBy(asc(accounts.sort))
 }
 
+/* ───────────────────────────── Catégories ────────────────────────────── */
+export function listCategories(userId: string) {
+  return db
+    .select()
+    .from(categories)
+    .where(eq(categories.userId, userId))
+    .orderBy(asc(categories.sort))
+}
+
 /* ──────────────────────────── Transactions ───────────────────────────── */
 export interface TransactionFilter {
   type?: string // 'Dépense' | 'Revenu' | 'Transfert' | 'Récurrente'
@@ -184,6 +193,20 @@ export async function getMonthlySummary(userId: string, month: string) {
     .where(and(eq(monthlySummaries.userId, userId), eq(monthlySummaries.month, month)))
     .limit(1)
   return rows[0] ?? null
+}
+
+/** Série des résumés mensuels (trend cashflow 6 mois), ordre chronologique. */
+export function listMonthlySummaries(userId: string) {
+  return db
+    .select({
+      month: monthlySummaries.month,
+      revenus: monthlySummaries.revenus,
+      depenses: monthlySummaries.depenses,
+      epargne: monthlySummaries.epargne,
+    })
+    .from(monthlySummaries)
+    .where(eq(monthlySummaries.userId, userId))
+    .orderBy(asc(monthlySummaries.month))
 }
 
 /** Répartition des dépenses par catégorie pour le mois (donut). */
