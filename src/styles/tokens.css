@@ -40,6 +40,9 @@
   --on-accent-rgb: 255, 255, 255;
   --scrim: rgba(25, 22, 18, 0.3);
   --shadow-rgb: 0, 0, 0;
+  /* vert « positif » lisible sur la feature-card sombre (delta hero mobile).
+     Surface toujours sombre → une seule valeur, thème-agnostique (cf. --on-accent). */
+  --pos-on-feature: #9fe0bf;
 
   /* Palette catégories (donut/pastilles d'analyse). Slots `cat-N` liés à une
      catégorie (categories.color_token) — le rendu lit toujours var(--cat-N),

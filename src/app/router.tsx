@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { AppShell } from '../components/shell'
 import { NAV_ALL } from '../components/shell/nav'
 import { ModulePage } from '../screens/ModulePage'
+import { Dashboard } from '../screens/dashboard'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
 import { Signup } from '../screens/auth/Signup'
@@ -13,7 +14,7 @@ import { RequireAuth, RequireGuest, RequireOnboarding } from './guards'
 // Modules en routes enfants de l'AppShell, dérivés de NAV (libellés 1:1 du wireframe).
 const moduleRoutes: RouteObject[] = NAV_ALL.map((n) =>
   n.end
-    ? { index: true, element: <ModulePage title={n.label} /> }
+    ? { index: true, element: <Dashboard /> }
     : { path: n.path.slice(1), element: <ModulePage title={n.label} /> },
 )
 

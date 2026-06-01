@@ -56,3 +56,32 @@ export function formatDateFR(
   const showYear = options.withYear === true || date.getFullYear() !== reference.getFullYear()
   return showYear ? `${day} ${month} ${date.getFullYear()}` : `${day} ${month}`
 }
+
+/* ── Helpers ISO (parse direct des composantes : sans fuseau ni « now », donc
+   déterministes — adaptés aux dates serveur `YYYY-MM-DD` / `YYYY-MM`). ── */
+
+const MONTHS_FR_SHORT = [
+  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+  'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+] // prettier-ignore
+
+// Libellés courts d'axe de graphe (3 lettres, 1:1 du wireframe : Déc/Jan/Fév…).
+const MONTHS_FR_CHART = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'] // prettier-ignore
+
+/** `2026-05-31` → `31 mai` (jour sans zéro, mois abrégé, pas d'année). */
+export function formatIsoDay(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${d} ${MONTHS_FR_SHORT[m - 1] ?? ''}`.trim()
+}
+
+/** `2026-05` → `Mai` (libellé court d'axe, 1:1 du wireframe). */
+export function formatIsoMonthLabel(iso: string): string {
+  const m = Number(iso.split('-')[1])
+  return MONTHS_FR_CHART[m - 1] ?? iso
+}
+
+/** `2026-05` → `avril` (mois précédent, minuscule, pour « vs avril »). */
+export function prevMonthLong(iso: string): string {
+  const m = Number(iso.split('-')[1])
+  return MONTHS_FR[(m - 2 + 12) % 12]
+}

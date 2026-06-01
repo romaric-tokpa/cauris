@@ -57,10 +57,12 @@ export default defineConfig({
     },
   ],
 
-  // Les deux serveurs (Hono d'abord, puis Vite qui le proxifie).
+  // Les deux serveurs (Hono d'abord, puis Vite qui le proxifie). Le backend seede
+  // d'abord les données démo d'Aïcha (idempotent) → le dashboard rend les chiffres
+  // fixtures sous la session e2e d'Aïcha.
   webServer: [
     {
-      command: 'npm run dev:server',
+      command: 'npm run db:seed && npm run dev:server',
       url: 'http://localhost:8787/health',
       reuseExistingServer: true,
       timeout: 120_000,

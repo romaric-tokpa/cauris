@@ -3,32 +3,21 @@ import { test as setup, expect } from '@playwright/test'
 import { AUTH_FILE } from './constants'
 
 /**
- * Crée (ou réutilise) une session de test authentifiée + onboardée, et sauvegarde
- * les cookies dans un storageState réutilisé par les projets `smoke` et `fidelity`.
- * Les gardes redirigent `/` → `/auth` sans session : ce setup permet aux tests du
- * shell de rendre l'app authentifiée.
+ * Session de test authentifiée = l'utilisatrice démo **Aïcha** (`aicha@cauris.demo`),
+ * créée + onboardée + seedée par `db:seed` (lancé par le webServer, cf.
+ * playwright.config.ts). Sa session sert de contexte aux projets `smoke` et
+ * `fidelity` : le dashboard rend ainsi les chiffres fixtures du wireframe.
  */
-const EMAIL = 'e2e@cauris.test'
-const PASSWORD = 'e2e-password-123'
+const EMAIL = 'aicha@cauris.demo'
+const PASSWORD = 'aicha-demo-2026'
 const ORIGIN = 'http://localhost:5173'
 
 setup('authenticate', async ({ request }) => {
-  // Sign-up, ou sign-in si l'utilisateur de test existe déjà (db locale persistante).
-  const signUp = await request.post('/api/auth/sign-up/email', {
-    data: { name: 'E2E User', email: EMAIL, password: PASSWORD },
+  const signIn = await request.post('/api/auth/sign-in/email', {
+    data: { email: EMAIL, password: PASSWORD },
     headers: { origin: ORIGIN },
   })
-  if (!signUp.ok()) {
-    const signIn = await request.post('/api/auth/sign-in/email', {
-      data: { email: EMAIL, password: PASSWORD },
-      headers: { origin: ORIGIN },
-    })
-    expect(signIn.ok()).toBeTruthy()
-  }
-
-  // Marque l'onboarding terminé (idempotent) → la garde laisse passer vers le shell.
-  const complete = await request.post('/api/onboarding/complete', { headers: { origin: ORIGIN } })
-  expect(complete.ok()).toBeTruthy()
+  expect(signIn.ok()).toBeTruthy()
 
   mkdirSync('e2e/.auth', { recursive: true })
   await request.storageState({ path: AUTH_FILE })

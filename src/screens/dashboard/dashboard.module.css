@@ -1,0 +1,402 @@
+/* Dashboard — layout & typo portés 1:1 des wireframes (dashboard-desktop-a.jsx /
+   dashboard-mobile.jsx). Les styles inline du .jsx (grilles, tailles, marges,
+   opacités) vivent ICI ; couleurs via tokens uniquement. Le padding/gap externe
+   est fourni par AppShell `.content` (24/28 desktop · 0 18 84 mobile). */
+
+/* Toggle desktop/mobile aligné sur le breakpoint du shell (901 / 900). */
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+/* Titre de page accessible, toujours présent (e2e + a11y), visuellement masqué. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Petites utilitaires de gap (combinées à .r / .c de components.css). */
+.g3 { gap: 3px; }
+.g6 { gap: 6px; }
+.g8 { gap: 8px; }
+.g9 { gap: 9px; }
+.g10 { gap: 10px; }
+.g11 { gap: 11px; }
+.g12 { gap: 12px; }
+.g14 { gap: 14px; }
+.g18 { gap: 18px; }
+
+/* Pastilles de couleur catégorie (statique par slot → var(--cat-N), jamais inline). */
+.cat1 { background: var(--cat-1); }
+.cat2 { background: var(--cat-2); }
+.cat3 { background: var(--cat-3); }
+.cat4 { background: var(--cat-4); }
+.cat5 { background: var(--cat-5); }
+.cat6 { background: var(--cat-6); }
+
+/* ───────────────────────────── DESKTOP ───────────────────────────── */
+.greeting {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+/* Insights (placeholder soigné — vraie IA en Phase 12) */
+.aiAv {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  border-radius: 8px;
+}
+.insightsBody {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 2px 2px;
+  color: var(--ink-soft);
+}
+.insightsIco {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+.insightsText {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.insightsSoon {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 14px;
+}
+.cardSub {
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.legend {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.swInk { background: var(--ink); }
+.swLine { background: var(--line); }
+
+.donutLegend {
+  flex: 1;
+}
+.legendRow {
+  font-size: 12.5px;
+}
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.triGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 14px;
+}
+.itemHead {
+  margin-bottom: 7px;
+}
+.itemName {
+  font-weight: 600;
+  font-size: 13px;
+}
+.itemSub {
+  font-size: 11px;
+  margin-top: 6px;
+}
+.goalPct {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.txnText {
+  line-height: 1.3;
+  min-width: 0;
+}
+.txnName {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.txnMeta {
+  font-size: 11px;
+}
+.txnAmtCol {
+  align-items: flex-end;
+  margin-left: auto;
+}
+.txnWhen {
+  font-size: 10.5px;
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 14px;
+}
+.comptesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.compteIco {
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.compteText {
+  line-height: 1.25;
+}
+.compteName {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.compteBank {
+  font-size: 10.5px;
+}
+.compteBal {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.pretRow {
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.pretLabel {
+  font-size: 11.5px;
+}
+.pretVal {
+  font-size: 21px;
+  margin-top: 3px;
+}
+.pretRight {
+  align-items: flex-end;
+}
+.pretMens {
+  font-weight: 600;
+  font-size: 14px;
+}
+.pretFoot {
+  font-size: 11px;
+  margin-top: 7px;
+}
+
+/* ───────────────────────────── MOBILE ────────────────────────────── */
+.heroLabel {
+  font-size: 11.5px;
+  opacity: 0.7;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.heroVal {
+  font-size: 30px;
+  margin-top: 8px;
+}
+.heroCur {
+  font-size: 14px;
+  opacity: 0.6;
+}
+.heroDelta {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.heroUp {
+  color: var(--pos-on-feature);
+  font-weight: 700;
+}
+.heroVs {
+  opacity: 0.6;
+}
+
+.miniGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.miniIco {
+  width: 30px;
+  height: 30px;
+}
+.miniLabel {
+  font-size: 11.5px;
+  margin-top: 9px;
+  font-weight: 600;
+}
+.miniVal {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.cardHeadMb {
+  margin-bottom: 10px;
+}
+.cardHeadMb4 {
+  margin-bottom: 4px;
+}
+.cardTitleSm {
+  font-size: 13.5px;
+}
+.chipSm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.linkSm {
+  font-size: 11.5px;
+}
+
+.itemHeadSm {
+  margin-bottom: 6px;
+}
+.itemNameSm {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.goalPctSm {
+  font-size: 11px;
+}
+
+.rowLineSm {
+  padding: 9px 0;
+}
+.rowIcoSm {
+  width: 32px;
+  height: 32px;
+}
+.txnTextSm {
+  line-height: 1.25;
+  min-width: 0;
+}
+.txnNameSm {
+  font-weight: 600;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.txnMetaSm {
+  font-size: 10.5px;
+}
+.rowAmtSm {
+  font-size: 12.5px;
+}
+
+/* ───────────────────────── États (chargement / erreur) ───────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelRow {
+  display: grid;
+  gap: 14px;
+}
+.skelKpis {
+  grid-template-columns: repeat(4, 1fr);
+}
+.skelCard {
+  height: 96px;
+  border-radius: var(--r-card, 16px);
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 220px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (max-width: 900px) {
+  .skelKpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.errorWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  max-width: 360px;
+}
+.errIco {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+.errTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+.errText {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
