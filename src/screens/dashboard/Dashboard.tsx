@@ -1,9 +1,18 @@
 import { Icon } from '../../components/primitives'
 import { Card } from '../../components/ui'
+import { useSession } from '../../lib/auth-client'
+import { useSetPageTitle } from '../../components/shell/pageTitle'
 import { useDashboard } from './useDashboard'
 import { DashboardDesktop } from './DashboardDesktop'
 import { DashboardMobile } from './DashboardMobile'
 import styles from './dashboard.module.css'
+
+/** Prénom = premier mot du `name` Better Auth (« Aïcha Koné » → « Aïcha »). */
+function useGreeting(): string {
+  const { data } = useSession()
+  const prenom = data?.user?.name?.trim().split(/\s+/)[0] ?? ''
+  return prenom ? `Bonjour, ${prenom}` : 'Bonjour'
+}
 
 /** Squelette de chargement (sans titre h1 : l'écran n'est « prêt » qu'au succès). */
 function DashboardSkeleton() {
@@ -44,14 +53,17 @@ function DashboardError({ onRetry }: { onRetry: () => void }) {
  *  Rendu desktop (cockpit A) + mobile togglés par CSS ; un seul fetch, états soignés. */
 export function Dashboard() {
   const { data, isPending, isError, refetch } = useDashboard()
+  const greeting = useGreeting()
+  // Surcharge le titre de la chrome mobile (MobileHeader) : « Bonjour, {prénom} ».
+  useSetPageTitle(greeting)
 
   if (isPending) return <DashboardSkeleton />
   if (isError || !data) return <DashboardError onRetry={() => void refetch()} />
 
   return (
     <>
-      <h1 className={styles.srOnly}>Tableau de bord</h1>
-      <DashboardDesktop d={data} className={styles.desktop} />
+      <h1 className={styles.srOnly}>{greeting}</h1>
+      <DashboardDesktop d={data} greeting={greeting} className={styles.desktop} />
       <DashboardMobile d={data} className={styles.mobile} />
     </>
   )

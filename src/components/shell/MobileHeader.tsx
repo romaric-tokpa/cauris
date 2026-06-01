@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { findNavByPath } from './nav'
+import { usePageTitle } from './pageTitle'
 import styles from './MobileHeader.module.css'
 
 /** App bar mobile — porté 1:1 de MobShell (titre/sous-titre, cloche+dot, avatar,
@@ -16,7 +17,9 @@ export function MobileHeader({
   onBack?: () => void
 }) {
   const { pathname } = useLocation()
-  const title = findNavByPath(pathname)?.label ?? 'Cauris'
+  // Titre fourni par l'écran (ex. « Bonjour, Aïcha ») sinon libellé de la route.
+  const override = usePageTitle()
+  const title = override ?? findNavByPath(pathname)?.label ?? 'Cauris'
   return (
     <div className={`r between ${styles.header} ${className}`}>
       <div className={`r ${styles.left}`}>

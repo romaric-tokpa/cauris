@@ -12,7 +12,15 @@ const fmtPct = (n: number): string => String(n).replace('.', ',')
 
 /** Dashboard desktop (cockpit pattern A) — porté 1:1 de dashboard-desktop-a.jsx,
  *  sans la chrome (sidebar/header) déjà fournie par l'AppShell. */
-export function DashboardDesktop({ d, className = '' }: { d: DashboardData; className?: string }) {
+export function DashboardDesktop({
+  d,
+  greeting,
+  className = '',
+}: {
+  d: DashboardData
+  greeting: string
+  className?: string
+}) {
   const cashflow = d.cashflow.map((c) => ({ m: formatIsoMonthLabel(c.m), rev: c.rev, dep: c.dep }))
   const donutCats = [...d.breakdown]
     .slice(0, 4)
@@ -28,7 +36,7 @@ export function DashboardDesktop({ d, className = '' }: { d: DashboardData; clas
       <div className="r between">
         <div>
           <div className="t-eyebrow">{formatIsoMonthLabel(d.month)} 2026</div>
-          <div className={styles.greeting}>Bonjour, Aïcha</div>
+          <div className={styles.greeting}>{greeting}</div>
         </div>
         <div className={`r ${styles.g10}`}>
           <button type="button" className="btn">
