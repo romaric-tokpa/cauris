@@ -5,6 +5,7 @@ import { ModulePage } from '../screens/ModulePage'
 import { Dashboard } from '../screens/dashboard'
 import { Transactions } from '../screens/transactions'
 import { Budgets, BudgetDetail } from '../screens/budgets'
+import { Objectifs, ObjectifDetail } from '../screens/objectifs'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
 import { Signup } from '../screens/auth/Signup'
@@ -18,11 +19,16 @@ const moduleRoutes: RouteObject[] = NAV_ALL.map((n) => {
   if (n.end) return { index: true, element: <Dashboard /> }
   if (n.path === '/transactions') return { path: 'transactions', element: <Transactions /> }
   if (n.path === '/budgets') return { path: 'budgets', element: <Budgets /> }
+  if (n.path === '/objectifs') return { path: 'objectifs', element: <Objectifs /> }
   return { path: n.path.slice(1), element: <ModulePage title={n.label} /> }
 })
 
-// Détail budget (page pleine) — hors NAV, enfant de l'AppShell (shell persistant).
-const appRoutes: RouteObject[] = [...moduleRoutes, { path: 'budgets/:id', element: <BudgetDetail /> }]
+// Détails (page pleine) — hors NAV, enfants de l'AppShell (shell persistant).
+const appRoutes: RouteObject[] = [
+  ...moduleRoutes,
+  { path: 'budgets/:id', element: <BudgetDetail /> },
+  { path: 'objectifs/:id', element: <ObjectifDetail /> },
+]
 
 export const router = createBrowserRouter([
   // App (shell) — sous garde : authentifié + onboardé.

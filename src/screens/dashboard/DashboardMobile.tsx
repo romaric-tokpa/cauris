@@ -91,13 +91,13 @@ export function DashboardMobile({ d, className = '' }: { d: DashboardData; class
         </div>
         <div className={`c ${styles.g11}`}>
           {d.goals.slice(0, 2).map((o) => (
-            <div key={o.id}>
+            <Link to={`/objectifs/${o.id}`} className="card-link-reset" key={o.id}>
               <div className={`r between ${styles.itemHeadSm}`}>
                 <span className={styles.itemNameSm}>{o.name}</span>
                 <span className={`t-mono t-faint ${styles.goalPctSm}`}>{o.pct}%</span>
               </div>
               <Progress pct={o.pct} tone="ok" />
-            </div>
+            </Link>
           ))}
         </div>
       </Card>

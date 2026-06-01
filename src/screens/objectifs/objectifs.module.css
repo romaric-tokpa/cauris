@@ -1,0 +1,312 @@
+/* Objectifs — layout & typo portés de screens-objectifs.jsx (ObjDetailDesk = détail,
+   ObjMob = liste mobile ; liste desktop EXTRAPOLÉE sobrement de la carte-objectif).
+   Les inline du .jsx → classes ici ; couleurs via tokens uniquement. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.g7 { gap: 7px; }
+.g10 { gap: 10px; }
+.g12 { gap: 12px; }
+.g14 { gap: 14px; }
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+
+/* Action « à venir » (phase ultérieure) : atténuée + curseur non autorisé (honnête). */
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Valeur prévisionnelle en attente (Phase 12) — discrète, non trompeuse. */
+.soonText {
+  font-style: italic;
+}
+
+/* ───────────────────────────── LISTE (grille desktop extrapolée) ───────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.cardHead {
+  margin-bottom: 2px;
+}
+.goalName {
+  font-weight: 700;
+  font-size: 14px;
+}
+.statusText {
+  font-size: 11.5px;
+}
+.donutWrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+.cardFoot {
+  margin-top: 6px;
+}
+.cardMoney {
+  font-size: 12px;
+}
+
+/* ───────────────────────────── LISTE MOBILE (ObjMob 1:1) ───────────────────── */
+.chipSm {
+  font-size: 11.5px;
+  padding: 5px 11px;
+  flex: none;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mobCard {
+  gap: 14px;
+}
+.mobRight {
+  flex: 1;
+  min-width: 0;
+}
+.mobHead {
+  margin-bottom: 7px;
+}
+.mobName {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.mobMoney {
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+/* ───────────────────────────── DÉTAIL ─────────────────────────────────────── */
+.detailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.deskHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.headActions {
+  gap: 10px;
+}
+.mobActions {
+  display: none;
+}
+@media (max-width: 900px) {
+  .deskHead {
+    display: none;
+  }
+  .mobActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* hero : Donut + colonne stats/progress/note */
+.heroCard {
+  gap: 28px;
+}
+.heroRight {
+  flex: 1;
+  min-width: 0;
+}
+.statRow {
+  gap: 0;
+}
+.statDivider {
+  border-left: 1px solid var(--line-soft);
+  padding-left: 20px;
+}
+.progWrap {
+  margin-top: 16px;
+}
+.heroNote {
+  margin-top: 12px;
+}
+@media (max-width: 900px) {
+  .heroCard {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+}
+
+/* AIBanner « Conseil » (placeholder statique — vraie IA Phase 12) */
+.aiAv {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  border-radius: 9px;
+}
+.aiText {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.aiTagOk {
+  color: var(--pos);
+  background: var(--pos-wash);
+  margin-right: 8px;
+}
+.nowrap {
+  white-space: nowrap;
+}
+/* pastille d'icône colorée (historique : versement positif) */
+.histIcoPos {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+
+/* grille 2 colonnes : historique (1.4fr) + projection (1fr) */
+.gridTwo {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .gridTwo {
+    grid-template-columns: 1fr;
+  }
+}
+.histSub {
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.histRowText {
+  line-height: 1.25;
+}
+.histName {
+  font-weight: 600;
+  font-size: 13px;
+}
+.histAcc {
+  font-size: 11px;
+}
+.histRight {
+  align-items: flex-end;
+  margin-left: auto;
+}
+.histAmt {
+  margin: 0;
+}
+.histWhen {
+  font-size: 10.5px;
+}
+
+/* projection : titre + 2 sous-cartes soft */
+.projTitle {
+  margin-bottom: 14px;
+}
+.projCol {
+  gap: 14px;
+}
+.projLabel {
+  font-size: 11.5px;
+}
+.projVal {
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+/* drawer/sheet « Ajouter une contribution » */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.goalSummary {
+  gap: 8px;
+}
+.goalSummaryName {
+  font-weight: 600;
+  font-size: 13px;
+}
+.goalSummaryMeta {
+  font-size: 12px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ───────────────────────── États (chargement / erreur) ────────────────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 120px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 260px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: objShimmer 1.4s infinite;
+}
+@keyframes objShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}

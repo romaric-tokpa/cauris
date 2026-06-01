@@ -85,3 +85,9 @@ export function prevMonthLong(iso: string): string {
   const m = Number(iso.split('-')[1])
   return MONTHS_FR[(m - 2 + 12) % 12]
 }
+
+/** `2026-12-31` → `déc. 2026` (mois abrégé + année, pour « Date cible »). */
+export function formatIsoMonthYear(iso: string): string {
+  const [y, m] = iso.split('-').map(Number)
+  return `${MONTHS_FR_SHORT[m - 1] ?? ''} ${y}`.trim()
+}

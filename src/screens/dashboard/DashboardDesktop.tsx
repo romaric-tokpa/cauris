@@ -176,7 +176,7 @@ export function DashboardDesktop({
           </div>
           <div className={`c ${styles.g12}`}>
             {d.goals.map((o) => (
-              <Link to="/objectifs" className="card-link-reset" key={o.id}>
+              <Link to={`/objectifs/${o.id}`} className="card-link-reset" key={o.id}>
                 <div className={`r between ${styles.itemHead}`}>
                   <span className={styles.itemName}>{o.name}</span>
                   <span className={`t-mono t-muted ${styles.goalPct}`}>{o.pct}%</span>
