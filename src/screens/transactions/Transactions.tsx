@@ -56,10 +56,14 @@ export function Transactions() {
     )
   }
 
-  // Le chip « Mai 2026 » est un VRAI périmètre : la liste + les stats sont scopées
-  // au mois courant (sinon une opération d'un autre mois — ex. Freelance en avril —
-  // fausserait les Entrées/Net). Mai = mois de démo ; convergence avec le dashboard.
-  const list = useTransactions({ ...filters, from: '2026-05-01', to: '2026-05-31' })
+  // Périmètre temporel : honore from/to de l'URL s'ils sont fournis (ex. lien
+  // « Voir les transactions liées » d'un budget → catégorie + bornes du mois), sinon
+  // retombe sur le mois courant. Le chip « Mai 2026 » reste un VRAI périmètre par
+  // défaut (scope liste + stats au mois courant ; sinon une opération d'un autre mois
+  // fausserait Entrées/Net). Convergence avec le dashboard.
+  const from = params.get('from') || '2026-05-01'
+  const to = params.get('to') || '2026-05-31'
+  const list = useTransactions({ ...filters, from, to })
   const accountsQ = useAccounts()
   const categoriesQ = useCategories()
 
