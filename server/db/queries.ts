@@ -195,7 +195,12 @@ export async function getMonthlySummary(userId: string, month: string) {
   return rows[0] ?? null
 }
 
-/** Série des résumés mensuels (trend cashflow 6 mois), ordre chronologique. */
+/**
+ * Façade (suite) : série des résumés mensuels pour le trend cashflow 6 mois,
+ * ordre chronologique. Même encapsulation que `getMonthlySummary` — **basculable
+ * sur `SUM(transactions)` par mois** sans changer signature ni écrans. Seule
+ * porte d'accès aux résumés mensuels : aucun écran/route ne lit la table en direct.
+ */
 export function listMonthlySummaries(userId: string) {
   return db
     .select({
