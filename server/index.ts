@@ -5,6 +5,11 @@ import { eq } from 'drizzle-orm'
 import { client, db } from './db/client'
 import { user } from './db/auth-schema'
 import { auth } from './auth'
+import { getSessionUserId } from './session'
+import { getMonthlySummary } from './db/queries'
+
+// Mois de démonstration (période de réf. produit : Mai 2026 ; le seed s'y arrête).
+const DEMO_MONTH = '2026-05'
 
 /**
  * Backend Cauris (Hono).
@@ -38,10 +43,20 @@ api.get('/health', (c) => c.json({ status: 'ok' }))
 // Marque l'onboarding terminé pour l'utilisateur de la SESSION (seul chemin pour
 // flipper onboarding_complete, cohérent avec input:false côté Better Auth).
 api.post('/onboarding/complete', async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session) return c.json({ error: 'unauthorized' }, 401)
-  await db.update(user).set({ onboardingComplete: true }).where(eq(user.id, session.user.id))
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  await db.update(user).set({ onboardingComplete: true }).where(eq(user.id, userId))
   return c.json({ status: 'ok' })
+})
+
+// Démo bout-en-bout du scoping : renvoie les agrégats du mois pour le user de
+// session (via la façade). Prouve session → user_id → requête scopée. ?month=YYYY-MM.
+api.get('/dashboard/summary', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const month = c.req.query('month') ?? DEMO_MONTH
+  const summary = await getMonthlySummary(userId, month)
+  return c.json({ month, summary })
 })
 
 app.route('/api', api)
