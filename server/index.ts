@@ -95,14 +95,10 @@ api.get('/dashboard', async (c) => {
   const total = accountsRows.reduce((s, a) => s + a.balance, 0)
   const depenses = summary?.depenses ?? 0
 
-  // Delta solde : aucun historique de solde stocké → proxy = évolution m/m des
-  // revenus (le « +3,2 % » du wireframe est illustratif, hors must-match).
-  const idx = months.findIndex((m) => m.month === month)
-  const prev = idx > 0 ? months[idx - 1] : null
+  // Delta solde : valeur EXACTE du wireframe, stockée en dixièmes (32) → % (3,2).
+  // Recopiée, jamais dérivée.
   const soldeDeltaPct =
-    prev && summary && prev.revenus
-      ? Math.round(((summary.revenus - prev.revenus) / prev.revenus) * 1000) / 10
-      : null
+    summary?.balanceDeltaPct != null ? summary.balanceDeltaPct / 10 : null
 
   const cashflow = months.map((m) => ({ m: m.month, rev: m.revenus, dep: m.depenses }))
 

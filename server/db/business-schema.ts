@@ -264,6 +264,9 @@ export const monthlySummaries = sqliteTable(
     revenus: integer('revenus').notNull(),
     depenses: integer('depenses').notNull(),
     epargne: integer('epargne').notNull(),
+    // Évolution du solde m/m, en dixièmes de % (32 = 3,2 %). Valeur EXACTE du
+    // wireframe, recopiée à l'affichage (jamais dérivée). Nullable (mois sans valeur).
+    balanceDeltaPct: integer('balance_delta_pct'),
     ...timestamps(),
   },
   (t) => [

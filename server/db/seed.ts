@@ -592,7 +592,14 @@ async function seed() {
     { userId: uid, month: '2026-02', revenus: 760000, depenses: 700000, epargne: 60000 },
     { userId: uid, month: '2026-03', revenus: 830000, depenses: 620000, epargne: 210000 },
     { userId: uid, month: '2026-04', revenus: 820000, depenses: 580000, epargne: 240000 },
-    { userId: uid, month: '2026-05', revenus: 850000, depenses: 612000, epargne: 238000 },
+    {
+      userId: uid,
+      month: '2026-05',
+      revenus: 850000,
+      depenses: 612000,
+      epargne: 238000,
+      balanceDeltaPct: 32, // +3,2 % (valeur exacte du wireframe, en dixièmes)
+    },
   ])
 
   /* ── category_summaries (catAnalytics, Mai) — couche présentation ── */
@@ -621,6 +628,11 @@ async function seed() {
     'monthly_summaries (Mai)',
     mai.revenus === 850000 && mai.depenses === 612000 && mai.epargne === 238000,
     `rev ${mai.revenus} / dép ${mai.depenses} / épa ${mai.epargne}`,
+  )
+  check(
+    'Delta solde (Mai)',
+    mai.balanceDeltaPct === 32,
+    `${mai.balanceDeltaPct} dixièmes = +3,2 %`,
   )
 
   const cs = await db

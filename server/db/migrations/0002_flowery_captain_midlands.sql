@@ -1,0 +1,1 @@
+ALTER TABLE `monthly_summaries` ADD `balance_delta_pct` integer;

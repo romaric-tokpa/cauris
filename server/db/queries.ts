@@ -188,6 +188,7 @@ export async function getMonthlySummary(userId: string, month: string) {
       revenus: monthlySummaries.revenus,
       depenses: monthlySummaries.depenses,
       epargne: monthlySummaries.epargne,
+      balanceDeltaPct: monthlySummaries.balanceDeltaPct,
     })
     .from(monthlySummaries)
     .where(and(eq(monthlySummaries.userId, userId), eq(monthlySummaries.month, month)))
