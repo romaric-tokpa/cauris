@@ -224,100 +224,76 @@ async function seed() {
     { id: cat.retrait, userId: uid, name: 'Retrait', kind: 'transfer', colorToken: null, sort: 8 },
   ])
 
-  /* ── Transactions (txnsFull) — dates FR → ISO (Mai 2026) ── */
-  await db.insert(transactions).values([
-    {
+  /* ── Transactions — LEDGER de MAI 2026 enrichi (somme EXACTEMENT aux totaux du
+     wireframe : revenus 850 000 ; dépenses 612 000 ventilées par catégorie selon
+     le donut ; transfert −100 000 exclu des revenus/dépenses). Les lignes du
+     wireframe (txnsFull) sont gardées, complétées par des opérations plausibles.
+     NB : « Freelance design » 120 000 est déplacée au 23 AVRIL. RÈGLE assumée :
+     seul le MOIS COURANT (mai) somme/dérive ; les transactions des mois PASSÉS
+     sont ILLUSTRATIVES et ne se somment PAS — l'historique monthly_summaries fait
+     foi pour le trend (monthly_summaries[avril]=820 000 reste autoritaire, non
+     ajusté pour cette ligne). ── */
+  type Acc = keyof typeof acc
+  type Cat = keyof typeof cat
+  interface Seed {
+    l: string
+    a: Acc
+    c: Cat
+    m: number
+    d: string
+    t: string
+    tr?: Acc
+  }
+  const rows: Seed[] = [
+    // — revenus —
+    { l: 'Salaire', a: 'courant', c: 'revenu', m: 850000, d: '2026-05-28', t: 'Revenu' },
+    { l: 'Freelance design', a: 'wave', c: 'revenu', m: 120000, d: '2026-04-23', t: 'Revenu' }, // AVRIL (illustratif)
+    // — transfert (exclu des stats) —
+    { l: 'Transfert épargne', a: 'courant', c: 'transfert', m: -100000, d: '2026-05-26', t: 'Transfert', tr: 'epargne' }, // prettier-ignore
+    // — Alimentation → 171 000 —
+    { l: 'Marché de Cocody', a: 'om', c: 'alimentation', m: -25000, d: '2026-05-31', t: 'Dépense' },
+    { l: 'Supermarché Prosuma', a: 'om', c: 'alimentation', m: -34500, d: '2026-05-21', t: 'Dépense' }, // prettier-ignore
+    { l: 'Marché de Cocody', a: 'om', c: 'alimentation', m: -28000, d: '2026-05-15', t: 'Dépense' },
+    { l: 'Supermarché Prosuma', a: 'om', c: 'alimentation', m: -41500, d: '2026-05-12', t: 'Dépense' }, // prettier-ignore
+    { l: 'Glovo (courses)', a: 'wave', c: 'alimentation', m: -22000, d: '2026-05-09', t: 'Dépense' },
+    { l: 'Boulangerie du coin', a: 'om', c: 'alimentation', m: -20000, d: '2026-05-05', t: 'Dépense' }, // prettier-ignore
+    // — Logement → 135 000 —
+    { l: 'Loyer', a: 'courant', c: 'logement', m: -135000, d: '2026-05-01', t: 'Récurrente' },
+    // — Transport → 116 000 —
+    { l: 'Course Yango', a: 'wave', c: 'transport', m: -6200, d: '2026-05-26', t: 'Dépense' },
+    { l: 'Carburant Total', a: 'courant', c: 'transport', m: -25000, d: '2026-05-20', t: 'Dépense' }, // prettier-ignore
+    { l: 'Course Yango', a: 'om', c: 'transport', m: -4800, d: '2026-05-18', t: 'Dépense' },
+    { l: 'Gbaka + bus', a: 'om', c: 'transport', m: -3000, d: '2026-05-15', t: 'Dépense' },
+    { l: 'Course Yango', a: 'wave', c: 'transport', m: -12000, d: '2026-05-10', t: 'Dépense' },
+    { l: 'Carburant Total', a: 'courant', c: 'transport', m: -15000, d: '2026-05-08', t: 'Dépense' }, // prettier-ignore
+    { l: 'Réparation auto', a: 'courant', c: 'transport', m: -50000, d: '2026-05-06', t: 'Dépense' },
+    // — Factures → 86 000 —
+    { l: 'SODECI — eau', a: 'courant', c: 'factures', m: -18500, d: '2026-05-27', t: 'Dépense' },
+    { l: 'CIE — électricité', a: 'courant', c: 'factures', m: -22000, d: '2026-05-22', t: 'Récurrente' }, // prettier-ignore
+    { l: 'Facture Orange (internet)', a: 'courant', c: 'factures', m: -15500, d: '2026-05-14', t: 'Récurrente' }, // prettier-ignore
+    { l: 'CIE — électricité (régul.)', a: 'courant', c: 'factures', m: -30000, d: '2026-05-03', t: 'Dépense' }, // prettier-ignore
+    // — Loisirs → 55 000 —
+    { l: 'Abonnement Canal+', a: 'courant', c: 'loisirs', m: -15000, d: '2026-05-25', t: 'Récurrente' }, // prettier-ignore
+    { l: 'Restaurant Cocody', a: 'wave', c: 'loisirs', m: -20000, d: '2026-05-17', t: 'Dépense' },
+    { l: 'Cinéma Majestic', a: 'om', c: 'loisirs', m: -16500, d: '2026-05-10', t: 'Dépense' },
+    { l: 'Spotify', a: 'courant', c: 'loisirs', m: -3500, d: '2026-05-12', t: 'Récurrente' },
+    // — Santé → 49 000 —
+    { l: 'Pharmacie Plateau', a: 'wave', c: 'sante', m: -8400, d: '2026-05-24', t: 'Dépense' },
+    { l: 'Pharmacie Plateau', a: 'wave', c: 'sante', m: -22600, d: '2026-05-16', t: 'Dépense' },
+    { l: 'Consultation médicale', a: 'courant', c: 'sante', m: -18000, d: '2026-05-07', t: 'Dépense' }, // prettier-ignore
+  ]
+  await db.insert(transactions).values(
+    rows.map((r) => ({
       userId: uid,
-      accountId: acc.om,
-      categoryId: cat.alimentation,
-      label: 'Marché de Cocody',
-      amount: -25000,
-      occurredAt: '2026-05-31',
-      type: 'Dépense',
-    },
-    {
-      userId: uid,
-      accountId: acc.courant,
-      categoryId: cat.revenu,
-      label: 'Salaire',
-      amount: 850000,
-      occurredAt: '2026-05-28',
-      type: 'Revenu',
-    },
-    {
-      userId: uid,
-      accountId: acc.courant,
-      categoryId: cat.factures,
-      label: 'SODECI — eau',
-      amount: -18500,
-      occurredAt: '2026-05-27',
-      type: 'Dépense',
-    },
-    {
-      userId: uid,
-      accountId: acc.courant,
-      categoryId: cat.transfert,
-      transferAccountId: acc.epargne,
-      label: 'Transfert épargne',
-      amount: -100000,
-      occurredAt: '2026-05-26',
-      type: 'Transfert',
-    },
-    {
-      userId: uid,
-      accountId: acc.wave,
-      categoryId: cat.transport,
-      label: 'Course Yango',
-      amount: -6200,
-      occurredAt: '2026-05-26',
-      type: 'Dépense',
-    },
-    {
-      userId: uid,
-      accountId: acc.courant,
-      categoryId: cat.loisirs,
-      label: 'Abonnement Canal+',
-      amount: -15000,
-      occurredAt: '2026-05-25',
-      type: 'Récurrente',
-    },
-    {
-      userId: uid,
-      accountId: acc.wave,
-      categoryId: cat.sante,
-      label: 'Pharmacie Plateau',
-      amount: -8400,
-      occurredAt: '2026-05-24',
-      type: 'Dépense',
-    },
-    {
-      userId: uid,
-      accountId: acc.wave,
-      categoryId: cat.revenu,
-      label: 'Freelance design',
-      amount: 120000,
-      occurredAt: '2026-05-23',
-      type: 'Revenu',
-    },
-    {
-      userId: uid,
-      accountId: acc.courant,
-      categoryId: cat.factures,
-      label: 'CIE — électricité',
-      amount: -22000,
-      occurredAt: '2026-05-22',
-      type: 'Récurrente',
-    },
-    {
-      userId: uid,
-      accountId: acc.om,
-      categoryId: cat.alimentation,
-      label: 'Supermarché Prosuma',
-      amount: -34500,
-      occurredAt: '2026-05-21',
-      type: 'Dépense',
-    },
-  ])
+      accountId: acc[r.a],
+      categoryId: cat[r.c],
+      transferAccountId: r.tr ? acc[r.tr] : null,
+      label: r.l,
+      amount: r.m,
+      occurredAt: r.d,
+      type: r.t,
+    })),
+  )
 
   /* ── Budgets (budgetsFull) — Mai 2026 ── */
   await db.insert(budgets).values([
@@ -618,6 +594,40 @@ async function seed() {
   const accs = await db.select().from(accounts).where(eq(accounts.userId, uid))
   const totalBal = accs.reduce((s, a) => s + a.balance, 0)
   check('Solde total (Σ accounts.balance)', totalBal === 2480000, `${totalBal} = 2 480 000`)
+
+  /* — DÉRIVABILITÉ : le ledger de MAI somme EXACTEMENT aux totaux (preuve que la
+     façade pourra dériver). Transferts exclus des revenus/dépenses. — */
+  const all = await db.select().from(transactions).where(eq(transactions.userId, uid))
+  const may = all.filter((t) => t.occurredAt.startsWith('2026-05'))
+  const sum = (rows: typeof may) => rows.reduce((s, t) => s + t.amount, 0)
+  const income = sum(may.filter((t) => t.type !== 'Transfert' && t.amount > 0))
+  const expense = sum(may.filter((t) => t.type !== 'Transfert' && t.amount < 0))
+  check('Ledger mai — revenus (Σ hors transfert)', income === 850000, `${income} = 850 000`)
+  check('Ledger mai — dépenses (Σ hors transfert)', expense === -612000, `${expense} = -612 000`)
+  check('Ledger mai — épargne dérivée', income + expense === 238000, `${income + expense} = 238 000`)
+
+  const byCat = (id: string) => sum(may.filter((t) => t.categoryId === id && t.amount < 0))
+  const targets: [string, string, number][] = [
+    ['Alimentation', cat.alimentation, -171000],
+    ['Transport', cat.transport, -116000],
+    ['Logement', cat.logement, -135000],
+    ['Factures', cat.factures, -86000],
+    ['Loisirs', cat.loisirs, -55000],
+    ['Santé', cat.sante, -49000],
+  ]
+  let catTotal = 0
+  for (const [name, id, target] of targets) {
+    const v = byCat(id)
+    catTotal += v
+    check(`Ledger mai — catégorie ${name}`, v === target, `${v} = ${target}`)
+  }
+  check('Ledger mai — Σ catégories', catTotal === -612000, `${catTotal} = -612 000`)
+  const transfers = sum(may.filter((t) => t.type === 'Transfert'))
+  check(
+    'Ledger mai — transferts exclus',
+    transfers === -100000,
+    `transfert ${transfers} hors revenus/dépenses`,
+  )
 
   const ms = await db
     .select()
