@@ -272,6 +272,12 @@ export const monthlySummaries = sqliteTable(
   ],
 )
 
+/**
+ * Dépense TOTALE par catégorie sur le mois (couche de présentation).
+ * NB : `category_summaries.amount` (dépense totale catégorie) ≠ `budgets.spent`
+ * (consommé sur l'enveloppe budgétée, plafonné par `cap`) — DEUX MESURES
+ * DISTINCTES du wireframe, pas une incohérence (`amount ≥ spent`).
+ */
 export const categorySummaries = sqliteTable(
   'category_summaries',
   {
