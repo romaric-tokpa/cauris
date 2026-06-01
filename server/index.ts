@@ -14,6 +14,7 @@ import {
   listCategories,
   listBudgets,
   getBudgetById,
+  getAccountById,
   listGoals,
   listContributions,
   getGoalById,
@@ -324,16 +325,53 @@ async function parseTxnInput(
   return { input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt } }
 }
 
-// Listes de référence (sélecteurs du formulaire). Scopées.
+/**
+ * Projection d'un compte vers le front. SÉCURITÉ : le solde RÉEL d'un compte BLOQUÉ
+ * n'est JAMAIS sérialisé (`balance: null`) — le front rend « ••• ••• » à partir du
+ * flag `blocked`, jamais d'un masquage cosmétique. (CLAUDE.md : solde masqué.)
+ */
+type AccountRow = Awaited<ReturnType<typeof listAccounts>>[number]
+function maskAccount(a: AccountRow) {
+  return {
+    id: a.id,
+    name: a.name,
+    bank: a.bank,
+    type: a.type,
+    accountNumber: a.accountNumber,
+    blocked: a.blocked,
+    balance: a.blocked ? null : a.balance,
+  }
+}
+
+// Liste des comptes (soldes bloqués masqués) + patrimoine agrégé serveur. Scopée.
+// Sert AUSSI de liste de référence aux sélecteurs de formulaire (id/name).
 api.get('/accounts', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  return c.json({ accounts: await listAccounts(userId) })
+  const [rows, months] = await Promise.all([listAccounts(userId), listMonthlySummaries(userId)])
+  // Patrimoine total = Σ des soldes RÉELS (incl. bloqué), calculé SERVEUR : le total
+  // inclut Wave (fidèle au wireframe) sans jamais exposer son solde individuel.
+  const patrimoineTotal = rows.reduce((s, a) => s + a.balance, 0)
+  // Spark = épargne CUMULÉE des mois — proxy RÉEL de la TENDANCE du patrimoine (pas
+  // les soldes absolus mensuels ; le vrai historique de solde = chantier dédié futur).
+  let cum = 0
+  const patrimoineSpark = months.map((m) => (cum += m.epargne ?? 0))
+  return c.json({ accounts: rows.map(maskAccount), patrimoineTotal, patrimoineSpark })
 })
 api.get('/categories', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   return c.json({ categories: await listCategories(userId) })
+})
+
+// Détail compte (solde bloqué masqué) + dernières opérations. Appartenance → 404.
+api.get('/accounts/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const a = await getAccountById(userId, c.req.param('id'))
+  if (!a) return c.json({ error: 'not found' }, 404)
+  const recentTransactions = await listTransactionsDetailed(userId, { accountId: a.id, limit: 5 })
+  return c.json({ account: maskAccount(a), recentTransactions })
 })
 
 // Liste filtrée + stats d'en-tête.

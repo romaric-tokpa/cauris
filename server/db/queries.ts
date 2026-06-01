@@ -35,6 +35,17 @@ export function listAccounts(userId: string) {
     .orderBy(asc(accounts.sort))
 }
 
+/** Détail d'un compte du user (null si inexistant / à autrui). Ligne brute : le
+ *  masquage du solde (compte bloqué) est appliqué au niveau ROUTE (maskAccount). */
+export async function getAccountById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
 /* ───────────────────────────── Catégories ────────────────────────────── */
 export function listCategories(userId: string) {
   return db
