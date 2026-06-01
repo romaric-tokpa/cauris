@@ -1,0 +1,203 @@
+/* Transactions — layout & typo portés 1:1 de screens-transactions.jsx (TxnDesk /
+   TxnMob / TxnAddMob). Inline du .jsx → classes ici ; couleurs via tokens.
+   Padding/gap externe fourni par AppShell `.content`. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.g6 { gap: 6px; }
+.g7 { gap: 7px; }
+.g8 { gap: 8px; }
+.g10 { gap: 10px; }
+.g12 { gap: 12px; }
+
+/* ───────────────────────────── DESKTOP ───────────────────────────── */
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+
+.filterStrip {
+  margin-top: 2px;
+}
+.searchField {
+  width: 280px;
+}
+
+/* chip enveloppant un <select> natif invisible (garde le look chip + chevron) */
+.selectWrap {
+  position: relative;
+}
+.selectNative {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+}
+
+.statStrip {
+  gap: 0;
+}
+.statDivider {
+  border-left: 1px solid var(--line-soft);
+  padding-left: 20px;
+}
+
+.txnTable {
+  overflow: hidden;
+}
+.txnTr {
+  cursor: pointer;
+}
+.tdDate {
+  white-space: nowrap;
+  width: 70px;
+}
+.txnIco {
+  width: 30px;
+  height: 30px;
+}
+.txnName {
+  font-weight: 600;
+}
+.tdAmount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────── MOBILE ────────────────────────────── */
+.mobChips {
+  overflow: hidden;
+}
+.mobChip {
+  font-size: 11.5px;
+  padding: 5px 11px;
+  flex: none;
+}
+.mobStatVal {
+  font-size: 16px;
+}
+.groupHead {
+  margin-bottom: 4px;
+}
+.groupHeadLater {
+  margin: 12px 0 4px;
+}
+.mobRow {
+  padding: 10px 0;
+}
+.mobRowIco {
+  width: 34px;
+  height: 34px;
+}
+.mobRowText {
+  line-height: 1.25;
+  min-width: 0;
+}
+.mobRowName {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobRowSub {
+  font-size: 11px;
+}
+.mobRowAmt {
+  font-size: 13px;
+}
+
+/* ───────────────────────────── FORMULAIRE ────────────────────────── */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.danger {
+  color: var(--neg);
+}
+
+/* ───────────────────────── États (chargement / vide / erreur) ────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 56px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 320px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: txnShimmer 1.4s infinite;
+}
+@keyframes txnShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}

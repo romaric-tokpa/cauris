@@ -264,6 +264,18 @@ async function parseTxnInput(
   return { input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt } }
 }
 
+// Listes de référence (sélecteurs du formulaire). Scopées.
+api.get('/accounts', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  return c.json({ accounts: await listAccounts(userId) })
+})
+api.get('/categories', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  return c.json({ categories: await listCategories(userId) })
+})
+
 // Liste filtrée + stats d'en-tête.
 api.get('/transactions', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
