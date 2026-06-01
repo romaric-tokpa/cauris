@@ -15,6 +15,9 @@ import {
   listBudgets,
   getBudgetById,
   listGoals,
+  listContributions,
+  getGoalById,
+  createContribution,
   listLoans,
   listNotifications,
   listTransactions,
@@ -398,6 +401,105 @@ api.delete('/transactions/:id', async (c) => {
   if (!existing) return c.json({ error: 'not found' }, 404)
   await deleteTransaction(userId, id)
   return c.json({ status: 'ok' })
+})
+
+/* ───────────────────────────────── Objectifs ───────────────────────────────
+ * Lecture (liste + détail avec historique) + ajout de contribution. Scopées session.
+ * Une contribution incrémente goals.current_amount de façon ATOMIQUE (et ne touche
+ * PAS le solde du compte source — dette assumée Phase 7, cf. createContribution).
+ * La CRÉATION / ÉDITION d'objectif est DIFFÉRÉE (target_date/target_amount modélisés
+ * et lus, mais leur saisie exige un écran absent du wireframe — non inventé ici). */
+
+// Jour de référence produit (currentDate) — borne le statut « En retard ».
+const TODAY = '2026-06-01'
+
+type GoalStatus = 'Atteint' | 'En retard' | 'En cours'
+/** pct/reste/statut d'un objectif — dérivés (current_amount stocké fait foi). */
+function goalMeta(g: { currentAmount: number; targetAmount: number; targetDate: string | null }): {
+  pct: number
+  reste: number
+  status: GoalStatus
+} {
+  const pct = g.targetAmount ? Math.floor((g.currentAmount / g.targetAmount) * 100) : 0
+  const reste = Math.max(0, g.targetAmount - g.currentAmount)
+  const status: GoalStatus =
+    pct >= 100 ? 'Atteint' : g.targetDate && g.targetDate < TODAY ? 'En retard' : 'En cours'
+  return { pct, reste, status }
+}
+
+/** Valide une contribution + vérifie l'appartenance du compte source. */
+async function parseContributionInput(
+  userId: string,
+  goalId: string,
+  body: unknown,
+): Promise<{ input: Parameters<typeof createContribution>[1] } | { error: string }> {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const amount = b.amount
+  if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0)
+    return { error: 'Montant : entier FCFA strictement positif requis.' }
+
+  const occurredAt = b.occurredAt
+  if (typeof occurredAt !== 'string' || !ISO_DATE.test(occurredAt))
+    return { error: 'Date invalide (AAAA-MM-JJ).' }
+
+  // Compte source : optionnel mais, si fourni, doit appartenir au user.
+  let accountId: string | null = null
+  if (b.accountId != null && b.accountId !== '') {
+    if (typeof b.accountId !== 'string' || !(await userOwnsAccount(userId, b.accountId)))
+      return { error: 'Compte invalide ou non autorisé.' }
+    accountId = b.accountId
+  }
+  return { input: { goalId, accountId, amount, occurredAt } }
+}
+
+// Liste des objectifs (pct/reste/statut dérivés).
+api.get('/goals', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const rows = await listGoals(userId)
+  const goals = rows.map((g) => ({
+    id: g.id,
+    name: g.name,
+    currentAmount: g.currentAmount,
+    targetAmount: g.targetAmount,
+    targetDate: g.targetDate,
+    ...goalMeta(g),
+  }))
+  return c.json({ goals })
+})
+
+// Détail : objectif + historique des contributions. Appartenance → 404.
+api.get('/goals/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const g = await getGoalById(userId, c.req.param('id'))
+  if (!g) return c.json({ error: 'not found' }, 404)
+  const [contributions] = await Promise.all([listContributions(userId, g.id)])
+  const goal = {
+    id: g.id,
+    name: g.name,
+    currentAmount: g.currentAmount,
+    targetAmount: g.targetAmount,
+    targetDate: g.targetDate,
+    ...goalMeta(g),
+  }
+  return c.json({ goal, contributions })
+})
+
+// Ajout d'une contribution : crée la ligne ET fait progresser l'objectif (atomique).
+api.post('/goals/:id/contributions', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const goalId = c.req.param('id')
+  const goal = await getGoalById(userId, goalId)
+  if (!goal) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseContributionInput(userId, goalId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const { contribution, goal: updated } = await createContribution(userId, parsed.input)
+  return c.json({ contribution, goal: { ...updated, ...goalMeta(updated) } }, 201)
 })
 
 app.route('/api', api)

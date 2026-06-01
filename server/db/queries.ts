@@ -260,6 +260,48 @@ export function listContributions(userId: string, goalId: string) {
     .orderBy(desc(contributions.occurredAt))
 }
 
+/** Détail d'un objectif du user (null si inexistant / à autrui). Pattern `getBudgetById`. */
+export async function getGoalById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Entrée d'écriture d'une contribution (montant entier FCFA > 0, validé par l'appelant). */
+export interface ContributionWriteInput {
+  goalId: string
+  accountId: string | null
+  amount: number
+  occurredAt: string
+}
+
+/**
+ * Ajoute une contribution À UN objectif du user et fait progresser l'objectif, de
+ * façon ATOMIQUE : insère la ligne d'historique PUIS incrémente `goals.current_amount`
+ * (scopé `and(id, userId)`). Renvoie la contribution + l'objectif mis à jour.
+ *
+ * NB Phase 7 (dette assumée, documentée) : on n'altère PAS `accounts.balance` du compte
+ * source — pas de double-écriture comptable ici (cf. dette agrégats). `current_amount`
+ * reste la source de vérité de la progression ; `contributions` = historique des versements.
+ */
+export async function createContribution(userId: string, input: ContributionWriteInput) {
+  return db.transaction(async (tx) => {
+    const [contribution] = await tx
+      .insert(contributions)
+      .values({ userId, ...input })
+      .returning()
+    const [goal] = await tx
+      .update(goals)
+      .set({ currentAmount: sql`${goals.currentAmount} + ${input.amount}` })
+      .where(and(eq(goals.id, input.goalId), eq(goals.userId, userId)))
+      .returning()
+    return { contribution, goal }
+  })
+}
+
 /* ──────────────────────────────── Prêts ──────────────────────────────── */
 export function listLoans(userId: string) {
   return db.select().from(loans).where(eq(loans.userId, userId)).orderBy(asc(loans.createdAt))
