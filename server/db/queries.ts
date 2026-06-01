@@ -226,6 +226,27 @@ export function listBudgets(userId: string, period?: string) {
     .orderBy(desc(budgets.spent))
 }
 
+/** Détail d'un budget du user (null si inexistant / à autrui). Jointure catégorie
+ *  pour nom + token couleur, comme `listBudgets`. Pattern scopé de `getTransactionById`. */
+export async function getBudgetById(userId: string, id: string) {
+  const rows = await db
+    .select({
+      id: budgets.id,
+      categoryId: budgets.categoryId,
+      categoryName: categories.name,
+      colorToken: categories.colorToken,
+      cap: budgets.cap,
+      spent: budgets.spent,
+      txnCount: budgets.txnCount,
+      period: budgets.period,
+    })
+    .from(budgets)
+    .innerJoin(categories, eq(categories.id, budgets.categoryId))
+    .where(and(eq(budgets.id, id), eq(budgets.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
 /* ─────────────────────────────── Objectifs ───────────────────────────── */
 export function listGoals(userId: string) {
   return db.select().from(goals).where(eq(goals.userId, userId)).orderBy(asc(goals.createdAt))

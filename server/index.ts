@@ -13,6 +13,7 @@ import {
   listAccounts,
   listCategories,
   listBudgets,
+  getBudgetById,
   listGoals,
   listLoans,
   listNotifications,
@@ -31,6 +32,17 @@ import {
 
 // Mois de démonstration (période de réf. produit : Mai 2026 ; le seed s'y arrête).
 const DEMO_MONTH = '2026-05'
+
+/**
+ * pct/tone d'un budget — SEULE source des seuils (dashboard + écran Budgets).
+ * `floor` reproduit les % du wireframe (185 000/200 000 = 92,5 % → 92). Tons :
+ * `over` > 100 %, `warn` ≥ 90 %, sinon `ok`.
+ */
+function budgetMeta(spent: number, cap: number): { pct: number; tone: 'over' | 'warn' | 'ok' } {
+  const pct = cap ? Math.floor((spent / cap) * 100) : 0
+  const tone = pct > 100 ? 'over' : pct >= 90 ? 'warn' : 'ok'
+  return { pct, tone }
+}
 
 /**
  * Backend Cauris (Hono).
@@ -121,13 +133,8 @@ api.get('/dashboard', async (c) => {
     trendPct: b.trendPct,
   }))
 
-  const toneOf = (pct: number) => (pct > 100 ? 'over' : pct >= 90 ? 'warn' : 'ok')
   const budgets = budgetRows
-    .map((b) => {
-      // floor : reproduit les % du wireframe (185 000/200 000 = 92,5 % → 92)
-      const pct = b.cap ? Math.floor((b.spent / b.cap) * 100) : 0
-      return { ...b, pct, tone: toneOf(pct) }
-    })
+    .map((b) => ({ ...b, ...budgetMeta(b.spent, b.cap) }))
     .filter((b) => b.tone === 'over' || b.tone === 'warn')
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 3)
@@ -194,6 +201,56 @@ api.get('/dashboard', async (c) => {
     notifications: notifs,
     loan,
   })
+})
+
+/* ───────────────────────────────── Budgets ─────────────────────────────────
+ * Lecture seule (Phase 6). pct/tone via budgetMeta (même logique que le dashboard).
+ * Le DÉTAIL expose DEUX mesures du même mois, distinctes par construction :
+ *  - budget.spent : enveloppe budgétée, STOCKÉE (ne bouge pas aux mutations) ;
+ *  - categoryTotal : dépense TOTALE de la catégorie, DÉRIVÉE du ledger via la façade
+ *    getCategoryBreakdown (bouge aux mutations). Pour Transport : 54 000 vs 116 000.
+ * Scopées session ; le détail vérifie l'appartenance (getBudgetById → 404). */
+
+// Liste des budgets de la période + résumé d'en-tête.
+api.get('/budgets', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const period = c.req.query('period') ?? DEMO_MONTH
+  const rows = await listBudgets(userId, period)
+  const budgets = rows.map((b) => ({ ...b, ...budgetMeta(b.spent, b.cap) }))
+  const totalCap = budgets.reduce((s, b) => s + b.cap, 0)
+  const totalSpent = budgets.reduce((s, b) => s + b.spent, 0)
+  const summary = {
+    totalCap,
+    totalSpent,
+    pct: budgetMeta(totalSpent, totalCap).pct,
+    restant: totalCap - totalSpent,
+    alertCount: budgets.filter((b) => b.tone === 'warn').length, // « N en alerte »
+    overCount: budgets.filter((b) => b.tone === 'over').length, // « Dépassés »
+  }
+  return c.json({ budgets, summary })
+})
+
+// Détail : enveloppe (stockée) + dépense catégorie (dérivée) + transactions liées.
+api.get('/budgets/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const b = await getBudgetById(userId, c.req.param('id'))
+  if (!b) return c.json({ error: 'not found' }, 404)
+
+  // Transactions liées = toutes les opérations de la catégorie sur la période du
+  // budget (bornes du mois). Leur Σ = categoryTotal (cohérence avec la façade).
+  const from = `${b.period}-01`
+  const to = `${b.period}-31`
+  const filter: TransactionFilter = { categoryId: b.categoryId, from, to }
+  const [breakdown, linkedTransactions, linkedStats] = await Promise.all([
+    getCategoryBreakdown(userId, b.period),
+    listTransactionsDetailed(userId, filter),
+    getTransactionStats(userId, filter),
+  ])
+  const categoryTotal = breakdown.find((x) => x.categoryId === b.categoryId)?.amount ?? 0
+  const budget = { ...b, ...budgetMeta(b.spent, b.cap), ecart: b.spent - b.cap }
+  return c.json({ budget, categoryTotal, linkedTransactions, linkedStats })
 })
 
 /* ─────────────────────────── Transactions (CRUD) ───────────────────────────
