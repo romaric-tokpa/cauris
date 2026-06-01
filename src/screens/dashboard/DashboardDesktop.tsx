@@ -153,7 +153,7 @@ export function DashboardDesktop({
           </div>
           <div className={`c ${styles.g12}`}>
             {d.budgets.map((b) => (
-              <Link to="/budgets" className="card-link-reset" key={b.id}>
+              <Link to={`/budgets/${b.id}`} className="card-link-reset" key={b.id}>
                 <div className={`r between ${styles.itemHead}`}>
                   <span className={styles.itemName}>{b.categoryName}</span>
                   <Badge tone={b.tone}>{b.pct}%</Badge>

@@ -93,6 +93,8 @@ export function useTxnMutations() {
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['transactions'] })
     void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    // Le détail budget dérive son total catégorie du ledger → re-dériver après mutation.
+    void qc.invalidateQueries({ queryKey: ['budgets'] })
   }
   const create = useMutation({
     mutationFn: (data: TxnWritePayload) =>

@@ -70,13 +70,13 @@ export function DashboardMobile({ d, className = '' }: { d: DashboardData; class
         </div>
         <div className={`c ${styles.g11}`}>
           {d.budgets.slice(0, 2).map((b) => (
-            <div key={b.id}>
+            <Link to={`/budgets/${b.id}`} className="card-link-reset" key={b.id}>
               <div className={`r between ${styles.itemHeadSm}`}>
                 <span className={styles.itemNameSm}>{b.categoryName}</span>
                 <Badge tone={b.tone}>{b.pct}%</Badge>
               </div>
               <Progress pct={b.pct} tone={b.tone} />
-            </div>
+            </Link>
           ))}
         </div>
       </Card>

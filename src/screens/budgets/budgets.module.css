@@ -1,0 +1,285 @@
+/* Budgets — layout & typo portés 1:1 de screens-budgets.jsx (BudgetDesk /
+   BudgetDetailDesk / BudgetMob). Les inline du .jsx → classes ici ; couleurs via
+   tokens uniquement. Padding/gap externe fourni par AppShell `.content`. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.g7 { gap: 7px; }
+.g10 { gap: 10px; }
+.g12 { gap: 12px; }
+
+/* ───────────────────────────── LISTE DESKTOP ───────────────────────────── */
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+
+/* Action « à venir » (fonctionnalité d'une phase ultérieure) : visiblement
+   atténuée + curseur non autorisé → honnête, pas un bouton actif trompeur. */
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summaryTop {
+  margin-bottom: 12px;
+}
+.summaryLabel {
+  font-size: 12px;
+}
+.summaryVal {
+  font-size: 22px;
+  margin-top: 3px;
+}
+.summaryAside {
+  align-items: flex-end;
+}
+.reste {
+  font-size: 11.5px;
+  margin-top: 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.budHead {
+  margin-bottom: 2px;
+}
+.budIco {
+  width: 34px;
+  height: 34px;
+}
+.budName {
+  font-weight: 700;
+  font-size: 14px;
+}
+.gaugeWrap {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0;
+}
+.budFoot {
+  margin-top: 2px;
+}
+.budMoney {
+  font-size: 12px;
+}
+
+/* ───────────────────────────── DÉTAIL ───────────────────────────── */
+.detailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.deskHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.headActions {
+  gap: 10px;
+}
+.mobActions {
+  display: none;
+}
+@media (max-width: 900px) {
+  .deskHead {
+    display: none;
+  }
+  .mobActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* bandeau d'alerte (pastille d'icône colorée par ton — via tokens) */
+.alertIcoNeg {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+.alertIcoWarn {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+.alertTitle {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.alertSub {
+  font-size: 12px;
+}
+
+/* AIBanner (conseil, placeholder statique — vraie IA Phase 12) */
+.aiAv {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  border-radius: 9px;
+}
+.aiText {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.aiTag {
+  color: var(--warn);
+  background: var(--warn-wash);
+  margin-right: 8px;
+}
+
+/* carte stats (enveloppe — INCHANGÉE) */
+.statRow {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 14px;
+  margin-bottom: 16px;
+}
+.statDivider {
+  border-left: 1px solid var(--line-soft);
+  padding-left: 20px;
+}
+.progFoot {
+  font-size: 11.5px;
+  margin-top: 7px;
+}
+
+/* section transactions liées (porte la distinction enveloppe ≠ catégorie) */
+.linkedCard {
+  overflow: hidden;
+}
+.linkedHead {
+  padding: 18px 18px 14px;
+}
+.headFlush {
+  margin-bottom: 0;
+}
+.cardSub {
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+  max-width: 60ch;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.tdDate {
+  white-space: nowrap;
+  width: 70px;
+}
+.tdAmount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tdName {
+  font-weight: 600;
+}
+.tdChevron {
+  width: 40px;
+}
+
+/* ───────────────────────────── LISTE MOBILE ───────────────────────────── */
+.chipSm {
+  font-size: 11.5px;
+  padding: 5px 11px;
+  flex: none;
+}
+.summaryMobHead {
+  margin-bottom: 9px;
+}
+.summaryMobVal {
+  font-size: 18px;
+  margin-bottom: 9px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.budHeadMob {
+  margin-bottom: 8px;
+}
+.budNameMob {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.budMoneyMob {
+  font-size: 11px;
+  margin-top: 7px;
+}
+
+/* ───────────────────────── États (chargement / vide / erreur) ────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 96px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 280px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: budShimmer 1.4s infinite;
+}
+@keyframes budShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
