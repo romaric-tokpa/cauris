@@ -73,6 +73,10 @@ export async function expectFidelity(
     for (const width of [WIDTHS.mobile, WIDTHS.desktop]) {
       await setWidth(page, width)
       await page.goto(url)
+      // Attendre que l'écran soit prêt (au-delà de l'éventuel écran de chargement
+      // de session des gardes) avant la capture — son spinner animé ne se
+      // stabiliserait jamais.
+      await page.getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' })
       await applyTheme(page, theme)
       await expect(page).toHaveScreenshot(`${name}-${theme}-${width}.png`, opts)
     }

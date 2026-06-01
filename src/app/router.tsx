@@ -8,6 +8,7 @@ import { Signup } from '../screens/auth/Signup'
 import { ForgotPassword } from '../screens/auth/ForgotPassword'
 import { ResetPassword } from '../screens/auth/ResetPassword'
 import { OnboardingWizard } from '../screens/onboarding/OnboardingWizard'
+import { RequireAuth, RequireGuest, RequireOnboarding } from './guards'
 
 // Modules en routes enfants de l'AppShell, dérivés de NAV (libellés 1:1 du wireframe).
 const moduleRoutes: RouteObject[] = NAV_ALL.map((n) =>
@@ -17,24 +18,32 @@ const moduleRoutes: RouteObject[] = NAV_ALL.map((n) =>
 )
 
 export const router = createBrowserRouter([
+  // App (shell) — sous garde : authentifié + onboardé.
   {
     path: '/',
-    element: <AppShell />,
-    children: moduleRoutes,
+    element: <RequireAuth />,
+    children: [{ element: <AppShell />, children: moduleRoutes }],
   },
-  // HORS shell (plein écran). Gardes de route = sous-bloc D.
+  // Auth (plein écran) — sous garde invité.
   {
     path: '/auth',
-    element: <AuthLayout />,
+    element: <RequireGuest />,
     children: [
-      { index: true, element: <Login /> },
-      { path: 'inscription', element: <Signup /> },
-      { path: 'mot-de-passe-oublie', element: <ForgotPassword /> },
-      { path: 'reinitialisation', element: <ResetPassword /> },
+      {
+        element: <AuthLayout />,
+        children: [
+          { index: true, element: <Login /> },
+          { path: 'inscription', element: <Signup /> },
+          { path: 'mot-de-passe-oublie', element: <ForgotPassword /> },
+          { path: 'reinitialisation', element: <ResetPassword /> },
+        ],
+      },
     ],
   },
+  // Onboarding (plein écran) — sous garde : authentifié, pas encore onboardé.
   {
     path: '/onboarding',
-    element: <OnboardingWizard />,
+    element: <RequireOnboarding />,
+    children: [{ index: true, element: <OnboardingWizard /> }],
   },
 ])

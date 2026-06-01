@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { BottomSheet } from '../ui'
+import { signOut } from '../../lib/auth-client'
 import { NAV_ALL } from './nav'
 
 function tabClass({ isActive }: { isActive: boolean }) {
@@ -17,6 +18,12 @@ export function MobileTabBar({ className = '' }: { className?: string }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
   const moreActive = !MAIN_PATHS.includes(pathname)
+
+  const onLogout = async () => {
+    setMoreOpen(false)
+    await signOut()
+    window.location.assign('/auth')
+  }
 
   return (
     <>
@@ -56,6 +63,10 @@ export function MobileTabBar({ className = '' }: { className?: string }) {
               <Icon name={n.icon} size={18} /> {n.label}
             </NavLink>
           ))}
+          <hr className="wf-hr" />
+          <button type="button" className="si2" onClick={() => void onLogout()}>
+            <Icon name="logout" size={18} /> Se déconnecter
+          </button>
         </div>
       </BottomSheet>
     </>

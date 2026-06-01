@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { signUp } from '../../lib/auth-client'
 import { Field, PasswordField, ErrorBanner } from './fields'
@@ -8,7 +8,6 @@ import styles from './auth.module.css'
 /** Inscription — portée 1:1 de screens-auth.jsx (AuthSignup), champs réels + Better Auth.
  *  Le téléphone est collecté (fidélité wireframe) mais non persisté (auth tél. = plugin futur). */
 export function Signup() {
-  const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -23,12 +22,13 @@ export function Signup() {
     setError('')
     setLoading(true)
     const res = await signUp.email({ name, email, password })
-    setLoading(false)
     if (res.error) {
+      setLoading(false)
       setError(res.error.message ?? 'Création du compte impossible. Réessayez.')
       return
     }
-    void navigate('/')
+    // Rechargement complet : la garde repart d'une session fraîche → /onboarding.
+    window.location.assign('/')
   }
 
   return (

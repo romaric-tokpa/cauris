@@ -1,13 +1,15 @@
 import { defineConfig, devices } from '@playwright/test'
+import { AUTH_FILE } from './e2e/constants'
 
 /**
- * Harnais Playwright (Phase 0).
+ * Harnais Playwright.
  *
- * - Navigateur : Chromium uniquement pour l'instant.
- * - Serveur : `vite dev` (port 5173). La Phase 1 pourra basculer sur `vite preview`
- *   (build de prod) pour un rendu encore plus déterministe.
- * - Régression visuelle : seuil SERRÉ documenté ci-dessous et dans
- *   `e2e/helpers/visual.ts`.
+ * - Navigateur : Chromium uniquement.
+ * - Serveurs : front Vite (5173, proxy /api) + backend Hono (8787) — les gardes de
+ *   route exigent une session, donc les deux tournent.
+ * - Auth : un projet `setup` crée une session (storageState) réutilisée par `smoke`
+ *   et `fidelity` (sinon `/` redirige vers `/auth`).
+ * - Régression visuelle : seuil SERRÉ (voir e2e/helpers/visual.ts).
  */
 
 const PORT = 5173
@@ -22,10 +24,6 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  // Seuil de régression visuelle GLOBAL (réutilisé par le helper de fidélité).
-  //  - maxDiffPixelRatio 0.01 → au plus 1 % des pixels peuvent diverger ;
-  //  - threshold 0.15 → faible tolérance colorimétrique par pixel (0 strict … 1 laxiste).
-  // Serré volontairement : le gate doit rester fidèle au pixel près au wireframe.
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
@@ -35,35 +33,43 @@ export default defineConfig({
   },
 
   projects: [
+    // Crée la session de test (cookies → storageState).
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+
+    // Smoke : app authentifiée monte sans erreur.
     {
-      // Tests fonctionnels / smoke.
       name: 'smoke',
       testMatch: /.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
+      dependencies: ['setup'],
     },
+
+    // Gate de RÉGRESSION visuelle : baselines AUTO-GÉNÉRÉES dans e2e/baselines/
+    // (clair+sombre × 390+1440). Suffixe {platform} pour éviter les faux positifs
+    // macOS (dev) ↔ Linux (CI). Les PNG de design/wireframe/screenshots/ NE sont
+    // PAS des baselines (captures canvas desktop, pas de mobile).
     {
-      // Gate de RÉGRESSION visuelle (Phase 1+) : baselines AUTO-GÉNÉRÉES, stockées
-      // dans e2e/baselines/, pour clair+sombre × 390+1440. Elles détectent les
-      // dérives futures du rendu (≠ fidélité au wireframe, qui se fait par revue
-      // humaine du rendu vs composant source .jsx — voir /revue-fidelite).
-      //
-      // Les PNG de design/wireframe/screenshots/ NE sont PLUS des baselines :
-      // captures canvas desktop (chrome/scroll/overlays, pas de mobile), inutilisables
-      // au pixel. Aucun couplage automatique vers ce dossier ici.
-      //
-      // Le suffixe {platform} évite les faux positifs entre macOS (dev) et Linux (CI).
       name: 'fidelity',
       testMatch: /.*\.fidelity\.ts/,
       snapshotPathTemplate: '{testDir}/baselines/{arg}-{platform}{ext}',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
+      dependencies: ['setup'],
     },
   ],
 
-  webServer: {
-    // Le smoke test n'a besoin que du front (pas du backend Hono).
-    command: 'npm run dev:web -- --port 5173 --strictPort',
-    url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  // Les deux serveurs (Hono d'abord, puis Vite qui le proxifie).
+  webServer: [
+    {
+      command: 'npm run dev:server',
+      url: 'http://localhost:8787/health',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm run dev:web -- --port 5173 --strictPort',
+      url: BASE_URL,
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 })

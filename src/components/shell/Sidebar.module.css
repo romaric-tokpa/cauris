@@ -24,3 +24,8 @@
 .userSub {
   font-size: 11px;
 }
+.logoutBtn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+}

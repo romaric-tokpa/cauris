@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { signIn } from '../../lib/auth-client'
 import { Field, PasswordField, ErrorBanner } from './fields'
@@ -7,7 +7,6 @@ import styles from './auth.module.css'
 
 /** Connexion — portée 1:1 de screens-auth.jsx (AuthLogin), champs réels + Better Auth. */
 export function Login() {
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -18,12 +17,14 @@ export function Login() {
     setError('')
     setLoading(true)
     const res = await signIn.email({ email, password })
-    setLoading(false)
     if (res.error) {
+      setLoading(false)
       setError(res.error.message ?? 'Connexion impossible. Vérifiez vos identifiants.')
       return
     }
-    void navigate('/')
+    // Rechargement complet : la garde repart d'une session fraîche (le store useSession
+    // ne se met pas à jour à temps après signin) puis route vers / ou /onboarding.
+    window.location.assign('/')
   }
 
   return (

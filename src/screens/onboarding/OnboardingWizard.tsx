@@ -1,5 +1,4 @@
 import { useEffect, useReducer, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { money } from '../../lib/money'
 import { authClient } from '../../lib/auth-client'
@@ -76,7 +75,6 @@ function load(): WizardState {
 }
 
 export function OnboardingWizard() {
-  const navigate = useNavigate()
   const [state, dispatch] = useReducer(reducer, undefined, load)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -117,7 +115,8 @@ export function OnboardingWizard() {
         return
       }
       localStorage.removeItem(STORAGE_KEY)
-      void navigate('/')
+      // Rechargement complet : la garde repart d'une session fraîche (onboardé) → /.
+      window.location.assign('/')
     } catch {
       setError('Erreur réseau. Réessayez.')
       setSubmitting(false)

@@ -19,8 +19,12 @@ jobs:
       - run: npm run build
 
   e2e:
-    name: E2E (Playwright smoke)
+    name: E2E (Playwright)
     runs-on: ubuntu-latest
+    env:
+      # Auth de test (pas de secret réel ; base SQLite locale éphémère du job).
+      BETTER_AUTH_SECRET: ci-e2e-secret-not-for-production
+      BETTER_AUTH_URL: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,4 +33,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # Crée les tables d'auth dans la base SQLite locale avant de lancer les serveurs.
+      - run: npm run db:migrate
       - run: npm run e2e

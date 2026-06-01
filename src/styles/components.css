@@ -942,6 +942,14 @@ button.tab {
   background: var(--panel-2);
   color: var(--ink);
 }
+/* .si2 porté sur un <button> réel (déconnexion) : reset natif. */
+.set-nav button.si2 {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  font-family: var(--sans);
+  text-align: left;
+}
 
 /* ---- auth / onboarding / states ---- */
 .steps {
