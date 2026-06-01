@@ -1,7 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { Icon } from '../../components/primitives'
 import { money } from '../../lib/money'
-import { authClient } from '../../lib/auth-client'
 import { OnbStep, Choice, ChoiceCard, MoneyInput, ErrorBanner } from './parts'
 import styles from './onboarding.module.css'
 
@@ -105,17 +104,9 @@ export function OnboardingWizard() {
         setSubmitting(false)
         return
       }
-      // CRITIQUE : refetch session fraîche (cache cookie désactivé) et exiger
-      // onboardingComplete=true AVANT de naviguer, sinon boucle de garde (sous-bloc D).
-      const fresh = await authClient.getSession({ query: { disableCookieCache: true } })
-      const user = fresh.data?.user as { onboardingComplete?: boolean } | undefined
-      if (!user?.onboardingComplete) {
-        setError('Session non synchronisée. Réessayez.')
-        setSubmitting(false)
-        return
-      }
       localStorage.removeItem(STORAGE_KEY)
-      // Rechargement complet : la garde repart d'une session fraîche (onboardé) → /.
+      // Rechargement dur (pattern unifié des transitions d'auth) : la garde repart
+      // d'une session fraîche — onboardingComplete=true est lu en base au reboot → /.
       window.location.assign('/')
     } catch {
       setError('Erreur réseau. Réessayez.')
