@@ -561,7 +561,11 @@ async function seed() {
     },
   ])
 
-  /* ── monthly_summaries (trend, ×1000) — couche présentation ── */
+  /* ── monthly_summaries — HISTORIQUE (mois passés) + ligne du mois courant.
+     Les mois PASSÉS portent leurs totaux pleins (source du trend 6 mois). Le MOIS
+     COURANT (MONTH) est désormais DÉRIVÉ par la façade depuis le ledger : sa ligne
+     ne porte donc PLUS de totaux (NULL) — elle ne garde que `balance_delta_pct`
+     (non dérivable, pas d'historique de solde). Voir façade getMonthlySummary. ── */
   await db.insert(monthlySummaries).values([
     { userId: uid, month: '2025-12', revenus: 780000, depenses: 640000, epargne: 140000 },
     { userId: uid, month: '2026-01', revenus: 810000, depenses: 590000, epargne: 220000 },
@@ -570,23 +574,17 @@ async function seed() {
     { userId: uid, month: '2026-04', revenus: 820000, depenses: 580000, epargne: 240000 },
     {
       userId: uid,
-      month: '2026-05',
-      revenus: 850000,
-      depenses: 612000,
-      epargne: 238000,
+      month: MONTH, // mois courant : totaux NULL (dérivés du ledger), delta seul
+      revenus: null,
+      depenses: null,
+      epargne: null,
       balanceDeltaPct: 32, // +3,2 % (valeur exacte du wireframe, en dixièmes)
     },
   ])
 
-  /* ── category_summaries (catAnalytics, Mai) — couche présentation ── */
-  await db.insert(categorySummaries).values([
-    { userId: uid, categoryId: cat.alimentation, month: MONTH, amount: 171000, trendPct: 6 },
-    { userId: uid, categoryId: cat.logement, month: MONTH, amount: 135000, trendPct: 0 },
-    { userId: uid, categoryId: cat.transport, month: MONTH, amount: 116000, trendPct: 14 },
-    { userId: uid, categoryId: cat.factures, month: MONTH, amount: 86000, trendPct: -3 },
-    { userId: uid, categoryId: cat.loisirs, month: MONTH, amount: 55000, trendPct: 2 },
-    { userId: uid, categoryId: cat.sante, month: MONTH, amount: 49000, trendPct: 9 },
-  ])
+  /* ── category_summaries — le donut du MOIS COURANT est DÉRIVÉ du ledger par la
+     façade : aucune ligne du mois courant n'est seedée (la table reste pour de
+     futurs snapshots historiques de mois clôturés). ── */
 
   /* ───────────────── Assertions d'agrégats (échec = throw) ───────────────── */
   console.log('\nVérification des agrégats vs wireframe :')
@@ -629,31 +627,29 @@ async function seed() {
     `transfert ${transfers} hors revenus/dépenses`,
   )
 
+  /* — Mois courant : la ligne monthly_summaries ne porte PLUS de totaux (dérivés
+     du ledger), seulement le delta solde. category_summaries du mois courant
+     supprimées (le donut dérive). On asserte l'ÉTAT « source unique = ledger ». — */
   const ms = await db
     .select()
     .from(monthlySummaries)
     .where(and(eq(monthlySummaries.userId, uid), eq(monthlySummaries.month, MONTH)))
   const mai = ms[0]
   check(
-    'monthly_summaries (Mai)',
-    mai.revenus === 850000 && mai.depenses === 612000 && mai.epargne === 238000,
+    'monthly_summaries (Mai) — totaux NULL (dérivés du ledger)',
+    mai.revenus === null && mai.depenses === null && mai.epargne === null,
     `rev ${mai.revenus} / dép ${mai.depenses} / épa ${mai.epargne}`,
   )
-  check(
-    'Delta solde (Mai)',
-    mai.balanceDeltaPct === 32,
-    `${mai.balanceDeltaPct} dixièmes = +3,2 %`,
-  )
+  check('Delta solde (Mai)', mai.balanceDeltaPct === 32, `${mai.balanceDeltaPct} dixièmes = +3,2 %`)
 
   const cs = await db
     .select()
     .from(categorySummaries)
     .where(and(eq(categorySummaries.userId, uid), eq(categorySummaries.month, MONTH)))
-  const catSum = cs.reduce((s, c) => s + c.amount, 0)
   check(
-    'Σ category_summaries (Mai) = dépenses',
-    catSum === 612000 && catSum === mai.depenses,
-    `${catSum} = 612 000`,
+    'category_summaries (Mai) — aucune (donut dérivé du ledger)',
+    cs.length === 0,
+    `${cs.length} ligne(s)`,
   )
 
   const transportBudget = (

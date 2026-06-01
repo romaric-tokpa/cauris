@@ -7,7 +7,7 @@
  *
  * Les écrans (phases suivantes) consomment CES fonctions, jamais `db` directement.
  */
-import { and, asc, desc, eq, gte, like, lte, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, like, lt, lte, ne, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { db } from './client'
 import {
@@ -307,15 +307,44 @@ export function listRecurrences(userId: string) {
  * POINT CLÉ. Les écrans n'appellent QUE cette façade, jamais les tables
  * `monthly_summaries` / `category_summaries` directement.
  *
- * AUJOURD'HUI : lit les tables summaries (couche de présentation seedée depuis
- * le wireframe — cf. Bloc A). Ces deux fonctions sont **basculables sur
- * `SUM(transactions)` sans changer leur signature ni les écrans** : la dérivation
- * appliquera des règles distinctes pour le budget (filtré sur le périmètre de
- * l'enveloppe) et pour la dépense totale de catégorie (somme brute) — voir la
- * distinction `budget.spent` ≠ `category_summaries.amount` documentée au schéma.
+ * SOURCE UNIQUE = LE LEDGER pour le **mois courant** (`DERIVED_MONTH`). La façade
+ * SOMME `transactions` (transferts exclus) pour ce mois → KPI dépenses + donut
+ * **bougent à chaque mutation** (dette « deux vérités » levée). Les mois PASSÉS
+ * sont lus dans `monthly_summaries` / `category_summaries` (historique autoritaire
+ * du trend ; règle « passé = table, présent = ledger » — cf. seed.ts).
+ *
+ * Non dérivables (restent stockés / hors façade) :
+ *  - `balance_delta_pct` : pas d'historique de solde → lu en table (recopié, pas dérivé).
+ *  - `budget.spent` : enveloppe budgétée indépendante (≠ dépense totale de catégorie ;
+ *    Alimentation spent 185 000 > total 171 000) → reste stocké (cf. listBudgets).
+ *  - `trendPct` du donut : m/m non dérivable sans snapshot du mois précédent → 0
+ *    pour le mois dérivé (le donut n'affiche PAS trendPct ; documenté).
  * ════════════════════════════════════════════════════════════════════════ */
 
-/** Revenus / dépenses / épargne du mois (YYYY-MM). null si non disponible. */
+/** Le seul mois à ledger vivant : ses agrégats sont DÉRIVÉS de `transactions`. */
+export const DERIVED_MONTH = '2026-05'
+
+/** Totaux d'un mois dérivés du ledger (transferts EXCLUS). dépenses ≥ 0. */
+async function deriveMonthTotals(userId: string, month: string) {
+  const rows = await db
+    .select({
+      revenus: sql<number>`coalesce(sum(case when ${transactions.type} != 'Transfert' and ${transactions.amount} > 0 then ${transactions.amount} else 0 end), 0)`,
+      depensesNeg: sql<number>`coalesce(sum(case when ${transactions.type} != 'Transfert' and ${transactions.amount} < 0 then ${transactions.amount} else 0 end), 0)`,
+    })
+    .from(transactions)
+    .where(and(eq(transactions.userId, userId), like(transactions.occurredAt, `${month}-%`)))
+  const revenus = rows[0].revenus
+  const depenses = -rows[0].depensesNeg // somme des négatifs → dépense positive
+  return { revenus, depenses, epargne: revenus - depenses }
+}
+
+/**
+ * Revenus / dépenses / épargne du mois (YYYY-MM). Forme : `{ month, revenus,
+ * depenses, epargne, balanceDeltaPct } | null`.
+ * - Mois courant (`DERIVED_MONTH`) : totaux dérivés du ledger ; `balanceDeltaPct`
+ *   lu en table (non dérivable). Mois « hybride » : NULL en table tolérés.
+ * - Mois passés : ligne historique de `monthly_summaries` (totaux pleins).
+ */
 export async function getMonthlySummary(userId: string, month: string) {
   const rows = await db
     .select({
@@ -328,17 +357,23 @@ export async function getMonthlySummary(userId: string, month: string) {
     .from(monthlySummaries)
     .where(and(eq(monthlySummaries.userId, userId), eq(monthlySummaries.month, month)))
     .limit(1)
-  return rows[0] ?? null
+  const row = rows[0] ?? null
+
+  if (month === DERIVED_MONTH) {
+    const totals = await deriveMonthTotals(userId, month)
+    return { month, ...totals, balanceDeltaPct: row?.balanceDeltaPct ?? null }
+  }
+  return row
 }
 
 /**
  * Façade (suite) : série des résumés mensuels pour le trend cashflow 6 mois,
- * ordre chronologique. Même encapsulation que `getMonthlySummary` — **basculable
- * sur `SUM(transactions)` par mois** sans changer signature ni écrans. Seule
- * porte d'accès aux résumés mensuels : aucun écran/route ne lit la table en direct.
+ * ordre chronologique. Mois passés = ligne historique ; mois courant = point
+ * DÉRIVÉ du ledger (sa ligne table porte des totaux NULL). Seule porte d'accès
+ * aux résumés mensuels : aucun écran/route ne lit la table en direct.
  */
-export function listMonthlySummaries(userId: string) {
-  return db
+export async function listMonthlySummaries(userId: string) {
+  const rows = await db
     .select({
       month: monthlySummaries.month,
       revenus: monthlySummaries.revenus,
@@ -348,10 +383,40 @@ export function listMonthlySummaries(userId: string) {
     .from(monthlySummaries)
     .where(eq(monthlySummaries.userId, userId))
     .orderBy(asc(monthlySummaries.month))
+  const derived = await deriveMonthTotals(userId, DERIVED_MONTH)
+  return rows.map((r) => (r.month === DERIVED_MONTH ? { month: r.month, ...derived } : r))
 }
 
-/** Répartition des dépenses par catégorie pour le mois (donut). */
-export function getCategoryBreakdown(userId: string, month: string) {
+/**
+ * Répartition des dépenses par catégorie pour le mois (donut).
+ * - Mois courant : DÉRIVÉ de `SUM(transactions, amount<0, hors Transfert)` groupé
+ *   par catégorie (`amount` ≥ 0 ; `trendPct = 0` non dérivable — non affiché).
+ * - Mois passés : `category_summaries` (historique).
+ * Le donut est re-trié côté client par `colorToken` → l'ordre SQL est indifférent.
+ */
+export async function getCategoryBreakdown(userId: string, month: string) {
+  if (month === DERIVED_MONTH) {
+    return db
+      .select({
+        categoryId: transactions.categoryId,
+        name: categories.name,
+        colorToken: categories.colorToken,
+        amount: sql<number>`-sum(${transactions.amount})`, // négatifs → dépense positive
+        trendPct: sql<number>`0`,
+      })
+      .from(transactions)
+      .innerJoin(categories, eq(categories.id, transactions.categoryId))
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          like(transactions.occurredAt, `${month}-%`),
+          lt(transactions.amount, 0),
+          ne(transactions.type, 'Transfert'),
+        ),
+      )
+      .groupBy(transactions.categoryId)
+      .orderBy(asc(sql`sum(${transactions.amount})`)) // plus négatif d'abord = plus grosse dépense
+  }
   return db
     .select({
       categoryId: categorySummaries.categoryId,

@@ -8,11 +8,13 @@
  *  - **Dates en texte ISO** : jour `YYYY-MM-DD`, mois `YYYY-MM`.
  *  - Idiome identique à `auth-schema.ts` (sqliteTable, modes integer, timestamps).
  *
- * `monthly_summaries` et `category_summaries` sont une **couche de présentation** :
- * elles existent uniquement pour reproduire à l'identique les chiffres d'un wireframe
- * incohérent. À terme (vraies données) ces agrégats seront **dérivés** de
- * `SUM(transactions)` — voir la façade `getMonthlySummary` / `getCategoryBreakdown`
- * (dette explicite, Bloc C). Aucun écran ne doit les requêter directement.
+ * `monthly_summaries` et `category_summaries` : depuis la bascule de la façade
+ * (chantier dérivation), les agrégats du **mois courant** sont **dérivés** de
+ * `SUM(transactions)` — la façade `getMonthlySummary` / `getCategoryBreakdown`
+ * somme le ledger pour `DERIVED_MONTH` et lit ces tables pour les mois PASSÉS
+ * (historique du trend). La ligne `monthly_summaries` du mois courant ne garde
+ * que `balance_delta_pct` (totaux NULL) ; ses `category_summaries` n'existent plus.
+ * Aucun écran ne requête ces tables directement (seule la façade le fait).
  */
 import { randomUUID } from 'node:crypto'
 import { relations, sql } from 'drizzle-orm'
@@ -263,11 +265,16 @@ export const monthlySummaries = sqliteTable(
     id: pk(),
     userId: userId(),
     month: text('month').notNull(), // YYYY-MM
-    revenus: integer('revenus').notNull(),
-    depenses: integer('depenses').notNull(),
-    epargne: integer('epargne').notNull(),
+    // Totaux NULLABLES depuis la bascule de la façade (chantier dérivation) : le
+    // MOIS COURANT (DERIVED_MONTH) dérive ses totaux de SUM(transactions) — sa ligne
+    // ici porte des totaux NULL (plus une source). Les mois PASSÉS gardent leurs
+    // totaux pleins (historique autoritaire du trend). Voir façade getMonthlySummary.
+    revenus: integer('revenus'),
+    depenses: integer('depenses'),
+    epargne: integer('epargne'),
     // Évolution du solde m/m, en dixièmes de % (32 = 3,2 %). Valeur EXACTE du
-    // wireframe, recopiée à l'affichage (jamais dérivée). Nullable (mois sans valeur).
+    // wireframe, recopiée à l'affichage (jamais dérivée — pas d'historique de solde).
+    // Reste seule donnée non-NULL de la ligne du mois courant. Nullable (mois sans valeur).
     balanceDeltaPct: integer('balance_delta_pct'),
     ...timestamps(),
   },
