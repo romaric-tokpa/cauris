@@ -7,7 +7,8 @@
  *
  * Les écrans (phases suivantes) consomment CES fonctions, jamais `db` directement.
  */
-import { and, asc, desc, eq, gte, lte, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, like, lte, sql, type SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { db } from './client'
 import {
   accounts,
@@ -50,23 +51,157 @@ export interface TransactionFilter {
   categoryId?: string
   from?: string // YYYY-MM-DD inclusif
   to?: string // YYYY-MM-DD inclusif
+  search?: string // sous-chaîne du libellé
   limit?: number
+  offset?: number
 }
 
-export function listTransactions(userId: string, filter: TransactionFilter = {}) {
+/** Conditions de filtre scopées `user_id` — factorisées (liste + stats). */
+function buildTxnConditions(userId: string, filter: TransactionFilter): SQL[] {
   const conds: SQL[] = [eq(transactions.userId, userId)]
   if (filter.type) conds.push(eq(transactions.type, filter.type))
   if (filter.accountId) conds.push(eq(transactions.accountId, filter.accountId))
   if (filter.categoryId) conds.push(eq(transactions.categoryId, filter.categoryId))
   if (filter.from) conds.push(gte(transactions.occurredAt, filter.from))
   if (filter.to) conds.push(lte(transactions.occurredAt, filter.to))
+  if (filter.search) conds.push(like(transactions.label, `%${filter.search}%`))
+  return conds
+}
 
+export function listTransactions(userId: string, filter: TransactionFilter = {}) {
   const q = db
     .select()
     .from(transactions)
-    .where(and(...conds))
+    .where(and(...buildTxnConditions(userId, filter)))
     .orderBy(desc(transactions.occurredAt))
   return filter.limit ? q.limit(filter.limit) : q
+}
+
+/** Liste enrichie (noms compte source / catégorie / compte de transfert). Scopée. */
+export function listTransactionsDetailed(userId: string, filter: TransactionFilter = {}) {
+  const transferAcc = alias(accounts, 'transfer_acc')
+  let q = db
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      categoryId: transactions.categoryId,
+      transferAccountId: transactions.transferAccountId,
+      label: transactions.label,
+      note: transactions.note,
+      amount: transactions.amount,
+      occurredAt: transactions.occurredAt,
+      type: transactions.type,
+      accountName: accounts.name,
+      categoryName: categories.name,
+      transferAccountName: transferAcc.name,
+    })
+    .from(transactions)
+    .leftJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .leftJoin(transferAcc, eq(transferAcc.id, transactions.transferAccountId))
+    .where(and(...buildTxnConditions(userId, filter)))
+    .orderBy(desc(transactions.occurredAt))
+    .$dynamic()
+  if (filter.limit !== undefined) q = q.limit(filter.limit)
+  if (filter.offset !== undefined) q = q.offset(filter.offset)
+  return q
+}
+
+/**
+ * Stats d'en-tête (scopées). **Les transferts sont EXCLUS** de entrées/sorties :
+ * un transfert entre comptes propres n'est ni un revenu ni une dépense (sinon le
+ * net est faussé). `count` compte toutes les opérations (transferts inclus).
+ */
+export async function getTransactionStats(userId: string, filter: TransactionFilter = {}) {
+  const rows = await db
+    .select({
+      entrees: sql<number>`coalesce(sum(case when ${transactions.type} != 'Transfert' and ${transactions.amount} > 0 then ${transactions.amount} else 0 end), 0)`,
+      sorties: sql<number>`coalesce(sum(case when ${transactions.type} != 'Transfert' and ${transactions.amount} < 0 then ${transactions.amount} else 0 end), 0)`,
+      count: sql<number>`count(*)`,
+    })
+    .from(transactions)
+    .where(and(...buildTxnConditions(userId, filter)))
+  const r = rows[0]
+  return { entrees: r.entrees, sorties: r.sorties, net: r.entrees + r.sorties, count: r.count }
+}
+
+/** Détail enrichi d'une transaction du user (null si inexistante / à autrui). */
+export async function getTransactionById(userId: string, id: string) {
+  const transferAcc = alias(accounts, 'transfer_acc')
+  const rows = await db
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      categoryId: transactions.categoryId,
+      transferAccountId: transactions.transferAccountId,
+      label: transactions.label,
+      note: transactions.note,
+      amount: transactions.amount,
+      occurredAt: transactions.occurredAt,
+      type: transactions.type,
+      accountName: accounts.name,
+      categoryName: categories.name,
+      transferAccountName: transferAcc.name,
+    })
+    .from(transactions)
+    .leftJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .leftJoin(transferAcc, eq(transferAcc.id, transactions.transferAccountId))
+    .where(and(eq(transactions.userId, userId), eq(transactions.id, id)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Appartenance d'un compte au user (vérif avant rattachement d'une écriture). */
+export async function userOwnsAccount(userId: string, accountId: string): Promise<boolean> {
+  const r = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.id, accountId)))
+    .limit(1)
+  return r.length > 0
+}
+
+/** Appartenance d'une catégorie au user. */
+export async function userOwnsCategory(userId: string, categoryId: string): Promise<boolean> {
+  const r = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.userId, userId), eq(categories.id, categoryId)))
+    .limit(1)
+  return r.length > 0
+}
+
+/** Données d'écriture d'une transaction (amount DÉJÀ signé par l'appelant). */
+export interface TransactionWriteInput {
+  type: string
+  label: string
+  note: string | null
+  amount: number
+  accountId: string
+  categoryId: string | null
+  transferAccountId: string | null
+  occurredAt: string
+}
+
+export function createTransaction(userId: string, input: TransactionWriteInput) {
+  return db.insert(transactions).values({ userId, ...input }).returning()
+}
+
+/** Écriture scopée : ne met à jour que si (id, user_id) correspond. */
+export function updateTransaction(userId: string, id: string, input: TransactionWriteInput) {
+  return db
+    .update(transactions)
+    .set(input)
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+    .returning()
+}
+
+/** Suppression scopée. */
+export function deleteTransaction(userId: string, id: string) {
+  return db
+    .delete(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
 }
 
 /* ─────────────────────────────── Budgets ─────────────────────────────── */

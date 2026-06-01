@@ -17,6 +17,16 @@ import {
   listLoans,
   listNotifications,
   listTransactions,
+  listTransactionsDetailed,
+  getTransactionStats,
+  getTransactionById,
+  userOwnsAccount,
+  userOwnsCategory,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  type TransactionFilter,
+  type TransactionWriteInput,
 } from './db/queries'
 
 // Mois de démonstration (période de réf. produit : Mai 2026 ; le seed s'y arrête).
@@ -184,6 +194,141 @@ api.get('/dashboard', async (c) => {
     notifications: notifs,
     loan,
   })
+})
+
+/* ─────────────────────────── Transactions (CRUD) ───────────────────────────
+ * Toutes scopées session. Écriture : appartenance vérifiée EXPLICITEMENT (SELECT
+ * via getTransactionById → 404) avant update/delete, + appartenance du compte /
+ * de la catégorie / du compte de transfert. Le client envoie une MAGNITUDE
+ * positive ; le serveur dérive le signe (Revenu → +, sinon −). Entier FCFA.
+ * NB : les stats (Entrées/Sorties/Net) viennent de SUM(transactions) sur les
+ * lignes réelles — elles diffèrent volontairement des KPI dashboard (summaries
+ * de présentation). Mutation → invalide la liste ET le dashboard côté front,
+ * mais le dashboard réaffiche les mêmes chiffres (agrégats non encore dérivés —
+ * dette « dérivation des agrégats », tranchée plus tard, cf. façade Phase 3). */
+
+const TXN_TYPES = ['Dépense', 'Revenu', 'Transfert', 'Récurrente']
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const intParam = (v?: string): number | undefined => {
+  const n = v != null ? Number(v) : NaN
+  return Number.isInteger(n) && n >= 0 ? n : undefined
+}
+
+/** Valide + dérive le signe + vérifie l'appartenance. → input signé ou message. */
+async function parseTxnInput(
+  userId: string,
+  body: unknown,
+): Promise<{ input: TransactionWriteInput } | { error: string }> {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const type = b.type
+  if (typeof type !== 'string' || !TXN_TYPES.includes(type)) return { error: 'Type invalide.' }
+
+  const label = typeof b.label === 'string' ? b.label.trim() : ''
+  if (!label) return { error: 'Libellé requis.' }
+
+  const note =
+    b.note == null ? null : typeof b.note === 'string' ? b.note.trim() || null : null
+
+  const magnitude = b.amount
+  if (typeof magnitude !== 'number' || !Number.isInteger(magnitude) || magnitude <= 0)
+    return { error: 'Montant : entier FCFA strictement positif requis.' }
+
+  const occurredAt = b.occurredAt
+  if (typeof occurredAt !== 'string' || !ISO_DATE.test(occurredAt))
+    return { error: 'Date invalide (AAAA-MM-JJ).' }
+
+  const accountId = b.accountId
+  if (typeof accountId !== 'string' || !(await userOwnsAccount(userId, accountId)))
+    return { error: 'Compte invalide ou non autorisé.' }
+
+  let categoryId: string | null = null
+  if (b.categoryId != null) {
+    if (typeof b.categoryId !== 'string' || !(await userOwnsCategory(userId, b.categoryId)))
+      return { error: 'Catégorie invalide ou non autorisée.' }
+    categoryId = b.categoryId
+  }
+
+  let transferAccountId: string | null = null
+  if (type === 'Transfert') {
+    const t = b.transferAccountId
+    if (typeof t !== 'string' || !(await userOwnsAccount(userId, t)))
+      return { error: 'Compte de transfert invalide ou non autorisé.' }
+    if (t === accountId) return { error: 'Le compte de transfert doit différer du compte source.' }
+    transferAccountId = t
+  }
+
+  // Signe dérivé du type : seul Revenu est positif.
+  const amount = type === 'Revenu' ? magnitude : -magnitude
+  return { input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt } }
+}
+
+// Liste filtrée + stats d'en-tête.
+api.get('/transactions', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const q = c.req.query()
+  const filter: TransactionFilter = {
+    type: q.type || undefined,
+    accountId: q.accountId || undefined,
+    categoryId: q.categoryId || undefined,
+    from: q.from || undefined,
+    to: q.to || undefined,
+    search: q.q || undefined,
+    limit: intParam(q.limit),
+    offset: intParam(q.offset),
+  }
+  const [rows, stats] = await Promise.all([
+    listTransactionsDetailed(userId, filter),
+    getTransactionStats(userId, filter),
+  ])
+  return c.json({ transactions: rows, stats })
+})
+
+// Détail (lecture).
+api.get('/transactions/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const txn = await getTransactionById(userId, c.req.param('id'))
+  if (!txn) return c.json({ error: 'not found' }, 404)
+  return c.json({ transaction: txn })
+})
+
+// Création.
+api.post('/transactions', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseTxnInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createTransaction(userId, parsed.input)
+  return c.json({ transaction: created }, 201)
+})
+
+// Édition (PATCH = remplacement complet du formulaire). Appartenance → 404.
+api.patch('/transactions/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getTransactionById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseTxnInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [updated] = await updateTransaction(userId, id, parsed.input)
+  return c.json({ transaction: updated })
+})
+
+// Suppression. Appartenance → 404.
+api.delete('/transactions/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getTransactionById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  await deleteTransaction(userId, id)
+  return c.json({ status: 'ok' })
 })
 
 app.route('/api', api)

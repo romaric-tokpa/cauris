@@ -89,6 +89,8 @@ export const transactions = sqliteTable(
       onDelete: 'set null',
     }),
     label: text('label').notNull(),
+    // note libre optionnelle (≠ label : le label est le nom affiché en liste)
+    note: text('note'),
     // entier FCFA signé : négatif = sortie, positif = entrée
     amount: integer('amount').notNull(),
     occurredAt: text('occurred_at').notNull(), // YYYY-MM-DD
