@@ -40,6 +40,17 @@
   --on-accent-rgb: 255, 255, 255;
   --scrim: rgba(25, 22, 18, 0.3);
   --shadow-rgb: 0, 0, 0;
+
+  /* Palette catégories (donut/pastilles d'analyse). Slots `cat-N` liés à une
+     catégorie (categories.color_token) — le rendu lit toujours var(--cat-N),
+     jamais un hex. CLAIR = hex EXACTS du wireframe (wf-lib.jsx), dans l'ordre :
+     1 Alimentation · 2 Transport · 3 Logement · 4 Factures · 5 Loisirs · 6 Santé. */
+  --cat-1: #3a3a3e;
+  --cat-2: #6f6f76;
+  --cat-3: #9a9aa1;
+  --cat-4: #c1c1c6;
+  --cat-5: #b9c4d4;
+  --cat-6: #cdd6e2;
 }
 [data-theme='dark'] {
   --paper: #1c1c21;
@@ -58,6 +69,16 @@
   --on-solid: #19191c;
   --feature: #26262d;
   --feature-ink: #ffffff;
+
+  /* Équivalents sombres par slot (parité clair/sombre) : la rampe est inversée
+     en clarté pour rester lisible sur panneau sombre, mêmes familles de teinte
+     (gris neutres 1–4, bleus froids 5–6). Consommés par le donut (Phase 8). */
+  --cat-1: #d4d4d9;
+  --cat-2: #a9aab1;
+  --cat-3: #85858d;
+  --cat-4: #63636b;
+  --cat-5: #7c91b0;
+  --cat-6: #93a7c2;
 }
 
 /* ---- Base : raccorde le document aux tokens (le wireframe le faisait via .wf) ---- */

@@ -1,10 +1,11 @@
 /**
  * Schéma Drizzle.
  *
- * Phase 2 : tables d'**authentification** (Better Auth) générées via la CLE
- * (`server/db/auth-schema.ts`), re-exportées ici pour que `db` les connaisse.
+ * Phase 2 : tables d'**authentification** (Better Auth) générées via la CLI
+ * (`server/db/auth-schema.ts`).
+ * Phase 3 : tables **métier** (`business-schema.ts`) portées de `wf-lib.jsx`.
  *
- * Le schéma **métier** (accounts, transactions, budgets, …) + le seed des données
- * d'Aïcha arrivent en **Phase 3**. Aucune table métier ici.
+ * Tout est re-exporté ici pour que `db` (et drizzle-kit) connaissent l'ensemble.
  */
 export * from './auth-schema'
+export * from './business-schema'
