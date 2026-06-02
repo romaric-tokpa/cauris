@@ -116,6 +116,84 @@ export interface GoalProjection {
   advice: string // recommandation (banner Conseil)
 }
 
+/* ── Prévisions (onglet « Prévisions ») — ENTRÉE calculée par la route (façade). ── */
+export interface ForecastTarget {
+  current: number // solde actuel (Σ comptes)
+  monthlyNet: number // solde net mensuel moyen (revenus − dépenses) sur l'historique
+  monthsCount: number // nb de mois d'historique complets utilisés (→ confiance)
+  expenseTrend: number | null // ratio dépenses M/M (1,055 = +5,5 %) ; null si indéterminé
+  trendLabel: string | null // « +5,5 % » (libellé du ratio, pour la base)
+  budgets: { name: string; pct: number }[] // budgets du mois (consommé %)
+}
+/** Solde projeté à un horizon (estimation linéaire). */
+export interface ForecastPoint {
+  label: string // « Solde à 7 jours »
+  amount: number
+  delta: number // amount − current (signé)
+}
+/** Risque de dépassement projeté d'UN budget (tendance des dépenses appliquée). */
+export interface BudgetRisk {
+  name: string
+  consumedPct: number
+  projectedPct: number
+  risk: 'ok' | 'warn' | 'over'
+}
+export interface ForecastsResult {
+  available: boolean // false → état vide honnête (« estimation indisponible »)
+  current: number
+  points: ForecastPoint[] // 7 j / 15 j / fin de mois
+  series: { labels: string[]; values: number[] } // [Auj., +7 j, +15 j, fin] pour le graphe
+  realizedCount: number // points « réalisés » au début de la série (1 = Auj.)
+  budgetRisks: BudgetRisk[]
+  horizon: string // « fin du mois en cours »
+  confidence: 'faible' | 'moyenne' | 'élevée'
+  basis: string // « vos N derniers mois (solde net moyen X FCFA/mois) »
+  framing: string // phrase d'estimation complète (§1.6)
+}
+
+/* ── Anomalies (onglet « Anomalies ») — ENTRÉE calculée par la route (ledger réel). ── */
+/** Dépense candidate à l'anomalie (écart au profil de sa catégorie). */
+export interface AnomalyCandidate {
+  label: string
+  category: string
+  amount: number // signé (négatif = dépense)
+  when: string // YYYY-MM-DD
+  categoryAvg: number // moyenne des AUTRES dépenses de la même catégorie (référence)
+  ratio: number // |amount| / categoryAvg
+  href: string // lien de NAVIGATION vers les opérations de la catégorie (jamais d'action)
+}
+/** Paiement récurrent détecté (type « Récurrente » du ledger). */
+export interface RecurringCandidate {
+  label: string
+  category: string
+  amount: number
+}
+export interface AnomalyInput {
+  month: string
+  candidates: AnomalyCandidate[]
+  recurring: RecurringCandidate[]
+}
+export interface Anomaly {
+  id: string
+  name: string
+  category: string
+  amount: number
+  when: string // « 6 mai » (libellé court)
+  level: 'Élevé' | 'Moyen'
+  reason: string // explication PAR COMPARAISON à l'historique de la catégorie (§1.6)
+  href: string // « Examiner » → opérations de la catégorie (navigation, jamais d'action)
+}
+export interface Recurring {
+  name: string
+  category: string
+  amount: number
+}
+export interface AnomaliesResult {
+  anomalies: Anomaly[] // [] → état « rien à signaler » honnête (jamais d'anomalie inventée)
+  recurring: Recurring[]
+  summary: string // ligne de contexte (méthode de détection)
+}
+
 /**
  * Point d'entrée de l'assistant. **Pour brancher l'API Anthropic réelle, NE changer
  * QUE le corps de cette fonction** (clé serveur `process.env.ANTHROPIC_API_KEY`,
@@ -142,21 +220,37 @@ export async function askClaude(params: {
   context: FinancialContext
   goal: GoalTarget
 }): Promise<GoalProjection>
+export async function askClaude(params: {
+  mode: 'forecasts'
+  context: FinancialContext
+  forecast: ForecastTarget
+}): Promise<ForecastsResult>
+export async function askClaude(params: {
+  mode: 'anomalies'
+  context: FinancialContext
+  anomalies: AnomalyInput
+}): Promise<AnomaliesResult>
 // eslint-disable-next-line @typescript-eslint/require-await -- les stubs sont synchrones ; le futur appel Anthropic awaitera (signature async conservée pour le swap).
 export async function askClaude(params: {
-  mode?: 'chat' | 'insights' | 'budget-advice' | 'goal-projection'
+  mode?: 'chat' | 'insights' | 'budget-advice' | 'goal-projection' | 'forecasts' | 'anomalies'
   messages?: ChatMessage[]
   context: FinancialContext
   budget?: BudgetTarget
   goal?: GoalTarget
-}): Promise<AiReply | InsightsResult | BudgetAdvice | GoalProjection> {
+  forecast?: ForecastTarget
+  anomalies?: AnomalyInput
+}): Promise<
+  AiReply | InsightsResult | BudgetAdvice | GoalProjection | ForecastsResult | AnomaliesResult
+> {
   // TODO Phase 12+ : brancher l'API Anthropic ICI (clé SERVEUR process.env.ANTHROPIC_API_KEY,
   //   modèle Claude courant). MÊME frontière pour tous les modes : `chat` (messages → texte),
-  //   `insights` / `budget-advice` / `goal-projection` (system prompt dédié → JSON structuré).
-  //   Seul ce corps change ; signatures et types de retour inchangés.
+  //   `insights` / `budget-advice` / `goal-projection` / `forecasts` / `anomalies` (system prompt
+  //   dédié → JSON structuré). Seul ce corps change ; signatures et types de retour inchangés.
   if (params.mode === 'insights') return stubInsights(params.context)
   if (params.mode === 'budget-advice') return stubBudgetAdvice(params.budget!)
   if (params.mode === 'goal-projection') return stubGoalProjection(params.goal!)
+  if (params.mode === 'forecasts') return stubForecasts(params.forecast!)
+  if (params.mode === 'anomalies') return stubAnomalies(params.anomalies!)
   return stubReply({ messages: params.messages ?? [], context: params.context })
 }
 
@@ -215,6 +309,17 @@ function monthsBetween(fromMonth: string, toMonth: string): number {
 function deltaPct(now: number, before: number): string {
   const d = Math.round(((now - before) / before) * 1000) / 10
   return `${d >= 0 ? '+' : '−'}${Math.abs(d).toString().replace('.', ',')} %`
+}
+
+/** « 2026-05-06 » → « 6 mai » (jour + mois abrégé francophone). */
+function dayMonthLabel(iso: string): string {
+  const m = Number(iso.slice(5, 7))
+  return `${Number(iso.slice(8, 10))} ${MONTHS_FR[m - 1] ?? ''}`.trim()
+}
+
+/** Nombre francophone à une décimale (« 4,5 ») — multiplicateur d'anomalie. */
+function ratioLabel(r: number): string {
+  return (Math.round(r * 10) / 10).toString().replace('.', ',')
 }
 
 /** Minuscule + sans diacritiques (matching de mots-clés robuste). */
@@ -490,4 +595,121 @@ function stubGoalProjection(g: GoalTarget): GoalProjection {
       : `À votre rythme actuel (≈ ${fcfa(g.avg)} FCFA/mois), « ${g.name} » serait atteint vers ${eta}. Augmenter vos versements rapprocherait l’échéance.`
 
   return { eta, horizon, confidence, basis, text, suggestedPace, advice }
+}
+
+/* ───────────────────────── Stub prévisions (onglet Prévisions) ─────────────────
+ * PRÉVISION §1.6 — chaque montant projeté est une ESTIMATION encadrée : horizon +
+ * confiance (∝ profondeur d'historique) + base (solde net mensuel moyen, dérivé de
+ * la façade). Projection LINÉAIRE assumée (accumulation du net au prorata des jours) —
+ * jamais présentée comme une certitude. Risque budget = pct consommé × tendance RÉELLE
+ * des dépenses M/M (pas de multiplicateur arbitraire). Aucun chiffre inventé. État vide
+ * honnête si l'historique manque. Déterministe (pas de Date.now/aléa). */
+function stubForecasts(f: ForecastTarget): ForecastsResult {
+  const confidence: ForecastsResult['confidence'] =
+    f.monthsCount >= 6 ? 'élevée' : f.monthsCount >= 3 ? 'moyenne' : 'faible'
+  const horizon = 'fin du mois en cours'
+  const basis = `vos ${f.monthsCount} derniers mois (solde net moyen ${fcfa(f.monthlyNet)} FCFA/mois)`
+
+  // Pas assez d'historique → estimation indisponible (honnête, pas de chiffre inventé).
+  if (f.monthsCount === 0 || f.monthlyNet === 0) {
+    return {
+      available: false,
+      current: f.current,
+      points: [],
+      series: { labels: [], values: [] },
+      realizedCount: 1,
+      budgetRisks: [],
+      horizon,
+      confidence: 'faible',
+      basis,
+      framing:
+        'Estimation indisponible : pas assez d’historique pour projeter un solde. ' +
+        'Ajoutez quelques mois d’opérations et je pourrai estimer la tendance.',
+    }
+  }
+
+  // Solde projeté = solde actuel + accumulation linéaire du net (prorata 30 j).
+  const at = (days: number) => f.current + Math.round((f.monthlyNet * days) / 30)
+  const j7 = at(7)
+  const j15 = at(15)
+  const fin = at(30)
+  const points: ForecastPoint[] = [
+    { label: 'Solde à 7 jours', amount: j7, delta: j7 - f.current },
+    { label: 'Solde à 15 jours', amount: j15, delta: j15 - f.current },
+    { label: 'Solde fin de mois', amount: fin, delta: fin - f.current },
+  ]
+  const series = {
+    labels: ['Auj.', '+7 j', '+15 j', 'Fin de mois'],
+    values: [f.current, j7, j15, fin],
+  }
+
+  // Risque budget = consommé × tendance RÉELLE des dépenses (sinon constant à habitudes égales).
+  const budgetRisks: BudgetRisk[] = f.budgets
+    .map((b) => {
+      const projectedPct = Math.round(b.pct * (f.expenseTrend ?? 1))
+      const risk: BudgetRisk['risk'] =
+        projectedPct >= 100 ? 'over' : projectedPct >= 90 ? 'warn' : 'ok'
+      return { name: b.name, consumedPct: b.pct, projectedPct, risk }
+    })
+    .sort((a, b) => b.projectedPct - a.projectedPct)
+    .slice(0, 5)
+
+  const trendNote =
+    f.trendLabel != null
+      ? ` Risque budget projeté à partir de la tendance de vos dépenses (${f.trendLabel} sur un mois).`
+      : ''
+  const framing =
+    `Projection linéaire à partir de votre solde net mensuel moyen — confiance ${confidence}, ` +
+    `basée sur ${basis}.${trendNote} Les flux ponctuels (salaire, loyer, échéances) peuvent ` +
+    `décaler ces montants : à lire comme une estimation, pas une certitude.`
+
+  return {
+    available: true,
+    current: f.current,
+    points,
+    series,
+    realizedCount: 1,
+    budgetRisks,
+    horizon,
+    confidence,
+    basis,
+    framing,
+  }
+}
+
+/* ───────────────────────── Stub anomalies (onglet Anomalies) ───────────────────
+ * §1.6 — chaque anomalie est EXPLIQUÉE par comparaison à l'historique de SA catégorie
+ * (référence = moyenne des autres dépenses de la catégorie), jamais une alerte sèche.
+ * SEULEMENT les écarts réellement dérivables (candidats filtrés par la route sur le
+ * ledger réel) ; si aucun → liste vide → l'écran affiche « rien à signaler » (jamais
+ * d'anomalie inventée). Récurrences = paiements marqués « Récurrente » dans le ledger
+ * (fait stocké, pas une inférence). Aucun champ exécutable. Déterministe. */
+function stubAnomalies(a: AnomalyInput): AnomaliesResult {
+  const anomalies: Anomaly[] = a.candidates
+    .slice()
+    .sort((x, y) => y.ratio - x.ratio)
+    .map((c, i) => ({
+      id: `anomaly-${i}`,
+      name: c.label,
+      category: c.category,
+      amount: c.amount,
+      when: dayMonthLabel(c.when),
+      level: c.ratio >= 4 ? 'Élevé' : 'Moyen',
+      reason:
+        `Montant ${ratioLabel(c.ratio)}× supérieur à vos dépenses ${c.category} habituelles ` +
+        `(≈ ${fcfa(c.categoryAvg)} FCFA). À vérifier si cette opération est attendue.`,
+      href: c.href,
+    }))
+
+  const recurring: Recurring[] = a.recurring.map((r) => ({
+    name: r.label,
+    category: r.category,
+    amount: r.amount,
+  }))
+
+  const summary = anomalies.length
+    ? `${anomalies.length} dépense${anomalies.length > 1 ? 's' : ''} inhabituelle${anomalies.length > 1 ? 's' : ''} en ${monthLabel(a.month)}, repérée${anomalies.length > 1 ? 's' : ''} par comparaison à vos habitudes par catégorie.`
+    : `Rien à signaler en ${monthLabel(a.month)} : aucune dépense ne s’écarte nettement de vos habitudes par catégorie.`
+
+  return { anomalies, recurring, summary }
 }

@@ -44,6 +44,10 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+/* Onglet-lien (AISub) : un <a> rendu comme un `.si` (pas de soulignement, couleur héritée). */
+.tabLink {
+  text-decoration: none;
+}
 
 /* ───────────────── Grille chat (1.9fr) / rail (1fr) ───────────────── */
 .grid {

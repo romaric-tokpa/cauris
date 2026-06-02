@@ -12,6 +12,10 @@ import {
   type FinancialContext,
   type BudgetTarget,
   type GoalTarget,
+  type ForecastTarget,
+  type AnomalyInput,
+  type AnomalyCandidate,
+  type RecurringCandidate,
 } from './ai'
 import {
   getMonthlySummary,
@@ -59,6 +63,12 @@ function budgetMeta(spent: number, cap: number): { pct: number; tone: 'over' | '
   const pct = cap ? Math.floor((spent / cap) * 100) : 0
   const tone = pct > 100 ? 'over' : pct >= 90 ? 'warn' : 'ok'
   return { pct, tone }
+}
+
+/** Delta % m/m signé à une décimale, format « +5,5 % » (miroir de ai.ts deltaPct). */
+function deltaPctLabel(now: number, before: number): string {
+  const d = Math.round(((now - before) / before) * 1000) / 10
+  return `${d >= 0 ? '+' : '−'}${Math.abs(d).toString().replace('.', ',')} %`
 }
 
 /**
@@ -574,6 +584,109 @@ api.get('/ai/goals/:id/projection', async (c) => {
   }
   const projection = await askClaude({ mode: 'goal-projection', context, goal })
   return c.json(projection)
+})
+
+// Prévisions (onglet « Prévisions »). PRÉVISION §1.6 : chaque solde projeté est une
+// ESTIMATION encadrée (horizon + confiance + base). Le solde net mensuel moyen et la
+// tendance des dépenses sont DÉRIVÉS de la façade (mêmes chiffres que dashboard/analytics).
+// SUGGESTION ONLY : texte + montants projetés, aucun champ exécutable.
+api.get('/ai/forecasts', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [context, accountsRows, months] = await Promise.all([
+    buildAiContext(userId),
+    listAccounts(userId),
+    listMonthlySummaries(userId),
+  ])
+  // Solde net mensuel moyen sur les mois COMPLETS (revenus + dépenses non nuls).
+  const complete = months.filter((m) => m.revenus != null && m.depenses != null)
+  const monthlyNet = complete.length
+    ? Math.round(complete.reduce((s, m) => s + (m.revenus! - m.depenses!), 0) / complete.length)
+    : 0
+  // Tendance des dépenses M/M (réelle) pour projeter le risque budget.
+  const expenseTrend =
+    context.depenses != null && context.depensesPrev && context.depensesPrev > 0
+      ? context.depenses / context.depensesPrev
+      : null
+  const trendLabel =
+    context.depenses != null && context.depensesPrev != null && context.depensesPrev > 0
+      ? deltaPctLabel(context.depenses, context.depensesPrev)
+      : null
+  const forecast: ForecastTarget = {
+    current: accountsRows.reduce((s, a) => s + a.balance, 0),
+    monthlyNet,
+    monthsCount: complete.length,
+    expenseTrend,
+    trendLabel,
+    budgets: context.budgets.map((b) => ({ name: b.name, pct: b.pct })),
+  }
+  const result = await askClaude({ mode: 'forecasts', context, forecast })
+  return c.json(result)
+})
+
+// Anomalies (onglet « Anomalies »). §1.6 : chaque anomalie est EXPLIQUÉE par comparaison
+// à l'historique de sa catégorie (référence = moyenne des AUTRES dépenses de la catégorie),
+// pas une alerte sèche. SEULEMENT les écarts réellement dérivables du ledger ; aucune
+// anomalie inventée (liste vide → écran « rien à signaler »). Récurrences = paiements
+// marqués « Récurrente » (fait stocké). SUGGESTION ONLY : aucun champ exécutable.
+api.get('/ai/anomalies', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const from = `${DEMO_MONTH}-01`
+  const to = `${DEMO_MONTH}-31`
+  const [context, txns] = await Promise.all([
+    buildAiContext(userId),
+    listTransactionsDetailed(userId, { from, to, limit: 500 }),
+  ])
+
+  // Dépenses du mois groupées par catégorie (transferts exclus : ni revenu ni dépense).
+  const expenses = txns.filter((t) => t.type !== 'Transfert' && t.amount < 0)
+  const byCat = new Map<string, typeof expenses>()
+  for (const t of expenses) {
+    const key = t.categoryName ?? '—'
+    const arr = byCat.get(key) ?? []
+    arr.push(t)
+    byCat.set(key, arr)
+  }
+
+  // Anomalie = dépense dont le montant s'écarte nettement du profil de SA catégorie.
+  // Seuils : catégorie d'au moins 3 dépenses (moyenne signifiante), |montant| ≥ 20 000,
+  // ratio ≥ 2,5× la moyenne des AUTRES dépenses de la catégorie. Rien d'inventé.
+  const candidates: AnomalyCandidate[] = []
+  for (const [category, rows] of byCat) {
+    if (rows.length < 3) continue
+    const total = rows.reduce((s, t) => s + Math.abs(t.amount), 0)
+    for (const t of rows) {
+      const amt = Math.abs(t.amount)
+      const others = rows.length - 1
+      const categoryAvg = Math.round((total - amt) / others)
+      if (categoryAvg <= 0) continue
+      const ratio = amt / categoryAvg
+      if (amt >= 20000 && ratio >= 2.5) {
+        candidates.push({
+          label: t.label,
+          category,
+          amount: t.amount,
+          when: t.occurredAt,
+          categoryAvg,
+          ratio,
+          // Lien de NAVIGATION vers les opérations de la catégorie (jamais d'action).
+          href: t.categoryId
+            ? `/transactions?categoryId=${t.categoryId}&from=${from}&to=${to}`
+            : '/transactions',
+        })
+      }
+    }
+  }
+
+  // Récurrences = paiements marqués « Récurrente » dans le ledger (fait stocké).
+  const recurring: RecurringCandidate[] = txns
+    .filter((t) => t.type === 'Récurrente')
+    .map((t) => ({ label: t.label, category: t.categoryName ?? '—', amount: t.amount }))
+
+  const input: AnomalyInput = { month: DEMO_MONTH, candidates, recurring }
+  const result = await askClaude({ mode: 'anomalies', context, anomalies: input })
+  return c.json(result)
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────

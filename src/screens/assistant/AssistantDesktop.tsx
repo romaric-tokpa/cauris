@@ -1,12 +1,9 @@
 import { Icon } from '../../components/primitives'
 import { Card } from '../../components/ui'
 import { MessageList, SuggestionChips, Composer } from './ChatThread'
+import { AiTabs } from './AiTabs'
 import { SUGGESTIONS, type AssistantState } from './useAssistant'
 import styles from './assistant.module.css'
-
-/** Onglets du module IA (1:1 wireframe AISub) — seul « Assistant » est actif ;
- *  Insights / Prévisions / Anomalies = sous-blocs ultérieurs (« à venir »). */
-const AI_TABS = ['Assistant', 'Insights', 'Prévisions', 'Anomalies'] as const
 
 interface Props extends AssistantState {
   className?: string
@@ -35,20 +32,8 @@ export function AssistantDesktop({
         </button>
       </div>
 
-      {/* subnav (seul Assistant actif) */}
-      <div className="subnav">
-        {AI_TABS.map((t, i) =>
-          i === 0 ? (
-            <span key={t} className="si on">
-              {t}
-            </span>
-          ) : (
-            <span key={t} className={`si ${styles.soon}`} title="Bientôt disponible" aria-disabled="true">
-              {t}
-            </span>
-          ),
-        )}
-      </div>
+      {/* subnav (AISub) — Assistant actif ; Prévisions/Anomalies = liens ; Insights = dashboard */}
+      <AiTabs active="Assistant" />
 
       <div className={styles.grid}>
         {/* colonne chat */}

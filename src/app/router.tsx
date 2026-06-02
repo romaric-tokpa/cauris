@@ -10,7 +10,7 @@ import { Comptes, ComptesDetail } from '../screens/comptes'
 import { Pret } from '../screens/pret'
 import { Analytics } from '../screens/analytics'
 import { Notifications } from '../screens/notifications'
-import { Assistant } from '../screens/assistant'
+import { Assistant, Previsions, Anomalies } from '../screens/assistant'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
 import { Signup } from '../screens/auth/Signup'
@@ -39,6 +39,9 @@ const appRoutes: RouteObject[] = [
   { path: 'budgets/:id', element: <BudgetDetail /> },
   { path: 'objectifs/:id', element: <ObjectifDetail /> },
   { path: 'comptes/:id', element: <ComptesDetail /> },
+  // Onglets du module IA (AISub) — pages pleines sous le shell.
+  { path: 'assistant-ia/previsions', element: <Previsions /> },
+  { path: 'assistant-ia/anomalies', element: <Anomalies /> },
 ]
 
 export const router = createBrowserRouter([
