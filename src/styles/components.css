@@ -910,6 +910,11 @@ button.tab {
 .switch.on i {
   left: 20px;
 }
+/* Switch « à venir » (fonctionnalité non implémentée) : visiblement inactif, non trompeur. */
+.switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .set-row {
   display: flex;
   align-items: center;

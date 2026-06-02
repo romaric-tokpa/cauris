@@ -1,0 +1,189 @@
+/* Paramètres — layout porté de screens-settings.jsx (ParamsDesk/ParamsMob). Lignes et
+   pastilles via les classes globales (.set-row/.set-ico/.set-nav/.si2) ; couleurs/tons
+   via tokens uniquement. Inline du .jsx → classes ici. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+
+/* Réglage « à venir » : visiblement inactif, non cliquable (honnête). */
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ───────────── Desktop : nav latérale 240px + contenu 640px ───────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+}
+/* nav latérale : ancres rendues en <a> (reset du soulignement/couleur natifs). */
+.grid :global(.set-nav) a.si2 {
+  text-decoration: none;
+}
+
+/* ───────────── Profil ───────────── */
+.profileCard {
+  align-items: center;
+}
+.profileLeft {
+  gap: 14px;
+}
+.avatarLg {
+  width: 52px;
+  height: 52px;
+  font-size: 19px;
+}
+.profileName {
+  font-weight: 700;
+  font-size: 16px;
+}
+.profileMeta {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+/* ───────────── Cartes de section ───────────── */
+.cardTitle {
+  margin-bottom: 6px;
+}
+
+/* ───────────── Lignes de réglage (SettingRow) ───────────── */
+.rowText {
+  flex: 1;
+  min-width: 0;
+}
+.rowLabel {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.rowSub {
+  font-size: 11.5px;
+  margin-top: 1px;
+}
+.rowRight {
+  flex: none;
+  margin-left: auto;
+}
+.icoDanger {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+/* Valeur fixe lecture seule (Devise/Langue) — pas un contrôle. */
+.fixedValue {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+/* Étiquette « Bientôt » (groupe Données mobile). */
+.soonTag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  opacity: 0.7;
+}
+
+/* Bouton danger (déconnexion) — tons via tokens. */
+.dangerBtn {
+  color: var(--neg);
+  border-color: var(--neg);
+}
+
+/* ───────────── Mobile ───────────── */
+.profileCardMob {
+  gap: 14px;
+  align-items: center;
+}
+.avatarMob {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+}
+.profileTextMob {
+  flex: 1;
+  min-width: 0;
+}
+.profileNameMob {
+  font-weight: 700;
+  font-size: 15px;
+}
+.profileMetaMob {
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.groupTitle {
+  margin-bottom: 4px;
+}
+
+/* ───────────── Formulaire mot de passe (drawer/sheet) ───────────── */
+.formCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.formActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.successRow {
+  gap: 12px;
+  align-items: flex-start;
+}
+.successIco {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.successTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.successText {
+  font-size: 12.5px;
+  margin-top: 2px;
+  line-height: 1.45;
+}
