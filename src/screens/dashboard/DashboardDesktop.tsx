@@ -1,15 +1,79 @@
 import { Link } from 'react-router-dom'
-import { Icon, Donut, Bars, Progress } from '../../components/primitives'
+import { Icon, Donut, Bars, Progress, type IconName } from '../../components/primitives'
 import { Card, Badge, KpiTile } from '../../components/ui'
 import { money } from '../../lib/money'
 import { maskedBalance } from '../../lib/account'
 import { formatIsoDay, formatIsoMonthLabel, prevMonthLong } from '../../lib/date'
-import type { DashboardData } from './useDashboard'
+import { useInsights, type DashboardData, type Insight } from './useDashboard'
 import styles from './dashboard.module.css'
 
 const catClass = (t: string | null): string => (t ? (styles[t.replace('-', '')] ?? '') : '')
 const catVar = (t: string | null): string => (t ? `var(--${t})` : 'var(--line)')
 const fmtPct = (n: number): string => String(n).replace('.', ',')
+
+/* Ton d'un insight (icône + tag) — couleurs via tokens (jamais en dur). */
+const insightTone = (t: string): string =>
+  ({ over: styles.tOver, warn: styles.tWarn, ok: styles.tOk })[t] ?? styles.tNeutral
+
+/** Un insight = icône tonifiée + tag + texte ; rendu en LIEN de navigation si `href`
+ *  (lecture seule, jamais d'action exécutable §1.6). Porté de dashboard-desktop-a.jsx. */
+function InsightItem({ n }: { n: Insight }) {
+  const tone = insightTone(n.tone)
+  const body = (
+    <>
+      <div className={`row-ico ${styles.insightIco} ${tone}`}>
+        <Icon name={n.icon as IconName} size={16} />
+      </div>
+      <div>
+        <span className={`insight-tag ${tone}`}>{n.tag}</span>
+        <div className={styles.insightText}>{n.text}</div>
+      </div>
+    </>
+  )
+  return n.href ? (
+    <Link to={n.href} className={`r ${styles.insightRow} ${styles.insightLink}`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={`r ${styles.insightRow}`}>{body}</div>
+  )
+}
+
+/** Carte Insights IA du dashboard — contenu RÉEL (askClaude mode insights), structure
+ *  1:1 du placeholder/wireframe. Liens vers l'écran concerné, jamais d'exécution. */
+function InsightsCard() {
+  const q = useInsights()
+  const insights = q.data?.insights ?? []
+  return (
+    <Card>
+      <div className="card-head">
+        <div className={`r ${styles.g9}`}>
+          <div className={`ai-av ${styles.aiAv}`}>C</div>
+          <div className="card-title">Insights</div>
+        </div>
+        <Link to="/assistant-ia" className="card-link">
+          Ouvrir l’assistant <Icon name="chevron" size={13} />
+        </Link>
+      </div>
+      {insights.length > 0 ? (
+        <div className={styles.insightsGrid}>
+          {insights.slice(0, 3).map((n) => (
+            <InsightItem key={n.id} n={n} />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.insightsBody}>
+          <div className={`row-ico ${styles.insightsIco}`}>
+            <Icon name="bolt" size={16} />
+          </div>
+          <div className={styles.insightsText}>
+            {q.isError ? 'Insights momentanément indisponibles.' : 'Analyse de vos finances en cours…'}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
 
 /** Dashboard desktop (cockpit pattern A) — porté 1:1 de dashboard-desktop-a.jsx,
  *  sans la chrome (sidebar/header) déjà fournie par l'AppShell. */
@@ -76,27 +140,8 @@ export function DashboardDesktop({
         />
       </div>
 
-      {/* Insights IA — placeholder soigné (vraie IA = Phase 12) */}
-      <Card>
-        <div className="card-head">
-          <div className={`r ${styles.g9}`}>
-            <div className={`ai-av ${styles.aiAv}`}>C</div>
-            <div className="card-title">Insights</div>
-          </div>
-          <Link to="/assistant-ia" className="card-link">
-            Ouvrir l’assistant <Icon name="chevron" size={13} />
-          </Link>
-        </div>
-        <div className={styles.insightsBody}>
-          <div className={`row-ico ${styles.insightsIco}`}>
-            <Icon name="bolt" size={16} />
-          </div>
-          <div className={styles.insightsText}>
-            <span className={styles.insightsSoon}>Vos insights IA arrivent bientôt.</span> Analyses,
-            anomalies et prévisions personnalisées apparaîtront ici.
-          </div>
-        </div>
-      </Card>
+      {/* Insights IA — contenu réel (Phase 12 sous-bloc 2) */}
+      <InsightsCard />
 
       {/* cashflow + répartition */}
       <div className={styles.chartGrid}>

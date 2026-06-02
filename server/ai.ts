@@ -26,24 +26,48 @@ export interface AiBar {
   colorToken: string | null
 }
 
-/** Instantané financier scopé `user_id` (composé par la route depuis la façade). */
+/**
+ * Instantané financier scopé `user_id` (composé par la route depuis la façade).
+ * Les `id` de budgets/objectifs servent UNIQUEMENT à construire des liens de
+ * NAVIGATION (lecture seule) ; ils n'ouvrent aucune action exécutable (§1.6).
+ */
 export interface FinancialContext {
   month: string // YYYY-MM
   total: number // patrimoine = Σ soldes
   revenus: number | null
   depenses: number | null
+  depensesPrev: number | null // dépenses du mois précédent (tendance MoM)
   epargne: number | null
   savingsRate: number | null
   topCategories: { name: string; amount: number; pct: number; colorToken: string | null }[]
-  budgets: { name: string; cap: number; spent: number; pct: number; tone: 'ok' | 'warn' | 'over' }[]
-  goals: { name: string; current: number; target: number; pct: number }[]
+  budgets: { id: string; name: string; cap: number; spent: number; pct: number; tone: 'ok' | 'warn' | 'over' }[]
+  goals: { id: string; name: string; current: number; target: number; pct: number }[]
   loans: { name: string; remaining: number; monthlyPayment: number }[]
 }
 
-/** Réponse de l'assistant : TEXTE + barres optionnelles. Aucun champ exécutable. */
+/** Réponse de l'assistant (chat) : TEXTE + barres optionnelles. Aucun champ exécutable. */
 export interface AiReply {
   reply: string
   bars?: AiBar[]
+}
+
+/**
+ * Insight du dashboard. `type` = sémantique (info/alerte/conseil) ; `tag`/`tone`/`icon`
+ * = rendu (insight-tag tonifié) ; `href` = lien de NAVIGATION (lecture seule), jamais
+ * une action exécutable. SUGGESTION ONLY (§1.6).
+ */
+export interface Insight {
+  id: string
+  type: 'info' | 'alerte' | 'conseil'
+  tag: string
+  tone: 'over' | 'warn' | 'ok' | ''
+  icon: string
+  text: string
+  href: string | null
+}
+
+export interface InsightsResult {
+  insights: Insight[]
 }
 
 /**
@@ -53,19 +77,27 @@ export interface AiReply {
  * seule) + envoyer `messages`, puis renvoyer `{ reply, bars? }`. La signature et le
  * type de retour restent identiques → la route et le front n'ont rien à changer.
  */
-// eslint-disable-next-line @typescript-eslint/require-await -- le stub est synchrone ; le futur appel Anthropic awaitera (signature async conservée pour le swap).
 export async function askClaude(params: {
+  mode?: 'chat'
   messages: ChatMessage[]
   context: FinancialContext
-}): Promise<AiReply> {
-  // TODO Phase 12+ : brancher l'API Anthropic ICI.
-  //   import Anthropic from '@anthropic-ai/sdk'
-  //   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })  // clé SERVEUR
-  //   const res = await client.messages.create({ model: <Claude courant>,
-  //     system: buildSystemPrompt(params.context), messages: params.messages, max_tokens: … })
-  //   return { reply: textFrom(res) }
-  // En attendant : stub déterministe, même contrat.
-  return stubReply(params)
+}): Promise<AiReply>
+export async function askClaude(params: {
+  mode: 'insights'
+  context: FinancialContext
+}): Promise<InsightsResult>
+// eslint-disable-next-line @typescript-eslint/require-await -- les stubs sont synchrones ; le futur appel Anthropic awaitera (signature async conservée pour le swap).
+export async function askClaude(params: {
+  mode?: 'chat' | 'insights'
+  messages?: ChatMessage[]
+  context: FinancialContext
+}): Promise<AiReply | InsightsResult> {
+  // TODO Phase 12+ : brancher l'API Anthropic ICI (clé SERVEUR process.env.ANTHROPIC_API_KEY,
+  //   modèle Claude courant). MÊME frontière pour les deux modes : `chat` (system prompt +
+  //   `messages` → texte) et `insights` (system prompt « génère N insights structurés » →
+  //   JSON parsé). Seul ce corps change ; signatures et types de retour inchangés.
+  if (params.mode === 'insights') return stubInsights(params.context)
+  return stubReply({ messages: params.messages ?? [], context: params.context })
 }
 
 /* ───────────────────────────── Stub déterministe ───────────────────────────── */
@@ -87,6 +119,18 @@ const MONTHS_FR = [
 function monthLabel(month: string): string {
   const m = Number(month.slice(5, 7))
   return MONTHS_FR[m - 1] ?? month
+}
+
+/** « 2026-05 » → « avril » (mois précédent). */
+function prevMonthLabel(month: string): string {
+  const m = Number(month.slice(5, 7))
+  return MONTHS_FR[(m - 2 + 12) % 12]
+}
+
+/** Pourcentage francophone signé à une décimale (« +5,5 % »). */
+function deltaPct(now: number, before: number): string {
+  const d = Math.round(((now - before) / before) * 1000) / 10
+  return `${d >= 0 ? '+' : '−'}${Math.abs(d).toString().replace('.', ',')} %`
 }
 
 /** Minuscule + sans diacritiques (matching de mots-clés robuste). */
@@ -202,4 +246,65 @@ function stubReply({
       '« Où part mon argent ce mois-ci ? », « Vais-je dépasser un budget ? » ou ' +
       '« Quel sera mon solde en fin de mois ? ».',
   }
+}
+
+/* ───────────────────────── Stub insights (dashboard) ──────────────────────────
+ * Insights DÉRIVÉS du contexte réel scopé (mêmes chiffres que le dashboard) :
+ * - alerte : le budget le plus à risque (dépassé/proche) → /budgets/:id ;
+ * - info   : tendance des dépenses M/M (réelle) → /analytics ;
+ * - conseil: recommandation reliée à un objectif concret (§1.6) → /objectifs/:id.
+ * Aucune ANOMALIE fabriquée (pas d'historique par catégorie seedé → non dérivable,
+ * donc non inventée). Aucune PRÉVISION à horizon chiffré fabriquée. Liens = navigation
+ * lecture seule, jamais d'action. Déterministe (pas de Date.now/aléa). */
+function stubInsights(ctx: FinancialContext): InsightsResult {
+  const insights: Insight[] = []
+
+  // 1) Budget le plus à risque (dépassé > proche). Reflète le vrai pct (ex. Transport 108 %).
+  const worst = ctx.budgets
+    .filter((b) => b.tone === 'over' || b.tone === 'warn')
+    .sort((a, b) => b.pct - a.pct)[0]
+  if (worst) {
+    const over = worst.tone === 'over'
+    insights.push({
+      id: 'budget-risk',
+      type: 'alerte',
+      tag: 'Alerte',
+      tone: worst.tone,
+      icon: 'gauge',
+      text: over
+        ? `Budget ${worst.name} dépassé : ${fcfa(worst.spent)} / ${fcfa(worst.cap)} FCFA (${worst.pct} %). Réduisez ce poste ou ajustez la limite.`
+        : `Budget ${worst.name} bientôt atteint : ${fcfa(worst.spent)} / ${fcfa(worst.cap)} FCFA (${worst.pct} %). Surveillez vos prochaines dépenses.`,
+      href: `/budgets/${worst.id}`,
+    })
+  }
+
+  // 2) Tendance des dépenses M/M (réelle, dérivée des résumés mensuels).
+  if (ctx.depenses != null && ctx.depensesPrev != null && ctx.depensesPrev > 0) {
+    const sens = ctx.depenses >= ctx.depensesPrev ? 'en hausse' : 'en baisse'
+    insights.push({
+      id: 'trend-depenses',
+      type: 'info',
+      tag: 'Tendance',
+      tone: '',
+      icon: 'trendUp',
+      text: `Vos dépenses de ${monthLabel(ctx.month)} (${fcfa(ctx.depenses)} FCFA) sont ${sens} de ${deltaPct(ctx.depenses, ctx.depensesPrev)} par rapport à ${prevMonthLabel(ctx.month)} (${fcfa(ctx.depensesPrev)} FCFA).`,
+      href: '/analytics',
+    })
+  }
+
+  // 3) Conseil épargne relié à un objectif concret (§1.6 : recommandation = objectif).
+  const goal = ctx.goals[0]
+  if (ctx.epargne != null && goal) {
+    insights.push({
+      id: 'advice-epargne',
+      type: 'conseil',
+      tag: 'Conseil',
+      tone: 'ok',
+      icon: 'target',
+      text: `Votre taux d’épargne est de ${ctx.savingsRate ?? 0} % (${fcfa(ctx.epargne)} FCFA ce mois). En le maintenant, l’objectif « ${goal.name} » (${goal.pct} %) progresse vers ${fcfa(goal.target)} FCFA.`,
+      href: `/objectifs/${goal.id}`,
+    })
+  }
+
+  return { insights }
 }

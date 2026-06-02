@@ -69,12 +69,56 @@
   gap: 14px;
 }
 
-/* Insights (placeholder soigné — vraie IA en Phase 12) */
+/* Insights IA — contenu réel (Phase 12 sous-bloc 2). Grille 3 colonnes, chaque
+   insight = icône tonifiée + tag + texte, en lien de navigation. Couleurs via tokens. */
 .aiAv {
   width: 26px;
   height: 26px;
   font-size: 11px;
   border-radius: 8px;
+}
+.insightsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.insightRow {
+  gap: 11px;
+  align-items: flex-start;
+}
+.insightLink {
+  text-decoration: none;
+  color: inherit;
+}
+.insightLink:hover .insightText {
+  color: var(--accent);
+}
+.insightIco {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.insightText {
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+/* tons (icône + tag) — paires token/wash */
+.tOver {
+  color: var(--neg);
+  background: var(--neg-wash);
+}
+.tWarn {
+  color: var(--warn);
+  background: var(--warn-wash);
+}
+.tOk {
+  color: var(--pos);
+  background: var(--pos-wash);
+}
+.tNeutral {
+  color: var(--accent);
+  background: var(--accent-wash);
 }
 .insightsBody {
   display: flex;

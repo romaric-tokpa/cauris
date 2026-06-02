@@ -433,33 +433,34 @@ function parseChatMessages(body: unknown): { messages: ChatMessage[] } | { error
   return { messages }
 }
 
-api.post('/ai/chat', async (c) => {
-  const userId = await getSessionUserId(c.req.raw.headers)
-  if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const body: unknown = await c.req.json().catch(() => null)
-  const parsed = parseChatMessages(body)
-  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
-
-  // Contexte financier scopé (lecture seule) — même façade que /api/dashboard.
-  const [accountsRows, summary, breakdown, budgetRows, goalRows, loanRows] = await Promise.all([
-    listAccounts(userId),
-    getMonthlySummary(userId, DEMO_MONTH),
-    getCategoryBreakdown(userId, DEMO_MONTH),
-    listBudgets(userId, DEMO_MONTH),
-    listGoals(userId),
-    listLoans(userId),
-  ])
+// Compose le contexte financier scopé (LECTURE SEULE) — même façade que /api/dashboard,
+// donc chiffres == dashboard/analytics/budgets. Partagé par /ai/chat et /ai/insights.
+async function buildAiContext(userId: string): Promise<FinancialContext> {
+  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, loanRows] =
+    await Promise.all([
+      listAccounts(userId),
+      getMonthlySummary(userId, DEMO_MONTH),
+      listMonthlySummaries(userId),
+      getCategoryBreakdown(userId, DEMO_MONTH),
+      listBudgets(userId, DEMO_MONTH),
+      listGoals(userId),
+      listLoans(userId),
+    ])
   const total = accountsRows.reduce((s, a) => s + a.balance, 0)
   const depenses = summary?.depenses ?? null
   const revenus = summary?.revenus ?? null
   const epargne = summary?.epargne ?? null
   const savingsRate = revenus && epargne != null ? Math.round((epargne / revenus) * 100) : null
+  // Dépenses du mois précédent (tendance M/M) depuis la série mensuelle.
+  const idx = months.findIndex((m) => m.month === DEMO_MONTH)
+  const depensesPrev = idx > 0 ? (months[idx - 1].depenses ?? null) : null
 
-  const context: FinancialContext = {
+  return {
     month: DEMO_MONTH,
     total,
     revenus,
     depenses,
+    depensesPrev,
     epargne,
     savingsRate,
     topCategories: breakdown.map((b) => ({
@@ -469,12 +470,14 @@ api.post('/ai/chat', async (c) => {
       colorToken: b.colorToken,
     })),
     budgets: budgetRows.map((b) => ({
+      id: b.id,
       name: b.categoryName,
       cap: b.cap,
       spent: b.spent,
       ...budgetMeta(b.spent, b.cap),
     })),
     goals: goalRows.map((g) => ({
+      id: g.id,
       name: g.name,
       current: g.currentAmount,
       target: g.targetAmount,
@@ -486,8 +489,27 @@ api.post('/ai/chat', async (c) => {
       monthlyPayment: l.monthlyPayment,
     })),
   }
+}
 
+api.post('/ai/chat', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseChatMessages(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const context = await buildAiContext(userId)
   const result = await askClaude({ messages: parsed.messages, context })
+  return c.json(result)
+})
+
+// Insights du dashboard : liste structurée DÉRIVÉE du contexte (mêmes chiffres que le
+// dashboard). askClaude(mode:'insights') = stub déterministe (même frontière Anthropic).
+// SUGGESTION ONLY : chaque insight est du texte + un lien de NAVIGATION (jamais d'action).
+api.get('/ai/insights', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const context = await buildAiContext(userId)
+  const result = await askClaude({ mode: 'insights', context })
   return c.json(result)
 })
 

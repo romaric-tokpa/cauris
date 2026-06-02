@@ -75,3 +75,27 @@ export function useDashboard(month?: string) {
     queryFn: () => apiFetch<DashboardData>(`/api/dashboard${month ? `?month=${month}` : ''}`),
   })
 }
+
+/** Insight du dashboard (Phase 12 sous-bloc 2) — miroir de `server/ai.ts`. `href` =
+ *  lien de NAVIGATION (lecture seule), jamais une action exécutable (§1.6). */
+export interface Insight {
+  id: string
+  type: 'info' | 'alerte' | 'conseil'
+  tag: string
+  tone: 'over' | 'warn' | 'ok' | ''
+  icon: string
+  text: string
+  href: string | null
+}
+
+/**
+ * Insights IA du dashboard. Clé `['dashboard', 'insights']` → couverte par
+ * l'invalidation `['dashboard']` de `useTxnMutations` : une mutation de transaction
+ * rafraîchit aussi les insights (mêmes chiffres que le dashboard).
+ */
+export function useInsights() {
+  return useQuery({
+    queryKey: ['dashboard', 'insights'],
+    queryFn: () => apiFetch<{ insights: Insight[] }>('/api/ai/insights'),
+  })
+}
