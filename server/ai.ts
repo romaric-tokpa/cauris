@@ -90,6 +90,32 @@ export interface BudgetAdvice {
   href: string | null
 }
 
+/** Objectif ciblé pour une projection (composé par la route depuis la façade). */
+export interface GoalTarget {
+  name: string
+  reste: number // target - current (≥ 0)
+  avg: number // moyenne des contributions (FCFA), 0 si aucune
+  count: number // nombre de contributions (échantillon)
+  targetDate: string | null // YYYY-MM-DD
+  nowMonth: string // YYYY-MM (mois courant produit)
+}
+
+/**
+ * Projection d'objectif — PRÉVISION §1.6 : TOUJOURS étiquetée estimation, avec
+ * `horizon` + `confidence` + base de calcul (`text`/`basis`). Jamais une certitude.
+ * `eta` = échéance estimée (libellé) ; `suggestedPace` = rythme mensuel pour tenir la
+ * date cible ; `advice` = recommandation honnête. Aucun champ exécutable.
+ */
+export interface GoalProjection {
+  eta: string | null // « avr. 2027 » | « déjà atteint » | null
+  horizon: string // « à votre rythme actuel »
+  confidence: 'faible' | 'moyenne' | 'élevée'
+  basis: string // « la moyenne de vos 4 dernières contributions (80 000 FCFA) »
+  text: string // phrase d'estimation complète (horizon + confiance + base)
+  suggestedPace: number | null // FCFA/mois pour tenir la date cible
+  advice: string // recommandation (banner Conseil)
+}
+
 /**
  * Point d'entrée de l'assistant. **Pour brancher l'API Anthropic réelle, NE changer
  * QUE le corps de cette fonction** (clé serveur `process.env.ANTHROPIC_API_KEY`,
@@ -111,19 +137,26 @@ export async function askClaude(params: {
   context: FinancialContext
   budget: BudgetTarget
 }): Promise<BudgetAdvice>
+export async function askClaude(params: {
+  mode: 'goal-projection'
+  context: FinancialContext
+  goal: GoalTarget
+}): Promise<GoalProjection>
 // eslint-disable-next-line @typescript-eslint/require-await -- les stubs sont synchrones ; le futur appel Anthropic awaitera (signature async conservée pour le swap).
 export async function askClaude(params: {
-  mode?: 'chat' | 'insights' | 'budget-advice'
+  mode?: 'chat' | 'insights' | 'budget-advice' | 'goal-projection'
   messages?: ChatMessage[]
   context: FinancialContext
   budget?: BudgetTarget
-}): Promise<AiReply | InsightsResult | BudgetAdvice> {
+  goal?: GoalTarget
+}): Promise<AiReply | InsightsResult | BudgetAdvice | GoalProjection> {
   // TODO Phase 12+ : brancher l'API Anthropic ICI (clé SERVEUR process.env.ANTHROPIC_API_KEY,
   //   modèle Claude courant). MÊME frontière pour tous les modes : `chat` (messages → texte),
-  //   `insights` (« génère N insights structurés » → JSON), `budget-advice` (conseil ciblé →
-  //   JSON). Seul ce corps change ; signatures et types de retour inchangés.
+  //   `insights` / `budget-advice` / `goal-projection` (system prompt dédié → JSON structuré).
+  //   Seul ce corps change ; signatures et types de retour inchangés.
   if (params.mode === 'insights') return stubInsights(params.context)
   if (params.mode === 'budget-advice') return stubBudgetAdvice(params.budget!)
+  if (params.mode === 'goal-projection') return stubGoalProjection(params.goal!)
   return stubReply({ messages: params.messages ?? [], context: params.context })
 }
 
@@ -152,6 +185,30 @@ function monthLabel(month: string): string {
 function prevMonthLabel(month: string): string {
   const m = Number(month.slice(5, 7))
   return MONTHS_FR[(m - 2 + 12) % 12]
+}
+
+const MONTHS_FR_SHORT = [
+  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+  'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+] // prettier-ignore
+
+/** Ajoute `n` mois à « YYYY-MM » → libellé court « avr. 2027 ». */
+function addMonthsLabel(baseMonth: string, n: number): string {
+  const [y, m] = baseMonth.split('-').map(Number)
+  const total = y * 12 + (m - 1) + n
+  return `${MONTHS_FR_SHORT[((total % 12) + 12) % 12]} ${Math.floor(total / 12)}`
+}
+
+/** « YYYY-MM » → « avr. 2027 ». */
+function monthYearLabel(month: string): string {
+  return addMonthsLabel(month, 0)
+}
+
+/** Nombre de mois de `fromMonth` à `toMonth` (« YYYY-MM »). */
+function monthsBetween(fromMonth: string, toMonth: string): number {
+  const [fy, fm] = fromMonth.split('-').map(Number)
+  const [ty, tm] = toMonth.split('-').map(Number)
+  return ty * 12 + (tm - 1) - (fy * 12 + (fm - 1))
 }
 
 /** Pourcentage francophone signé à une décimale (« +5,5 % »). */
@@ -368,4 +425,69 @@ function stubBudgetAdvice(b: BudgetTarget): BudgetAdvice {
     tone: 'ok',
     href: b.transactionsHref,
   }
+}
+
+/* ───────────────────────── Stub projection objectif ──────────────────────────
+ * PRÉVISION §1.6 — TOUJOURS étiquetée ESTIMATION, avec horizon + niveau de confiance
+ * + base de calcul. Échéance naïve (reste ÷ moyenne des contributions) ACCEPTABLE
+ * UNIQUEMENT parce qu'elle est explicitement encadrée (jamais « atteint en novembre »
+ * sec). `suggestedPace` = rythme pour tenir la date cible. Aucun chiffre inventé
+ * (reste/moyenne dérivés de la façade), aucun champ exécutable. Déterministe. */
+function stubGoalProjection(g: GoalTarget): GoalProjection {
+  const horizon = 'à votre rythme actuel'
+  // Confiance ∝ taille de l'échantillon de contributions.
+  const confidence: GoalProjection['confidence'] =
+    g.count >= 6 ? 'élevée' : g.count >= 3 ? 'moyenne' : 'faible'
+  const basis =
+    g.count > 0
+      ? `la moyenne de vos ${g.count} dernières contributions (${fcfa(g.avg)} FCFA)`
+      : 'vos contributions récentes'
+
+  // Objectif déjà atteint.
+  if (g.reste <= 0) {
+    return {
+      eta: 'déjà atteint',
+      horizon,
+      confidence: 'élevée',
+      basis,
+      text: `Objectif « ${g.name} » déjà atteint — bravo.`,
+      suggestedPace: null,
+      advice: `L’objectif « ${g.name} » est atteint. Vous pouvez relever la cible ou ouvrir un nouvel objectif.`,
+    }
+  }
+
+  // Rythme suggéré pour tenir la date cible.
+  let suggestedPace: number | null = null
+  let targetLabel: string | null = null
+  if (g.targetDate) {
+    const m = monthsBetween(g.nowMonth, g.targetDate.slice(0, 7))
+    targetLabel = monthYearLabel(g.targetDate.slice(0, 7))
+    if (m > 0) suggestedPace = Math.ceil(g.reste / m)
+  }
+
+  // Échéance estimée (naïve : reste ÷ moyenne), encadrée.
+  if (g.avg <= 0) {
+    return {
+      eta: null,
+      horizon,
+      confidence: 'faible',
+      basis,
+      text: 'Estimation indisponible : ajoutez des contributions pour projeter une échéance réaliste.',
+      suggestedPace,
+      advice:
+        suggestedPace != null
+          ? `Pour atteindre « ${g.name} » d’ici ${targetLabel}, visez environ ${fcfa(suggestedPace)} FCFA/mois.`
+          : `Ajoutez des contributions régulières à « ${g.name} » : j’estimerai alors une échéance.`,
+    }
+  }
+
+  const months = Math.ceil(g.reste / g.avg)
+  const eta = addMonthsLabel(g.nowMonth, months)
+  const text = `Estimation ${horizon} — confiance ${confidence}, basée sur ${basis}. À confirmer selon vos prochains versements.`
+  const advice =
+    suggestedPace != null
+      ? `À votre rythme actuel (≈ ${fcfa(g.avg)} FCFA/mois), « ${g.name} » serait atteint vers ${eta}. Pour tenir votre date cible (${targetLabel}), visez plutôt ${fcfa(suggestedPace)} FCFA/mois.`
+      : `À votre rythme actuel (≈ ${fcfa(g.avg)} FCFA/mois), « ${g.name} » serait atteint vers ${eta}. Augmenter vos versements rapprocherait l’échéance.`
+
+  return { eta, horizon, confidence, basis, text, suggestedPace, advice }
 }

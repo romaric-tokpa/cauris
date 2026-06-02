@@ -6,7 +6,13 @@ import { client, db } from './db/client'
 import { user } from './db/auth-schema'
 import { auth } from './auth'
 import { getSessionUserId } from './session'
-import { askClaude, type ChatMessage, type FinancialContext, type BudgetTarget } from './ai'
+import {
+  askClaude,
+  type ChatMessage,
+  type FinancialContext,
+  type BudgetTarget,
+  type GoalTarget,
+} from './ai'
 import {
   getMonthlySummary,
   getCategoryBreakdown,
@@ -539,6 +545,35 @@ api.get('/ai/budgets/:id/advice', async (c) => {
   }
   const advice = await askClaude({ mode: 'budget-advice', context, budget })
   return c.json(advice)
+})
+
+// Projection d'UN objectif (détail). Appartenance vérifiée → 404. PRÉVISION §1.6 :
+// la sortie est TOUJOURS une estimation encadrée (horizon + confiance + base), jamais
+// une certitude. Réutilise buildAiContext + l'objectif ciblé (reste/moyenne dérivés).
+// SUGGESTION ONLY : texte/rythme, aucun champ exécutable.
+api.get('/ai/goals/:id/projection', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const g = await getGoalById(userId, c.req.param('id'))
+  if (!g) return c.json({ error: 'not found' }, 404)
+  const [context, contributions] = await Promise.all([
+    buildAiContext(userId),
+    listContributions(userId, g.id),
+  ])
+  const reste = Math.max(0, g.targetAmount - g.currentAmount)
+  const avg = contributions.length
+    ? Math.round(contributions.reduce((s, ct) => s + ct.amount, 0) / contributions.length)
+    : 0
+  const goal: GoalTarget = {
+    name: g.name,
+    reste,
+    avg,
+    count: contributions.length,
+    targetDate: g.targetDate,
+    nowMonth: TODAY.slice(0, 7),
+  }
+  const projection = await askClaude({ mode: 'goal-projection', context, goal })
+  return c.json(projection)
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────

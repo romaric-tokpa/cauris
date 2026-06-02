@@ -51,6 +51,31 @@ export function useGoal(id: string) {
   })
 }
 
+/** Projection IA d'un objectif (Phase 12 sous-bloc 4) — miroir de `server/ai.ts`.
+ *  PRÉVISION §1.6 : estimation encadrée (horizon + confiance + base), jamais une
+ *  certitude. Aucun champ exécutable. */
+export interface GoalProjection {
+  eta: string | null
+  horizon: string
+  confidence: 'faible' | 'moyenne' | 'élevée'
+  basis: string
+  text: string
+  suggestedPace: number | null
+  advice: string
+}
+
+/**
+ * Projection d'un objectif. Clé `['goals', id, 'projection']` → couverte par
+ * l'invalidation `['goals']` de `useContributionMutations` (la projection dépend
+ * des contributions → se rafraîchit après ajout).
+ */
+export function useGoalProjection(id: string) {
+  return useQuery({
+    queryKey: ['goals', id, 'projection'],
+    queryFn: () => apiFetch<GoalProjection>(`/api/ai/goals/${id}/projection`),
+  })
+}
+
 /** Ajout d'une contribution → invalide la liste/détail objectifs ET le dashboard
  *  (la progression bouge). `['goals']` couvre `['goals', id]` (préfixe). */
 export function useContributionMutations(goalId: string) {

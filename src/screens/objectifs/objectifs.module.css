@@ -50,10 +50,6 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-/* Valeur prévisionnelle en attente (Phase 12) — discrète, non trompeuse. */
-.soonText {
-  font-style: italic;
-}
 
 /* ───────────────────────────── LISTE (grille desktop extrapolée) ───────────── */
 .grid {
@@ -246,6 +242,18 @@
 .projVal {
   font-size: 18px;
   margin-top: 4px;
+}
+.projFraming {
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+/* bouton stylé en lien (card-link) — reset des défauts natifs */
+.linkBtn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 /* drawer/sheet « Ajouter une contribution » */

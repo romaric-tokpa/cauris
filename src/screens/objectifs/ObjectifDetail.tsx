@@ -8,7 +8,7 @@ import { money } from '../../lib/money'
 import { formatIsoDay, formatIsoMonthYear } from '../../lib/date'
 import { useAccounts, type AccountRef } from '../transactions/useTransactions'
 import { ContributionForm } from './ContributionForm'
-import { useGoal, type GoalDetailResponse } from './useObjectifs'
+import { useGoal, useGoalProjection, type GoalDetailResponse } from './useObjectifs'
 import styles from './objectifs.module.css'
 
 /** Vrai sous le breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
@@ -69,6 +69,9 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
     ? Math.round(contributions.reduce((s, c) => s + c.amount, 0) / contributions.length)
     : 0
 
+  // Projection IA (PRÉVISION §1.6 : estimation encadrée — horizon + confiance + base).
+  const proj = useGoalProjection(g.id).data
+
   const actions = (
     <>
       {/* Édition de l'objectif = à venir (dette onboarding différée). */}
@@ -126,25 +129,33 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
                 <Icon name="calendar" size={14} />{' '}
                 {g.targetDate ? `Date cible : ${formatIsoMonthYear(g.targetDate)}` : 'Pas de date cible'}
               </span>
-              {/* Rythme suggéré = prévision → placeholder (Phase 12). */}
+              {/* Rythme suggéré (réel) = rythme mensuel pour tenir la date cible. */}
               <span className="t-faint">
-                Rythme suggéré : <span className={styles.soonText}>à venir</span>
+                Rythme suggéré :{' '}
+                {proj?.suggestedPace != null ? (
+                  <span className="t-mono">{money(proj.suggestedPace)} / mois</span>
+                ) : (
+                  'à votre rythme'
+                )}
               </span>
             </div>
           </div>
         </Card>
 
-        {/* Conseil IA — placeholder STATIQUE (vraie IA = Phase 12), comme Budgets. */}
+        {/* Conseil IA — contenu réel (askClaude goal-projection), dérivé des contributions. */}
         <Card pad="pad-sm" className={`r ${styles.g12}`}>
           <div className={`ai-av ${styles.aiAv}`}>C</div>
           <div className={styles.aiText}>
             <span className={`insight-tag ${styles.aiTagOk}`}>Conseil</span>
-            En passant de 25 000 à 50 000 FCFA/mois, vous atteignez cet objectif avec 2 mois
-            d’avance.
+            {proj?.advice ?? 'Analyse de cet objectif en cours…'}
           </div>
-          <span className={`card-link ${styles.nowrap}`}>
+          <button
+            type="button"
+            className={`card-link ${styles.nowrap} ${styles.linkBtn}`}
+            onClick={() => setFormOpen(true)}
+          >
             Ajuster <Icon name="chevron" size={13} />
-          </span>
+          </button>
         </Card>
 
         {/* 2 colonnes : historique + projection */}
@@ -190,10 +201,13 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
           <Card>
             <div className={`card-title ${styles.projTitle}`}>Projection</div>
             <div className={`c ${styles.projCol}`}>
-              {/* Prévision → placeholder (Phase 12). */}
+              {/* Prévision RÉELLE (§1.6) : estimation encadrée — horizon + confiance + base. */}
               <Card soft pad="pad-sm">
                 <div className={`t-faint ${styles.projLabel}`}>À ce rythme, objectif atteint</div>
-                <div className={`kpi-val ${styles.projVal} ${styles.soonText}`}>à venir</div>
+                <div className={`kpi-val ${styles.projVal}`}>
+                  {proj?.eta ? `≈ ${proj.eta}` : 'À estimer'}
+                </div>
+                {proj?.text && <div className={`t-faint ${styles.projFraming}`}>{proj.text}</div>}
               </Card>
               {/* Fait dérivable → calculé (moyenne des contributions affichées). */}
               <Card soft pad="pad-sm">
