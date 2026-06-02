@@ -1128,6 +1128,7 @@ button.choice {
 .btn:focus-visible,
 .icon-btn:focus-visible,
 .chip:focus-visible,
+.subnav .si:focus-visible,
 .nav-item:focus-visible,
 .tab:focus-visible,
 .card-link:focus-visible,
