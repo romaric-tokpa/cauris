@@ -61,6 +61,7 @@ export function TxnDesktop({
             key={t.label}
             className={'si' + (filters.type === t.value ? ' on' : '')}
             role="button"
+            aria-pressed={filters.type === t.value}
             tabIndex={0}
             onClick={() => setFilter('type', t.value)}
             onKeyDown={(e) => e.key === 'Enter' && setFilter('type', t.value)}
@@ -95,6 +96,7 @@ export function TxnDesktop({
             value={filters.q}
             onChange={(e) => setFilter('q', e.target.value)}
             placeholder="Rechercher un libellé…"
+            aria-label="Rechercher un libellé"
           />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Icon, ProjectionBars } from '../../components/primitives'
 import { Card } from '../../components/ui'
+import { EmptyState } from '../../components/states'
 import { useSetPageTitle } from '../../components/shell/pageTitle'
 import { money } from '../../lib/money'
 import { AiTabs } from './AiTabs'
@@ -124,23 +125,31 @@ function Content({ data }: { data: ForecastsResult }) {
         <div className={`wf-pad ${styles.tableHead}`}>
           <div className="card-title">Risque de dépassement par budget</div>
         </div>
-        <div className={styles.tableWrap}>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Budget</th>
-                <th className="num">Consommé</th>
-                <th className="num">Projeté fin de mois</th>
-                <th className="num">Risque</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.budgetRisks.map((b) => (
-                <BudgetRiskRow key={b.name} b={b} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {data.budgetRisks.length === 0 ? (
+          <EmptyState
+            icon="gauge"
+            title="Aucun budget à projeter"
+            text="Créez des budgets pour estimer leur risque de dépassement."
+          />
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Budget</th>
+                  <th className="num">Consommé</th>
+                  <th className="num">Projeté fin de mois</th>
+                  <th className="num">Risque</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.budgetRisks.map((b) => (
+                  <BudgetRiskRow key={b.name} b={b} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </>
   )

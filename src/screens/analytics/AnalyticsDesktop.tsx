@@ -431,6 +431,7 @@ export function AnalyticsDesktop({ data, tab, setTab, className = '' }: Props) {
             key={t}
             className={'si' + (tab === t ? ' on' : '')}
             role="button"
+            aria-pressed={tab === t}
             tabIndex={0}
             onClick={() => setTab(t)}
             onKeyDown={(e) => e.key === 'Enter' && setTab(t)}

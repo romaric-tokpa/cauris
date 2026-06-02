@@ -15,17 +15,27 @@ export function Header({ className = '' }: { className?: string }) {
     <header className={`r between ${styles.header} ${className}`}>
       <div className={`field ${styles.search}`}>
         <Icon name="search" size={17} />
-        <input placeholder="Rechercher une transaction, un compte…" readOnly />
+        <input
+          placeholder="Rechercher une transaction, un compte…"
+          aria-label="Rechercher une transaction, un compte"
+          readOnly
+        />
       </div>
 
       <div className={`r ${styles.actions}`}>
-        <div className="seg">
-          <button type="button">Jour</button>
-          <button type="button">Semaine</button>
-          <button type="button" className="on">
+        <div className="seg" role="group" aria-label="Période">
+          <button type="button" aria-pressed={false}>
+            Jour
+          </button>
+          <button type="button" aria-pressed={false}>
+            Semaine
+          </button>
+          <button type="button" className="on" aria-pressed={true}>
             Mois
           </button>
-          <button type="button">Année</button>
+          <button type="button" aria-pressed={false}>
+            Année
+          </button>
         </div>
 
         <button

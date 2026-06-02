@@ -17,6 +17,11 @@ function LoadingScreen() {
   )
 }
 
+/** Fallback Suspense des routes lazy-loadées (mêmes visuels que le chargement session). */
+export function RouteFallback() {
+  return <LoadingScreen />
+}
+
 /** Routes app : exige une session ET un onboarding terminé. */
 export function RequireAuth() {
   const { data, isPending } = useSession()

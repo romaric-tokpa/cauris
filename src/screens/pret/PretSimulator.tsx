@@ -79,10 +79,11 @@ export function PretSimulator({ loan }: { loan: LoanRow }) {
 
         <div>
           <span className="lbl">Type de simulation</span>
-          <div className="seg-full">
+          <div className="seg-full" role="group" aria-label="Type de simulation">
             <button
               type="button"
               className={type === 'anticipe' ? 'on' : ''}
+              aria-pressed={type === 'anticipe'}
               onClick={() => setType('anticipe')}
             >
               Remboursement anticipé
@@ -90,6 +91,7 @@ export function PretSimulator({ loan }: { loan: LoanRow }) {
             <button
               type="button"
               className={type === 'mensualite' ? 'on' : ''}
+              aria-pressed={type === 'mensualite'}
               onClick={() => setType('mensualite')}
             >
               Mensualité ajustée
@@ -121,10 +123,11 @@ export function PretSimulator({ loan }: { loan: LoanRow }) {
             </div>
             <div>
               <span className="lbl">Conserver</span>
-              <div className="seg-full">
+              <div className="seg-full" role="group" aria-label="Conserver">
                 <button
                   type="button"
                   className={keep === 'duree' ? 'on' : ''}
+                  aria-pressed={keep === 'duree'}
                   onClick={() => setKeep('duree')}
                 >
                   La durée
@@ -132,6 +135,7 @@ export function PretSimulator({ loan }: { loan: LoanRow }) {
                 <button
                   type="button"
                   className={keep === 'mensualite' ? 'on' : ''}
+                  aria-pressed={keep === 'mensualite'}
                   onClick={() => setKeep('mensualite')}
                 >
                   La mensualité

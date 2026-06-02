@@ -40,6 +40,7 @@ export function BudgetsDesktop({ budgets, summary, tab, setTab, className = '' }
             key={t}
             className={'si' + (tab === t ? ' on' : '')}
             role="button"
+            aria-pressed={tab === t}
             tabIndex={0}
             onClick={() => setTab(t)}
             onKeyDown={(e) => e.key === 'Enter' && setTab(t)}

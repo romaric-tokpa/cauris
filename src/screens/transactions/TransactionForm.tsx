@@ -117,12 +117,13 @@ export function TransactionForm({
 
       <div>
         <span className="lbl">Type</span>
-        <div className="seg-full">
+        <div className="seg-full" role="group" aria-label="Type">
           {types.map((t) => (
             <button
               key={t}
               type="button"
               className={t === s.type ? 'on' : ''}
+              aria-pressed={t === s.type}
               onClick={() => set('type', t)}
             >
               {t}

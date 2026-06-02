@@ -25,6 +25,7 @@ export function NotificationsMobile({ data, tab, setTab, onActivate, onMarkAll, 
               key={t}
               className={`chip ${styles.chip}` + (active === t ? ' on' : '')}
               role="button"
+              aria-pressed={active === t}
               tabIndex={0}
               onClick={() => setTab(t)}
               onKeyDown={(e) => e.key === 'Enter' && setTab(t)}

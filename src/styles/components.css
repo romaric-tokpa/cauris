@@ -1134,6 +1134,7 @@ button.choice {
 .icon-btn:focus-visible,
 .chip:focus-visible,
 .subnav .si:focus-visible,
+.set-nav .si2:focus-visible,
 .nav-item:focus-visible,
 .tab:focus-visible,
 .card-link:focus-visible,
@@ -1141,6 +1142,12 @@ button.choice {
 .seg-full button:focus-visible,
 .choice:focus-visible,
 .switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Champ de recherche/filtre (`.field`) : anneau au focus clavier de l'input interne
+   (les inputs dans `.inp` sont déjà couverts par `.inp:focus-within`). */
+.field:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

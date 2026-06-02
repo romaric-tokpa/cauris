@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Icon, Progress } from '../../components/primitives'
 import { Card, Badge } from '../../components/ui'
+import { EmptyState } from '../../components/states'
 import { money } from '../../lib/money'
 import { formatIsoDay, formatIsoMonthYear } from '../../lib/date'
 import { rateLabel } from '../../lib/rate'
@@ -23,6 +24,15 @@ const moLabel = (periodMonth: string) => formatIsoMonthYear(periodMonth)
 const payDate = (iso: string) => `${formatIsoDay(iso)} ${iso.slice(0, 4)}`
 
 function AmortTable({ rows }: { rows: AmortRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon="inbox"
+        title="Aucune échéance"
+        text="Le tableau d’amortissement apparaîtra une fois le prêt actif."
+      />
+    )
+  }
   return (
     <table className="tbl">
       <thead>
@@ -106,7 +116,7 @@ function Overview({ loan, stats, amortization, setTab }: {
         </div>
       </Card>
 
-      {/* conseil — statique (vraie IA = Phase 12), aucun chiffre en dur */}
+      {/* conseil générique statique (hors périmètre IA branché), aucun chiffre en dur */}
       <Card pad="pad-sm" className={`r ${styles.g12}`}>
         <div className={`ai-av ${styles.aiAv}`}>C</div>
         <div className={styles.aiText}>
@@ -249,7 +259,14 @@ function Paiements({ loan, stats, payments }: {
         <div className={styles.tableHead}>
           <div className="card-title">Paiements</div>
         </div>
-        <table className="tbl">
+        {payments.length === 0 ? (
+          <EmptyState
+            icon="inbox"
+            title="Aucun paiement"
+            text="Les échéances payées et à venir apparaîtront ici."
+          />
+        ) : (
+          <table className="tbl">
           <thead>
             <tr>
               <th>Échéance</th>
@@ -274,7 +291,8 @@ function Paiements({ loan, stats, payments }: {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        )}
       </Card>
     </>
   )

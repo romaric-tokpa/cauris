@@ -69,6 +69,7 @@ export function TxnMobile({ data, filters, setFilter, onRowClick, className = ''
             key={t.label}
             className={'chip ' + styles.mobChip + (filters.type === t.value ? ' on' : '')}
             role="button"
+            aria-pressed={filters.type === t.value}
             tabIndex={0}
             onClick={() => setFilter('type', t.value)}
             onKeyDown={(e) => e.key === 'Enter' && setFilter('type', t.value)}

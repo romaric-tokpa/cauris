@@ -183,6 +183,7 @@ export function AnalyticsMobile({ data, tab, setTab, className = '' }: Props) {
             key={t}
             className={`chip ${styles.chipMob}` + (active === t ? ' on' : '')}
             role="button"
+            aria-pressed={active === t}
             tabIndex={0}
             onClick={() => setTab(t)}
             onKeyDown={(e) => e.key === 'Enter' && setTab(t)}
