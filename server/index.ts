@@ -163,15 +163,9 @@ api.get('/dashboard', async (c) => {
     categoryName: t.categoryId ? (catName.get(t.categoryId) ?? '') : '',
   }))
 
-  const accounts = accountsRows.map((a) => ({
-    id: a.id,
-    name: a.name,
-    bank: a.bank,
-    type: a.type,
-    accountNumber: a.accountNumber,
-    balance: a.balance,
-    blocked: a.blocked,
-  }))
+  // Solde d'un compte bloqué masqué AUSSI ici (cohérence : jamais en clair). Le KPI
+  // « Solde total » (`total`) reste l'agrégat serveur des soldes réels (incl. bloqué).
+  const accounts = accountsRows.map(maskAccount)
 
   const lr = loanRows[0] ?? null
   const loan = lr

@@ -1,0 +1,259 @@
+/* Comptes — layout porté de screens-comptes.jsx (ComptesDesk = liste desktop,
+   CompteMobDetail = détail). Liste mobile + détail desktop EXTRAPOLÉS sobrement.
+   Inline du .jsx → classes ici ; couleurs/washes via tokens uniquement. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.g7 { gap: 7px; }
+.g8 { gap: 8px; }
+.g10 { gap: 10px; }
+.g12 { gap: 12px; }
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ───────────────── LISTE — en-tête patrimoine + Spark ───────────────── */
+.patLabel {
+  font-size: 12px;
+}
+.patVal {
+  font-size: 26px;
+  margin-top: 4px;
+}
+.patSub {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* ───────────────── LISTE — grille de comptes (desktop) ──────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.cardBlocked {
+  border-color: var(--neg);
+}
+.accHead {
+  margin-bottom: 16px;
+}
+.dim {
+  opacity: 0.6;
+}
+.accIco {
+  width: 42px;
+  height: 42px;
+}
+.accIcoBlocked {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+.accIcoMobile {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.accName {
+  font-weight: 700;
+  font-size: 15px;
+}
+.accBank {
+  font-size: 11.5px;
+}
+.accTags {
+  gap: 8px;
+}
+.iconBtnSm {
+  width: 34px;
+  height: 34px;
+}
+.accBottom {
+  align-items: flex-end;
+}
+.soldeLabel {
+  font-size: 11px;
+}
+.soldeVal {
+  font-size: 20px;
+  margin-top: 2px;
+}
+.blockedFoot {
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ───────────────── LISTE — mobile (extrapolée) ──────────────── */
+.chips {
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.chipSm {
+  font-size: 11.5px;
+  padding: 5px 11px;
+  flex: none;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mobHead {
+  margin-bottom: 10px;
+}
+.mobIco {
+  width: 38px;
+  height: 38px;
+}
+
+/* ───────────────── DÉTAIL (responsive) ──────────────── */
+.detailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.deskHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.headActions {
+  gap: 10px;
+}
+.mobActions {
+  display: none;
+}
+@media (max-width: 900px) {
+  .deskHead {
+    display: none;
+  }
+  .mobActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+.heroLabel {
+  font-size: 11.5px;
+  opacity: 0.7;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.heroVal {
+  font-size: 28px;
+  margin-top: 8px;
+}
+.heroNote {
+  margin-top: 10px;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.opsHead {
+  margin-bottom: 4px;
+}
+.opsTitle {
+  font-size: 13.5px;
+}
+.opRow {
+  padding: 10px 0;
+}
+.opIco {
+  width: 32px;
+  height: 32px;
+}
+.opText {
+  line-height: 1.25;
+  min-width: 0;
+}
+.opName {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.opMeta {
+  font-size: 10.5px;
+}
+.opAmt {
+  font-size: 12.5px;
+}
+
+/* ───────────────── États (chargement / erreur) ──────────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 96px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 220px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: cptShimmer 1.4s infinite;
+}
+@keyframes cptShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}

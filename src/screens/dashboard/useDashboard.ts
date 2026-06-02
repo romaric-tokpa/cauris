@@ -24,7 +24,7 @@ export interface DashboardData {
     bank: string
     type: string
     accountNumber: string
-    balance: number
+    balance: number | null // null si compte bloqué (jamais le vrai solde côté front)
     blocked: boolean
   }[]
   budgets: {

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Icon, Donut, Bars, Progress } from '../../components/primitives'
 import { Card, Badge, KpiTile } from '../../components/ui'
 import { money } from '../../lib/money'
+import { maskedBalance } from '../../lib/account'
 import { formatIsoDay, formatIsoMonthLabel, prevMonthLong } from '../../lib/date'
 import type { DashboardData } from './useDashboard'
 import styles from './dashboard.module.css'
@@ -233,18 +234,22 @@ export function DashboardDesktop({
           </div>
           <div className={styles.comptesGrid}>
             {d.accounts.map((c) => (
-              <Card soft pad="pad-sm" className="r between" key={c.id}>
-                <div className={`r ${styles.g10}`}>
-                  <div className={`row-ico ${styles.compteIco}`}>
-                    <Icon name="wallet" size={16} />
+              <Link to={`/comptes/${c.id}`} className="card-link-reset" key={c.id}>
+                <Card soft pad="pad-sm" className="r between">
+                  <div className={`r ${styles.g10}`}>
+                    <div className={`row-ico ${styles.compteIco}`}>
+                      <Icon name="wallet" size={16} />
+                    </div>
+                    <div className={styles.compteText}>
+                      <div className={styles.compteName}>{c.name}</div>
+                      <div className={`t-faint ${styles.compteBank}`}>{c.bank}</div>
+                    </div>
                   </div>
-                  <div className={styles.compteText}>
-                    <div className={styles.compteName}>{c.name}</div>
-                    <div className={`t-faint ${styles.compteBank}`}>{c.bank}</div>
+                  <div className={`t-mono ${styles.compteBal}`}>
+                    {maskedBalance(c.balance, c.blocked)}
                   </div>
-                </div>
-                <div className={`t-mono ${styles.compteBal}`}>{money(c.balance)}</div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </Card>
