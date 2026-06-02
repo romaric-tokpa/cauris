@@ -6,9 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     // En dev, le front appelle /api/* qui est proxifié vers le backend Hono.
+    // Cible surchargée par `API_PROXY_TARGET` pour le harnais e2e (serveur dédié,
+    // port 8887, distinct du backend dev 8787) — cf. playwright.config.ts.
     proxy: {
       '/api': {
-        target: 'http://localhost:8787',
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:8787',
         changeOrigin: true,
       },
     },

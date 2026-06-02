@@ -17,7 +17,10 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'sqlite', schema: authSchema }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
-  trustedOrigins: ['http://localhost:5173'],
+  // Origines de confiance — surchargeables par `AUTH_TRUSTED_ORIGINS` (liste
+  // séparée par des virgules) pour le harnais e2e qui sert le front sur un port
+  // dédié (5273, distinct du dev 5173). Défaut : dev local.
+  trustedOrigins: process.env.AUTH_TRUSTED_ORIGINS?.split(',') ?? ['http://localhost:5173'],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: ({ user, url }) => {

@@ -1,19 +1,34 @@
 import { defineConfig, devices } from '@playwright/test'
-import { AUTH_FILE } from './e2e/constants'
+import {
+  AUTH_FILE,
+  E2E_WEB_PORT,
+  E2E_WEB_ORIGIN,
+  E2E_SERVER_PORT,
+  E2E_SERVER_ORIGIN,
+  E2E_DB_URL,
+} from './e2e/constants'
 
 /**
- * Harnais Playwright.
+ * Harnais Playwright — ISOLÉ du dev (ports + DB dédiés).
  *
  * - Navigateur : Chromium uniquement.
- * - Serveurs : front Vite (5173, proxy /api) + backend Hono (8787) — les gardes de
- *   route exigent une session, donc les deux tournent.
- * - Auth : un projet `setup` crée une session (storageState) réutilisée par `smoke`
- *   et `fidelity` (sinon `/` redirige vers `/auth`).
+ * - Serveurs DÉDIÉS aux tests : front Vite (5273) + backend Hono (8887), JAMAIS
+ *   les ports dev (5173/8787). `reuseExistingServer: false` → Playwright lance
+ *   toujours ses propres serveurs et ne réutilise JAMAIS un `npm run dev` manuel
+ *   (qui pourrait servir un module périmé par HMR). `npm run e2e` est donc
+ *   reproductible même si un `npm run dev` tourne en parallèle.
+ * - DB JETABLE (`file:e2e-local.db`) : la commande du serveur de test
+ *   `rm + db:migrate + db:seed` AVANT de booter → chaque run part d'un état
+ *   propre et déterministe, sans jamais toucher la DB de dev (`local.db`).
+ *   (NB : en Playwright le webServer démarre AVANT un éventuel `globalSetup` ;
+ *   on séquence donc la remise à zéro DANS la commande serveur pour garantir
+ *   l'ordre — la DB est fraîche quand le serveur ouvre sa connexion.)
+ * - Auth : un projet `setup` crée une session (storageState) réutilisée par
+ *   `smoke` et `fidelity` (sinon `/` redirige vers `/auth`).
  * - Régression visuelle : seuil SERRÉ (voir e2e/helpers/visual.ts).
  */
 
-const PORT = 5173
-const BASE_URL = `http://localhost:${PORT}`
+const BASE_URL = E2E_WEB_ORIGIN
 
 export default defineConfig({
   testDir: './e2e',
@@ -57,21 +72,33 @@ export default defineConfig({
     },
   ],
 
-  // Les deux serveurs (Hono d'abord, puis Vite qui le proxifie). Le backend seede
-  // d'abord les données démo d'Aïcha (idempotent) → le dashboard rend les chiffres
-  // fixtures sous la session e2e d'Aïcha.
+  // Serveurs DÉDIÉS (Hono d'abord, puis Vite qui le proxifie) sur des ports e2e
+  // disjoints du dev. `reuseExistingServer: false` → jamais de réutilisation d'un
+  // dev manuel. Le backend repart d'une DB JETABLE fraîche (rm + migrate + seed)
+  // à chaque run, garantissant les chiffres fixtures d'Aïcha. La DB de dev
+  // (`local.db`) n'est jamais touchée (TURSO_DATABASE_URL pointe ailleurs).
   webServer: [
     {
-      command: 'npm run db:seed && npm run dev:server',
-      url: 'http://localhost:8787/health',
-      reuseExistingServer: true,
+      command:
+        'rm -f e2e-local.db e2e-local.db-shm e2e-local.db-wal && npm run db:migrate && npm run db:seed && npm run dev:server',
+      url: `${E2E_SERVER_ORIGIN}/health`,
+      reuseExistingServer: false,
       timeout: 120_000,
+      env: {
+        TURSO_DATABASE_URL: E2E_DB_URL,
+        PORT: String(E2E_SERVER_PORT),
+        BETTER_AUTH_URL: E2E_WEB_ORIGIN,
+        AUTH_TRUSTED_ORIGINS: E2E_WEB_ORIGIN,
+      },
     },
     {
-      command: 'npm run dev:web -- --port 5173 --strictPort',
+      command: `npm run dev:web -- --port ${E2E_WEB_PORT} --strictPort`,
       url: BASE_URL,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120_000,
+      env: {
+        API_PROXY_TARGET: E2E_SERVER_ORIGIN,
+      },
     },
   ],
 })

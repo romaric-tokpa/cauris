@@ -36,6 +36,10 @@ cauris.zip
 local.db
 local.db-*
 
+# Base de données JETABLE du harnais e2e (re-créée à chaque run, cf. playwright.config.ts)
+e2e-local.db
+e2e-local.db-*
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json

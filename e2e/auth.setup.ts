@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { test as setup, expect } from '@playwright/test'
-import { AUTH_FILE } from './constants'
+import { AUTH_FILE, E2E_WEB_ORIGIN } from './constants'
 
 /**
  * Session de test authentifiée = l'utilisatrice démo **Aïcha** (`aicha@cauris.demo`),
@@ -10,7 +10,9 @@ import { AUTH_FILE } from './constants'
  */
 const EMAIL = 'aicha@cauris.demo'
 const PASSWORD = 'aicha-demo-2026'
-const ORIGIN = 'http://localhost:5173'
+// Origine du front e2e (port dédié) — doit figurer dans `trustedOrigins` côté
+// Better Auth (cf. AUTH_TRUSTED_ORIGINS dans playwright.config.ts).
+const ORIGIN = E2E_WEB_ORIGIN
 
 setup('authenticate', async ({ request }) => {
   const signIn = await request.post('/api/auth/sign-in/email', {
