@@ -360,12 +360,42 @@ export function listNotifications(userId: string, opts: { unreadOnly?: boolean }
     .orderBy(desc(notifications.createdAt))
 }
 
-/** Écriture scopée : marque une notification de CE user comme lue. */
+/** Détail d'une notification du user (null si inexistante / à autrui). Vérif
+ *  d'appartenance avant écriture (pattern getTransactionById → 404 côté route). */
+export async function getNotificationById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Nombre de notifications non lues du user (badge cloche + payloads). Scopé. */
+export async function countUnreadNotifications(userId: string): Promise<number> {
+  const rows = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)))
+  return rows[0]?.n ?? 0
+}
+
+/** Écriture scopée : marque une notification de CE user comme lue (ligne renvoyée). */
 export function markNotificationRead(userId: string, notificationId: string) {
   return db
     .update(notifications)
     .set({ read: true })
     .where(and(eq(notifications.userId, userId), eq(notifications.id, notificationId)))
+    .returning()
+}
+
+/** Écriture scopée : marque TOUTES les non-lues du user comme lues (« Tout marquer
+ *  comme lu »). N'agit que sur les non-lues (idempotent). */
+export function markAllNotificationsRead(userId: string) {
+  return db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)))
 }
 
 /* ───────────────────────────── Récurrences ───────────────────────────── */

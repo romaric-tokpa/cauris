@@ -295,9 +295,19 @@ async function seed() {
     })),
   )
 
-  /* ── Budgets (budgetsFull) — Mai 2026 ── */
+  /* ── Budgets (budgetsFull) — Mai 2026. Ids explicites : le budget Transport est
+     la cible deep-link de la notif « Budget Transport dépassé ». ── */
+  const bud = {
+    transport: randomUUID(),
+    alimentation: randomUUID(),
+    factures: randomUUID(),
+    loisirs: randomUUID(),
+    sante: randomUUID(),
+    logement: randomUUID(),
+  }
   await db.insert(budgets).values([
     {
+      id: bud.transport,
       userId: uid,
       categoryId: cat.transport,
       cap: 50000,
@@ -306,6 +316,7 @@ async function seed() {
       period: MONTH,
     },
     {
+      id: bud.alimentation,
       userId: uid,
       categoryId: cat.alimentation,
       cap: 200000,
@@ -313,10 +324,11 @@ async function seed() {
       txnCount: 24,
       period: MONTH,
     },
-    { userId: uid, categoryId: cat.factures, cap: 90000, spent: 58500, txnCount: 6, period: MONTH },
-    { userId: uid, categoryId: cat.loisirs, cap: 50000, spent: 38000, txnCount: 9, period: MONTH },
-    { userId: uid, categoryId: cat.sante, cap: 40000, spent: 8400, txnCount: 3, period: MONTH },
+    { id: bud.factures, userId: uid, categoryId: cat.factures, cap: 90000, spent: 58500, txnCount: 6, period: MONTH }, // prettier-ignore
+    { id: bud.loisirs, userId: uid, categoryId: cat.loisirs, cap: 50000, spent: 38000, txnCount: 9, period: MONTH },
+    { id: bud.sante, userId: uid, categoryId: cat.sante, cap: 40000, spent: 8400, txnCount: 3, period: MONTH },
     {
+      id: bud.logement,
       userId: uid,
       categoryId: cat.logement,
       cap: 135000,
@@ -480,7 +492,10 @@ async function seed() {
     })),
   )
 
-  /* ── Notifications (notifsFull) — `when` relatif → created_at ISO ── */
+  /* ── Notifications (notifsFull) — `when` relatif → created_at ISO. Chaque notif
+     porte un deep-link (link_type + link_id) vers une entité EXISTANTE du user, OU
+     un lien d'écran (link_id null), OU rien (purement informative). Voir assertion
+     « Notifications — deep-links » plus bas (aucun id orphelin). ── */
   await db.insert(notifications).values([
     {
       userId: uid,
@@ -489,6 +504,8 @@ async function seed() {
       tone: 'over',
       icon: 'gauge',
       read: false,
+      linkType: 'budget',
+      linkId: bud.transport, // → /budgets/:id
       createdAt: new Date('2026-06-01T10:00:00'),
     },
     {
@@ -498,6 +515,8 @@ async function seed() {
       tone: 'warn',
       icon: 'bank',
       read: false,
+      linkType: 'loan',
+      linkId: loanId, // → /pret (prêt unique ; id stocké pour cohérence/futur)
       createdAt: new Date('2026-06-01T07:00:00'),
     },
     {
@@ -507,6 +526,8 @@ async function seed() {
       tone: 'ok',
       icon: 'target',
       read: false,
+      linkType: 'goal',
+      linkId: goal.voyage, // → /objectifs/:id
       createdAt: new Date('2026-05-31T12:00:00'),
     },
     {
@@ -516,6 +537,8 @@ async function seed() {
       tone: 'ok',
       icon: 'up',
       read: true,
+      linkType: 'transactions',
+      linkId: null, // → /transactions (revenu, liste non filtrée)
       createdAt: new Date('2026-05-28T12:00:00'),
     },
     {
@@ -525,6 +548,8 @@ async function seed() {
       tone: null,
       icon: 'lock',
       read: true,
+      linkType: 'account',
+      linkId: acc.wave, // → /comptes/:id
       createdAt: new Date('2026-05-27T12:00:00'),
     },
     {
@@ -534,6 +559,8 @@ async function seed() {
       tone: 'warn',
       icon: 'calendar',
       read: true,
+      linkType: 'transactions',
+      linkId: cat.factures, // → /transactions?categoryId=… (dépenses Factures)
       createdAt: new Date('2026-05-26T12:00:00'),
     },
     {
@@ -543,6 +570,8 @@ async function seed() {
       tone: null,
       icon: 'analytics',
       read: true,
+      linkType: 'analytics',
+      linkId: null, // → /analytics
       createdAt: new Date('2026-05-25T12:00:00'),
     },
   ])
@@ -719,6 +748,47 @@ async function seed() {
     '\n  ℹ budgets.spent (consommé sur l’enveloppe) ≠ category_summaries.amount (dépense\n' +
       '    totale catégorie) — deux mesures distinctes du wireframe, amount ≥ spent.\n' +
       '    Égalité NON assertée ; valeurs seedées telles quelles.',
+  )
+
+  /* — Deep-links : chaque notif est soit liée à une entité EXISTANTE du user
+     (budget/goal/account → link_id requis ; loan → le prêt ; transactions → une
+     catégorie ou null), soit un lien d'écran sans id (transactions/analytics),
+     soit informative. Aucun link_id orphelin. — */
+  const notifs = await db.select().from(notifications).where(eq(notifications.userId, uid))
+  const idSet = async (table: typeof budgets | typeof goals | typeof accounts | typeof loans | typeof categories) =>
+    new Set((await db.select({ id: table.id }).from(table).where(eq(table.userId, uid))).map((r) => r.id))
+  const [budgetIds, goalIds, accountIds, loanIds, categoryIds] = await Promise.all([
+    idSet(budgets),
+    idSet(goals),
+    idSet(accounts),
+    idSet(loans),
+    idSet(categories),
+  ])
+  const linkResolves = (type: string | null, id: string | null): boolean => {
+    switch (type) {
+      case 'budget':
+        return id != null && budgetIds.has(id)
+      case 'goal':
+        return id != null && goalIds.has(id)
+      case 'account':
+        return id != null && accountIds.has(id)
+      case 'loan':
+        return id == null || loanIds.has(id)
+      case 'transactions':
+        return id == null || categoryIds.has(id) // null = liste, sinon catégorie existante
+      case 'analytics':
+        return id == null // lien d'écran, pas d'id
+      case null:
+        return id == null // notif informative
+      default:
+        return false
+    }
+  }
+  const orphans = notifs.filter((n) => !linkResolves(n.linkType, n.linkId))
+  check(
+    'Notifications — deep-links (aucun id orphelin)',
+    notifs.length === 7 && orphans.length === 0,
+    `${notifs.length} notifs · ${orphans.length} orphelin(s)${orphans.length ? ' : ' + orphans.map((n) => n.title).join(', ') : ''}`,
   )
 
   console.log('\n✅ Seed terminé — toutes les assertions passent.')

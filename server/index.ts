@@ -23,6 +23,10 @@ import {
   listLoans,
   getLoanWithSchedule,
   listNotifications,
+  getNotificationById,
+  countUnreadNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
   listTransactions,
   listTransactionsDetailed,
   getTransactionStats,
@@ -310,6 +314,90 @@ api.get('/analytics', async (c) => {
   }
 
   return c.json({ period: month, kpis, averages, cashflow, breakdown: breakdownOut, budgets })
+})
+
+/* ───────────────────────────────── Notifications ───────────────────────────
+ * Centre de notifications (Phase 11). Chaque notif porte un deep-link contextuel
+ * résolu CÔTÉ SERVEUR en `href` depuis (link_type, link_id) — le front rend la
+ * ligne cliquable si `href` non-null. Les colonnes link_* ne sont PAS exposées
+ * brutes. Lecture/écriture scopées session ; PATCH vérifie l'appartenance (→ 404).
+ * `unreadCount` accompagne chaque réponse (badge cloche du shell). */
+
+// (link_type, link_id) → href applicatif. null = notif informative (non cliquable).
+function notifHref(linkType: string | null, linkId: string | null): string | null {
+  switch (linkType) {
+    case 'budget':
+      return linkId ? `/budgets/${linkId}` : null
+    case 'goal':
+      return linkId ? `/objectifs/${linkId}` : null
+    case 'account':
+      return linkId ? `/comptes/${linkId}` : null
+    case 'loan':
+      return '/pret'
+    case 'analytics':
+      return '/analytics'
+    case 'transactions':
+      // link_id = categoryId → liste filtrée sur le mois de réf. ; sinon liste brute.
+      return linkId
+        ? `/transactions?categoryId=${linkId}&from=${DEMO_MONTH}-01&to=${DEMO_MONTH}-31`
+        : '/transactions'
+    default:
+      return null
+  }
+}
+
+// Projection publique d'une notification (href résolu, link_* masqués).
+function projectNotification(n: {
+  id: string
+  title: string
+  body: string
+  tone: string | null
+  icon: string
+  read: boolean
+  linkType: string | null
+  linkId: string | null
+  createdAt: Date
+}) {
+  return {
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    tone: n.tone,
+    icon: n.icon,
+    read: n.read,
+    href: notifHref(n.linkType, n.linkId),
+    createdAt: n.createdAt,
+  }
+}
+
+// Liste des notifications du user + compteur de non-lues.
+api.get('/notifications', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [rows, unreadCount] = await Promise.all([
+    listNotifications(userId),
+    countUnreadNotifications(userId),
+  ])
+  return c.json({ notifications: rows.map(projectNotification), unreadCount })
+})
+
+// Marque UNE notification (du user) comme lue. Appartenance vérifiée → 404.
+api.patch('/notifications/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getNotificationById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await markNotificationRead(userId, existing.id)
+  const unreadCount = await countUnreadNotifications(userId)
+  return c.json({ notification: projectNotification(updated), unreadCount })
+})
+
+// « Tout marquer comme lu » : passe toutes les non-lues du user à lu.
+api.post('/notifications/read-all', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  await markAllNotificationsRead(userId)
+  return c.json({ status: 'ok', unreadCount: 0 })
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────

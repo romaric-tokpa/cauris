@@ -235,6 +235,12 @@ export const notifications = sqliteTable(
     tone: text('tone'),
     icon: text('icon').notNull(),
     read: integer('read', { mode: 'boolean' }).default(false).notNull(),
+    // Deep-link contextuel (Phase 11). Cible résolue côté serveur en `href` :
+    // 'budget'|'goal'|'account' → page détail /:id (link_id requis) ; 'loan' → /pret ;
+    // 'transactions' → /transactions (link_id = categoryId optionnel) ; 'analytics' → /analytics.
+    // null = notification purement informative (ligne non cliquable). Aucun id orphelin.
+    linkType: text('link_type'),
+    linkId: text('link_id'),
     ...timestamps(),
   },
   (t) => [index('notifications_user_idx').on(t.userId)],
