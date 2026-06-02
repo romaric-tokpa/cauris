@@ -14,7 +14,9 @@ export interface BarsProps {
 
 /** Barres groupées revenus/dépenses (hauteur CSS en %). Portées À L'IDENTIQUE de wf-lib.jsx. */
 export function Bars({ data, height = 140 }: BarsProps) {
-  const max = Math.max(...data.flatMap((d) => [d.rev, d.dep]))
+  // `Math.max(1, …)` : série vide → -Infinity, série tout-à-zéro → 0 → hauteurs NaN/Infinity.
+  // Le plancher à 1 garantit des hauteurs finies (barres à 0 % si pas de données).
+  const max = Math.max(1, ...data.flatMap((d) => [d.rev, d.dep]))
   return (
     <div className="wf-bars" style={{ height }}>
       {data.map((d, i) => (
