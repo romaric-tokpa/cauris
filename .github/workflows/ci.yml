@@ -19,7 +19,7 @@ jobs:
       - run: npm run build
 
   e2e:
-    name: E2E (Playwright)
+    name: E2E fonctionnel (Playwright)
     runs-on: ubuntu-latest
     env:
       # Auth de test (pas de secret réel ; base SQLite locale éphémère du job).
@@ -35,4 +35,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Crée les tables d'auth dans la base SQLite locale avant de lancer les serveurs.
       - run: npm run db:migrate
-      - run: npm run e2e
+      # UNIQUEMENT les tests FONCTIONNELS (projet smoke : l'app monte + parcours).
+      # La RÉGRESSION VISUELLE (projet fidelity, toHaveScreenshot) est un gate LOCAL :
+      # les baselines pixel sont spécifiques à macOS (-darwin) et donneraient des faux
+      # positifs cross-OS sur un runner Linux. Cf. e2e/baselines/README.md.
+      - run: npm run e2e:ci
