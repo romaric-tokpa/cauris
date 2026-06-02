@@ -387,49 +387,79 @@ async function seed() {
     },
   ])
 
-  /* ── Prêt auto (pret) — taux 9,5 % = 950 bps ── */
+  /* ── Prêt auto (pret) — COHÉRENT. Le wireframe codait des chiffres en dur
+     incohérents (amortissement ~10,3 % vs rateBps 9,5 % ; 22×145 000 < capital
+     restant → le prêt ne s'amortit pas). On garde les ancres ICONIQUES (remaining
+     3 200 000, rateBps 950, 22/36, principal 5 000 000) et on DÉRIVE la mensualité
+     de la formule d'amortissement standard ; l'échéancier est régénéré par
+     simulation entière depuis le capital restant → tout est cohérent, le moteur de
+     simulation (src/lib/loanSim.ts) solde en exactement 22 mois. ── */
   const loanId = randomUUID()
+  const LOAN_PRINCIPAL = 5000000
+  const LOAN_REMAINING = 3200000
+  const LOAN_RATE_BPS = 950
+  const LOAN_TERM = 36
+  const LOAN_MONTHS_REMAINING = 22
+  const LOAN_FIRST_PERIOD = '2026-06' // 1re échéance future (nextDueDate 2026-06-15)
+  const im = LOAN_RATE_BPS / 120000 // taux mensuel : 950 bps = 9,5 %/an ÷ 12
+  // Mensualité = B·i / (1 − (1+i)^−n), arrondie au FCFA SUPÉRIEUR pour solder en n mois.
+  const monthlyPayment = Math.ceil(
+    (LOAN_REMAINING * im) / (1 - Math.pow(1 + im, -LOAN_MONTHS_REMAINING)),
+  )
+
+  // Échéancier régénéré : intérêt = round(solde·i), capital = mensualité − intérêt,
+  // dernière échéance partielle (le capital restant est soldé exactement à 0).
+  const addMonths = (ym: string, k: number): string => {
+    const [y, m] = ym.split('-').map(Number)
+    const t = y * 12 + (m - 1) + k
+    return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+  }
+  const amortRows: {
+    periodMonth: string
+    principalPart: number
+    interestPart: number
+    remainingAfter: number
+  }[] = []
+  let loanBal = LOAN_REMAINING
+  while (loanBal > 0) {
+    const interestPart = Math.round(loanBal * im)
+    const principalPart = Math.min(monthlyPayment - interestPart, loanBal)
+    loanBal -= principalPart
+    amortRows.push({
+      periodMonth: addMonths(LOAN_FIRST_PERIOD, amortRows.length),
+      principalPart,
+      interestPart,
+      remainingAfter: loanBal,
+    })
+  }
+
   await db.insert(loans).values({
     id: loanId,
     userId: uid,
     name: 'Prêt auto',
-    principal: 5000000,
-    remaining: 3200000,
-    rateBps: 950,
-    monthlyPayment: 145000,
-    termMonths: 36,
-    monthsRemaining: 22,
+    principal: LOAN_PRINCIPAL,
+    remaining: LOAN_REMAINING,
+    rateBps: LOAN_RATE_BPS,
+    monthlyPayment,
+    termMonths: LOAN_TERM,
+    monthsRemaining: LOAN_MONTHS_REMAINING,
     nextDueDate: '2026-06-15',
   })
 
-  /* ── Amortissement (amortFull) ── */
-  const amort: [string, number, number, number][] = [
-    ['2026-06', 117500, 27500, 3082500],
-    ['2026-07', 118400, 26600, 2964100],
-    ['2026-08', 119300, 25700, 2844800],
-    ['2026-09', 120200, 24800, 2724600],
-    ['2026-10', 121100, 23900, 2603500],
-    ['2026-11', 122000, 23000, 2481500],
-    ['2026-12', 122900, 22100, 2358600],
-    ['2027-01', 123900, 21100, 2234700],
-    ['2027-02', 124900, 20100, 2109800],
-    ['2027-03', 125900, 19100, 1983900],
-    ['2027-04', 126900, 18100, 1857000],
-    ['2027-05', 127900, 17100, 1729100],
-  ]
   await db.insert(amortization).values(
-    amort.map(([period_month, principal_part, interest_part, remaining_after], i) => ({
+    amortRows.map((r, i) => ({
       userId: uid,
       loanId,
-      periodMonth: period_month,
-      principalPart: principal_part,
-      interestPart: interest_part,
-      remainingAfter: remaining_after,
+      periodMonth: r.periodMonth,
+      principalPart: r.principalPart,
+      interestPart: r.interestPart,
+      remainingAfter: r.remainingAfter,
       sort: i,
     })),
   )
 
-  /* ── Paiements de prêt (paiements) ── */
+  /* ── Paiements de prêt — échantillon récent (6 payés + 1 à venir), montant =
+     mensualité dérivée. Le « payé à ce jour » (14/36) est calculé via loanMeta. ── */
   const pays: [string, string, 'paid' | 'upcoming'][] = [
     ['2026-06', '2026-06-15', 'upcoming'],
     ['2026-05', '2026-05-15', 'paid'],
@@ -444,7 +474,7 @@ async function seed() {
       userId: uid,
       loanId,
       periodMonth: period_month,
-      amount: 145000,
+      amount: monthlyPayment,
       dueDate: due_date,
       status,
     })),
@@ -666,10 +696,22 @@ async function seed() {
   )
 
   const loan = (await db.select().from(loans).where(eq(loans.userId, uid)))[0]
+  const amortDb = await db.select().from(amortization).where(eq(amortization.userId, uid))
+  const sumPrincipal = amortDb.reduce((s, r) => s + r.principalPart, 0)
+  const lastAmort = amortDb.reduce((a, b) => (b.sort > a.sort ? b : a))
+  const iCheck = loan.rateBps / 120000
+  const expectedM = Math.ceil(
+    (loan.remaining * iCheck) / (1 - Math.pow(1 + iCheck, -loan.monthsRemaining)),
+  )
   check(
-    'Prêt auto',
-    loan.remaining === 3200000 && loan.rateBps === 950,
-    `reste ${loan.remaining} @ ${loan.rateBps / 100}%`,
+    'Prêt auto — cohérent',
+    loan.remaining === 3200000 &&
+      loan.rateBps === 950 &&
+      loan.monthlyPayment === expectedM &&
+      sumPrincipal === loan.remaining &&
+      lastAmort.remainingAfter === 0 &&
+      amortDb.length === loan.monthsRemaining,
+    `mensualité ${loan.monthlyPayment} (formule ${expectedM}) · Σcapital ${sumPrincipal} === ${loan.remaining} · ${amortDb.length} lignes · solde final ${lastAmort.remainingAfter}`,
   )
 
   // Deux mesures distinctes (pas une incohérence) : enveloppe budgétée vs dépense totale.

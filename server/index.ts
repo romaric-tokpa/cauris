@@ -20,6 +20,7 @@ import {
   getGoalById,
   createContribution,
   listLoans,
+  getLoanWithSchedule,
   listNotifications,
   listTransactions,
   listTransactionsDetailed,
@@ -532,6 +533,69 @@ api.post('/goals/:id/contributions', async (c) => {
   if ('error' in parsed) return c.json({ error: parsed.error }, 400)
   const { contribution, goal: updated } = await createContribution(userId, parsed.input)
   return c.json({ contribution, goal: { ...updated, ...goalMeta(updated) } }, 201)
+})
+
+/* ───────────────────────────── Prêts ──────────────────────────────────── */
+
+type LoanRow = Awaited<ReturnType<typeof listLoans>>[number]
+
+/** `2026-06` + k mois → `YYYY-MM` (déterministe, sans fuseau). */
+function addMonthsIso(ym: string, k: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  const t = y * 12 + (m - 1) + k
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+}
+
+/** Champs publics du prêt (sans userId/timestamps) + avancement (capital remboursé). */
+function projectLoan(l: LoanRow) {
+  const progress = l.principal ? Math.round(((l.principal - l.remaining) / l.principal) * 100) : 0
+  return {
+    id: l.id,
+    name: l.name,
+    principal: l.principal,
+    remaining: l.remaining,
+    rateBps: l.rateBps,
+    monthlyPayment: l.monthlyPayment,
+    termMonths: l.termMonths,
+    monthsRemaining: l.monthsRemaining,
+    nextDueDate: l.nextDueDate,
+    progress,
+  }
+}
+
+/** Stats de paiement dérivées (échéances payées/restantes, payé à ce jour, fin prévue). */
+function loanStats(l: LoanRow) {
+  const paidCount = l.termMonths - l.monthsRemaining
+  return {
+    paidCount,
+    paidToDate: paidCount * l.monthlyPayment,
+    remainingToPay: l.monthsRemaining * l.monthlyPayment,
+    projectedEndMonth: l.nextDueDate
+      ? addMonthsIso(l.nextDueDate.slice(0, 7), l.monthsRemaining - 1)
+      : null,
+  }
+}
+
+// Liste des prêts (avancement dérivé).
+api.get('/loans', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const rows = await listLoans(userId)
+  return c.json({ loans: rows.map(projectLoan) })
+})
+
+// Détail : prêt + échéancier + paiements + stats. Appartenance → 404.
+api.get('/loans/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const data = await getLoanWithSchedule(userId, c.req.param('id'))
+  if (!data) return c.json({ error: 'not found' }, 404)
+  return c.json({
+    loan: projectLoan(data.loan),
+    amortization: data.amortization,
+    payments: data.payments,
+    stats: loanStats(data.loan),
+  })
 })
 
 app.route('/api', api)
