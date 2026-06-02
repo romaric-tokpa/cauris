@@ -10,6 +10,7 @@ import { Comptes, ComptesDetail } from '../screens/comptes'
 import { Pret } from '../screens/pret'
 import { Analytics } from '../screens/analytics'
 import { Notifications } from '../screens/notifications'
+import { Assistant } from '../screens/assistant'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
 import { Signup } from '../screens/auth/Signup'
@@ -28,6 +29,7 @@ const moduleRoutes: RouteObject[] = NAV_ALL.map((n) => {
   if (n.path === '/pret') return { path: 'pret', element: <Pret /> }
   if (n.path === '/analytics') return { path: 'analytics', element: <Analytics /> }
   if (n.path === '/notifications') return { path: 'notifications', element: <Notifications /> }
+  if (n.path === '/assistant-ia') return { path: 'assistant-ia', element: <Assistant /> }
   return { path: n.path.slice(1), element: <ModulePage title={n.label} /> }
 })
 

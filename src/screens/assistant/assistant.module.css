@@ -1,0 +1,207 @@
+/* Assistant IA — layout porté de screens-ai.jsx (AssistantDesk/AssistantMob).
+   Chat = classes `.chat`/`.msg`/`.bubble`/`.ai-av`/`.ask` de components.css (réutilisées
+   à l'identique). Inline du .jsx → classes ici ; couleurs/tons via tokens uniquement. */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ───────────────── Grille chat (1.9fr) / rail (1fr) ───────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1.9fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.chatCard {
+  gap: 16px;
+}
+.rail {
+  gap: 14px;
+}
+
+/* ───────────────── Barres de répartition (dans une bulle) ───────────────── */
+.bars {
+  gap: 8px;
+  margin-top: 11px;
+}
+.barHead {
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+.barLabel {
+  font-weight: 600;
+}
+
+/* ───────────────── Chips de suggestions ───────────────── */
+.chips {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chipBtn {
+  font: inherit;
+  cursor: pointer;
+}
+.chipMd {
+  font-size: 11.5px;
+}
+.chipSm {
+  font-size: 11px;
+}
+
+/* ───────────────── Champ de saisie (.ask) ───────────────── */
+.askInput {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  font: inherit;
+  color: var(--ink);
+  padding: 0;
+}
+.askInput::placeholder {
+  color: var(--ink-faint);
+}
+.askSm {
+  padding: 9px 11px;
+}
+.send {
+  width: 34px;
+  height: 34px;
+  background: var(--solid);
+  color: var(--on-solid);
+  border: none;
+  flex: none;
+}
+.sendSm {
+  width: 30px;
+  height: 30px;
+  background: var(--solid);
+  color: var(--on-solid);
+  border: none;
+  flex: none;
+}
+
+/* ───────────────── Bulle de chargement (3 points) ───────────────── */
+.typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+}
+.typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  animation: aiTyping 1s infinite ease-in-out;
+}
+.typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes aiTyping {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* ───────────────── Rail : Questions fréquentes ───────────────── */
+.railTitle {
+  margin-bottom: 12px;
+}
+.qRow {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 0;
+  gap: 10px;
+}
+.qText {
+  font-size: 12.5px;
+  font-weight: 500;
+  flex: 1;
+}
+
+/* ───────────────── Rail : Confidentialité ───────────────── */
+.privacy {
+  gap: 12px;
+  align-items: flex-start;
+}
+.privacyIco {
+  background: var(--pos-wash);
+  color: var(--pos);
+  flex: none;
+}
+.privacyTitle {
+  font-weight: 700;
+  font-size: 13px;
+}
+.privacyText {
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* ───────────────── Variantes mobile (compact) ───────────────── */
+.msgSm {
+  max-width: 88%;
+}
+.avSm {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+.bubbleSm {
+  font-size: 12.5px;
+}
