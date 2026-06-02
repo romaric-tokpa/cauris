@@ -5,7 +5,7 @@ import { EmptyState } from '../../components/states'
 import { useSetPageTitle } from '../../components/shell/pageTitle'
 import { money } from '../../lib/money'
 import { formatIsoDay } from '../../lib/date'
-import { useBudget, type BudgetDetailResponse } from './useBudgets'
+import { useBudget, useBudgetAdvice, type BudgetDetailResponse } from './useBudgets'
 import styles from './budgets.module.css'
 
 function Skeleton() {
@@ -43,6 +43,8 @@ export function BudgetDetail() {
 
 function Detail({ data }: { data: BudgetDetailResponse }) {
   const { budget: b, categoryTotal, linkedTransactions } = data
+  // Conseil IA — seul le cas dépassement l'affiche (cf. bandeau ci-dessous).
+  const advice = useBudgetAdvice(b.id, b.tone === 'over')
   // Titre de l'app bar mobile (la route /budgets/:id n'est pas dans la nav).
   useSetPageTitle(b.categoryName)
 
@@ -107,18 +109,19 @@ function Detail({ data }: { data: BudgetDetailResponse }) {
           </div>
         )}
 
-        {/* conseil IA — placeholder STATIQUE (vraie IA = Phase 12), cas dépassement */}
+        {/* conseil IA — contenu réel (askClaude mode budget-advice), cas dépassement */}
         {b.tone === 'over' && (
           <Card pad="pad-sm" className={`r ${styles.g12}`}>
             <div className={`ai-av ${styles.aiAv}`}>C</div>
             <div className={styles.aiText}>
               <span className={`insight-tag ${styles.aiTag}`}>Conseil</span>
-              Réduire les courses Yango de 2 par semaine ramènerait ce budget sous son plafond avant
-              la fin du mois.
+              {advice.data?.text ?? 'Analyse de ce budget en cours…'}
             </div>
-            <span className={`card-link ${styles.nowrap}`}>
-              Voir comment <Icon name="chevron" size={13} />
-            </span>
+            {advice.data?.href && (
+              <Link to={advice.data.href} className={`card-link ${styles.nowrap}`}>
+                Voir comment <Icon name="chevron" size={13} />
+              </Link>
+            )}
           </Card>
         )}
 

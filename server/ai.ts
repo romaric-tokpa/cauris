@@ -70,6 +70,26 @@ export interface InsightsResult {
   insights: Insight[]
 }
 
+/** Budget ciblé pour un conseil (composé par la route). `transactionsHref` = lien de
+ *  NAVIGATION vers les opérations de la catégorie (lecture seule, jamais d'action). */
+export interface BudgetTarget {
+  name: string
+  cap: number
+  spent: number // enveloppe stockée
+  pct: number
+  tone: 'ok' | 'warn' | 'over'
+  ecart: number // spent - cap (dépassement de l'enveloppe)
+  categoryTotal: number // dépense TOTALE de la catégorie (dérivée du ledger)
+  transactionsHref: string
+}
+
+/** Conseil budget : TEXTE + lien de navigation. Aucun champ exécutable (§1.6). */
+export interface BudgetAdvice {
+  text: string
+  tone: 'ok' | 'warn' | 'over' | ''
+  href: string | null
+}
+
 /**
  * Point d'entrée de l'assistant. **Pour brancher l'API Anthropic réelle, NE changer
  * QUE le corps de cette fonction** (clé serveur `process.env.ANTHROPIC_API_KEY`,
@@ -86,17 +106,24 @@ export async function askClaude(params: {
   mode: 'insights'
   context: FinancialContext
 }): Promise<InsightsResult>
+export async function askClaude(params: {
+  mode: 'budget-advice'
+  context: FinancialContext
+  budget: BudgetTarget
+}): Promise<BudgetAdvice>
 // eslint-disable-next-line @typescript-eslint/require-await -- les stubs sont synchrones ; le futur appel Anthropic awaitera (signature async conservée pour le swap).
 export async function askClaude(params: {
-  mode?: 'chat' | 'insights'
+  mode?: 'chat' | 'insights' | 'budget-advice'
   messages?: ChatMessage[]
   context: FinancialContext
-}): Promise<AiReply | InsightsResult> {
+  budget?: BudgetTarget
+}): Promise<AiReply | InsightsResult | BudgetAdvice> {
   // TODO Phase 12+ : brancher l'API Anthropic ICI (clé SERVEUR process.env.ANTHROPIC_API_KEY,
-  //   modèle Claude courant). MÊME frontière pour les deux modes : `chat` (system prompt +
-  //   `messages` → texte) et `insights` (system prompt « génère N insights structurés » →
-  //   JSON parsé). Seul ce corps change ; signatures et types de retour inchangés.
+  //   modèle Claude courant). MÊME frontière pour tous les modes : `chat` (messages → texte),
+  //   `insights` (« génère N insights structurés » → JSON), `budget-advice` (conseil ciblé →
+  //   JSON). Seul ce corps change ; signatures et types de retour inchangés.
   if (params.mode === 'insights') return stubInsights(params.context)
+  if (params.mode === 'budget-advice') return stubBudgetAdvice(params.budget!)
   return stubReply({ messages: params.messages ?? [], context: params.context })
 }
 
@@ -307,4 +334,38 @@ function stubInsights(ctx: FinancialContext): InsightsResult {
   }
 
   return { insights }
+}
+
+/* ───────────────────────── Stub conseil budget (détail) ───────────────────────
+ * Conseil ciblé sur UN budget, basé sur ses VRAIS chiffres (ecart/pct/cap stockés +
+ * dépense catégorie dérivée). §1.6 : recommandation reliée à l'objectif concret
+ * (résorber le dépassement) ; lien = navigation vers les opérations (jamais d'action).
+ * Aucun chiffre inventé. Déterministe. */
+function stubBudgetAdvice(b: BudgetTarget): BudgetAdvice {
+  if (b.tone === 'over') {
+    return {
+      text:
+        `Le budget ${b.name} est dépassé de ${fcfa(b.ecart)} FCFA (${b.pct} % du plafond de ${fcfa(b.cap)} FCFA). ` +
+        `Vos dépenses ${b.name} totalisent ${fcfa(b.categoryTotal)} FCFA ce mois. ` +
+        `Limiter ce poste les prochaines semaines ramènerait l’enveloppe sous sa limite.`,
+      tone: 'over',
+      href: b.transactionsHref,
+    }
+  }
+  if (b.tone === 'warn') {
+    return {
+      text:
+        `Le budget ${b.name} approche du plafond : ${b.pct} % (${fcfa(b.spent)} / ${fcfa(b.cap)} FCFA). ` +
+        `Surveillez vos prochaines dépenses ${b.name} pour rester dans l’enveloppe.`,
+      tone: 'warn',
+      href: b.transactionsHref,
+    }
+  }
+  return {
+    text:
+      `Le budget ${b.name} est sous contrôle : ${b.pct} % (${fcfa(b.spent)} / ${fcfa(b.cap)} FCFA). ` +
+      `Continuez ainsi pour préserver votre épargne.`,
+    tone: 'ok',
+    href: b.transactionsHref,
+  }
 }

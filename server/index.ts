@@ -6,7 +6,7 @@ import { client, db } from './db/client'
 import { user } from './db/auth-schema'
 import { auth } from './auth'
 import { getSessionUserId } from './session'
-import { askClaude, type ChatMessage, type FinancialContext } from './ai'
+import { askClaude, type ChatMessage, type FinancialContext, type BudgetTarget } from './ai'
 import {
   getMonthlySummary,
   getCategoryBreakdown,
@@ -511,6 +511,34 @@ api.get('/ai/insights', async (c) => {
   const context = await buildAiContext(userId)
   const result = await askClaude({ mode: 'insights', context })
   return c.json(result)
+})
+
+// Conseil contextuel sur UN budget (détail). Appartenance vérifiée → 404. Cite les
+// vrais chiffres (ecart/pct + dépense catégorie dérivée). SUGGESTION ONLY : texte +
+// lien de navigation (jamais d'action). Réutilise buildAiContext + le budget ciblé.
+api.get('/ai/budgets/:id/advice', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const b = await getBudgetById(userId, c.req.param('id'))
+  if (!b) return c.json({ error: 'not found' }, 404)
+  const { pct, tone } = budgetMeta(b.spent, b.cap)
+  const [context, breakdown] = await Promise.all([
+    buildAiContext(userId),
+    getCategoryBreakdown(userId, b.period),
+  ])
+  const categoryTotal = breakdown.find((x) => x.categoryId === b.categoryId)?.amount ?? 0
+  const budget: BudgetTarget = {
+    name: b.categoryName,
+    cap: b.cap,
+    spent: b.spent,
+    pct,
+    tone,
+    ecart: b.spent - b.cap,
+    categoryTotal,
+    transactionsHref: `/transactions?categoryId=${b.categoryId}&from=${b.period}-01&to=${b.period}-31`,
+  }
+  const advice = await askClaude({ mode: 'budget-advice', context, budget })
+  return c.json(advice)
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────

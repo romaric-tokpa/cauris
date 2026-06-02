@@ -54,3 +54,25 @@ export function useBudget(id: string) {
     queryFn: () => apiFetch<BudgetDetailResponse>(`/api/budgets/${id}`),
   })
 }
+
+/** Conseil IA d'un budget (Phase 12 sous-bloc 3) — miroir de `server/ai.ts`. `href` =
+ *  lien de NAVIGATION (lecture seule), jamais une action exécutable (§1.6). */
+export interface BudgetAdvice {
+  text: string
+  tone: 'ok' | 'warn' | 'over' | ''
+  href: string | null
+}
+
+/**
+ * Conseil contextuel d'un budget. Clé `['budgets', id, 'advice']` → couverte par
+ * l'invalidation `['budgets']` de `useTxnMutations` (le conseil cite la dépense
+ * catégorie dérivée → se rafraîchit après mutation). `enabled` : seul le cas
+ * dépassement affiche le conseil dans le détail.
+ */
+export function useBudgetAdvice(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['budgets', id, 'advice'],
+    queryFn: () => apiFetch<BudgetAdvice>(`/api/ai/budgets/${id}/advice`),
+    enabled,
+  })
+}
