@@ -166,7 +166,7 @@
   }
 }
 
-/* AIBanner « Conseil » (placeholder statique — vraie IA Phase 12) */
+/* AIBanner « Conseil » — alimenté par askClaude(goal-projection), dérivé des contributions */
 .aiAv {
   width: 30px;
   height: 30px;
