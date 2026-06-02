@@ -95,6 +95,8 @@ export function useTxnMutations() {
     void qc.invalidateQueries({ queryKey: ['dashboard'] })
     // Le détail budget dérive son total catégorie du ledger → re-dériver après mutation.
     void qc.invalidateQueries({ queryKey: ['budgets'] })
+    // Analytics dérive KPI/donut/cashflow du même ledger → re-dériver après mutation.
+    void qc.invalidateQueries({ queryKey: ['analytics'] })
   }
   const create = useMutation({
     mutationFn: (data: TxnWritePayload) =>

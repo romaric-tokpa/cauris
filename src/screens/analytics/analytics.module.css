@@ -1,0 +1,348 @@
+/* Analytics — layout porté de screens-analytics.jsx + screens-analytics-tabs.jsx.
+   Desktop = 4 onglets (Overview/Catégories/Tendances/Budget vs réel) ; mobile = 3
+   chips (Overview/Catégories/Tendances, pas « Budget vs réel »). Inline du .jsx →
+   classes ici ; couleurs/washes via tokens uniquement (jamais de hex/rgba en dur). */
+
+.desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .desktop {
+    display: none;
+  }
+  .mobile {
+    display: flex;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+.headActions {
+  gap: 10px;
+}
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bold {
+  font-weight: 600;
+}
+
+/* ───────────────── Pastilles de catégorie (légendes) ───────────────── */
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+.cat1 {
+  background: var(--cat-1);
+}
+.cat2 {
+  background: var(--cat-2);
+}
+.cat3 {
+  background: var(--cat-3);
+}
+.cat4 {
+  background: var(--cat-4);
+}
+.cat5 {
+  background: var(--cat-5);
+}
+.cat6 {
+  background: var(--cat-6);
+}
+
+/* ───────────────── KPI ───────────────── */
+.kpiGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.kpiGrid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.kpiVal {
+  font-size: 22px;
+  margin-top: 12px;
+}
+.kpiDelta {
+  margin-top: 5px;
+}
+
+/* ───────────────── Graphes (Bars + Donut) ───────────────── */
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 14px;
+}
+.cardSub {
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.legend {
+  gap: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.g6 {
+  gap: 6px;
+}
+.g8 {
+  gap: 8px;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.swInk {
+  background: var(--ink);
+}
+.swLine {
+  background: var(--line);
+}
+
+/* donut + légende empilée */
+.donutWrap {
+  align-items: center;
+  gap: 16px;
+}
+.donutHead {
+  width: 100%;
+  margin-bottom: 0;
+}
+.legendList {
+  gap: 9px;
+  width: 100%;
+}
+.legendRow {
+  font-size: 12.5px;
+}
+
+/* ───────────────── Tables catégories (Overview / Catégories) ───────────────── */
+.headHint {
+  font-size: 11.5px;
+}
+.rowList {
+  gap: 2px;
+}
+.catRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+}
+.catRowDetail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+}
+.catName {
+  font-weight: 600;
+  font-size: 13px;
+  width: 120px;
+}
+.catNameWrap {
+  gap: 9px;
+  width: 150px;
+}
+.catNameStrong {
+  font-weight: 600;
+  font-size: 13px;
+}
+.catBar {
+  flex: 1;
+}
+.catPct {
+  font-size: 12px;
+  width: 42px;
+  text-align: right;
+}
+.catPctSm {
+  font-size: 12px;
+  width: 38px;
+  text-align: right;
+}
+.catCount {
+  font-size: 11.5px;
+  width: 64px;
+  text-align: right;
+}
+.catAmt {
+  width: 110px;
+  margin: 0;
+}
+.catAmtSm {
+  width: 104px;
+  margin: 0;
+}
+
+/* grille onglet Catégories (donut | table) */
+.catGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.7fr;
+  gap: 14px;
+  align-items: start;
+}
+.chipRow {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ───────────────── Tables (Tendances / Budget) ───────────────── */
+.tableCard {
+  overflow: hidden;
+}
+.tableHead {
+  padding: 18px 18px 14px;
+}
+.moCell {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ───────────────── Budget vs réel ───────────────── */
+.budgetStats {
+  gap: 0;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  row-gap: 14px;
+}
+.statDivider {
+  border-left: 1px solid var(--line-soft);
+  padding-left: 20px;
+}
+.consoCol {
+  width: 200px;
+}
+.consoCell {
+  gap: 10px;
+}
+.consoBar {
+  flex: 1;
+}
+.consoBadge {
+  min-width: 44px;
+  text-align: center;
+}
+
+/* ───────────────── Mobile ───────────────── */
+.statMobRow {
+  gap: 12px;
+}
+.statMobGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.statMobVal {
+  font-size: 16px;
+}
+.statMobDelta {
+  margin-top: 3px;
+}
+.chipRowMob {
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.chipMob {
+  font-size: 11.5px;
+  padding: 5px 11px;
+}
+.donutCardMob {
+  align-items: center;
+  gap: 14px;
+}
+.donutHeadMob {
+  width: 100%;
+  margin-bottom: 0;
+}
+.mobListTitle {
+  font-size: 13.5px;
+  margin-bottom: 12px;
+}
+.mobList {
+  gap: 12px;
+}
+.mobListHead {
+  margin-bottom: 6px;
+}
+.mobCatName {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.mobCatMeta {
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+/* ───────────────── États (chargement / erreur) ───────────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 110px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  position: relative;
+  overflow: hidden;
+}
+.skelTall {
+  height: 220px;
+}
+.skelCard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 55%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: anaShimmer 1.4s infinite;
+}
+@keyframes anaShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
