@@ -6,6 +6,7 @@ import { client, db } from './db/client'
 import { user } from './db/auth-schema'
 import { auth } from './auth'
 import { getSessionUserId } from './session'
+import { askClaude, type ChatMessage, type FinancialContext } from './ai'
 import {
   getMonthlySummary,
   getCategoryBreakdown,
@@ -398,6 +399,96 @@ api.post('/notifications/read-all', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   await markAllNotificationsRead(userId)
   return c.json({ status: 'ok', unreadCount: 0 })
+})
+
+/* ───────────────────────────────── Assistant IA ────────────────────────────
+ * Chat de l'assistant financier (Phase 12, sous-bloc 1). La route LIT le contexte
+ * financier scopé (façade, mêmes agrégats que /api/dashboard → chiffres cohérents)
+ * et le passe à `askClaude` (STUB déterministe pour l'instant ; clé Anthropic
+ * SERVEUR plus tard, jamais côté client). SUGGESTION ONLY (§1.6) : la réponse est
+ * du TEXTE (+ barres lecture seule) ; le contexte ne porte aucun id/handle d'action,
+ * la route n'écrit rien → l'assistant ne peut RIEN déclencher. */
+
+// Valide l'historique reçu (format Anthropic). Renvoie les messages ou une erreur.
+function parseChatMessages(body: unknown): { messages: ChatMessage[] } | { error: string } {
+  if (typeof body !== 'object' || body === null || !('messages' in body)) {
+    return { error: 'messages requis' }
+  }
+  const raw: unknown = body.messages
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return { error: 'messages doit être un tableau non vide' }
+  }
+  const messages: ChatMessage[] = []
+  for (const m of raw) {
+    const role = (m as { role?: unknown }).role
+    const content = (m as { content?: unknown }).content
+    if ((role !== 'user' && role !== 'assistant') || typeof content !== 'string') {
+      return { error: 'chaque message doit être { role: "user"|"assistant", content: string }' }
+    }
+    messages.push({ role, content })
+  }
+  if (messages[messages.length - 1].role !== 'user') {
+    return { error: 'le dernier message doit être de l’utilisateur' }
+  }
+  return { messages }
+}
+
+api.post('/ai/chat', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseChatMessages(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+
+  // Contexte financier scopé (lecture seule) — même façade que /api/dashboard.
+  const [accountsRows, summary, breakdown, budgetRows, goalRows, loanRows] = await Promise.all([
+    listAccounts(userId),
+    getMonthlySummary(userId, DEMO_MONTH),
+    getCategoryBreakdown(userId, DEMO_MONTH),
+    listBudgets(userId, DEMO_MONTH),
+    listGoals(userId),
+    listLoans(userId),
+  ])
+  const total = accountsRows.reduce((s, a) => s + a.balance, 0)
+  const depenses = summary?.depenses ?? null
+  const revenus = summary?.revenus ?? null
+  const epargne = summary?.epargne ?? null
+  const savingsRate = revenus && epargne != null ? Math.round((epargne / revenus) * 100) : null
+
+  const context: FinancialContext = {
+    month: DEMO_MONTH,
+    total,
+    revenus,
+    depenses,
+    epargne,
+    savingsRate,
+    topCategories: breakdown.map((b) => ({
+      name: b.name,
+      amount: b.amount,
+      pct: depenses ? Math.round((b.amount / depenses) * 100) : 0,
+      colorToken: b.colorToken,
+    })),
+    budgets: budgetRows.map((b) => ({
+      name: b.categoryName,
+      cap: b.cap,
+      spent: b.spent,
+      ...budgetMeta(b.spent, b.cap),
+    })),
+    goals: goalRows.map((g) => ({
+      name: g.name,
+      current: g.currentAmount,
+      target: g.targetAmount,
+      pct: g.targetAmount ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0,
+    })),
+    loans: loanRows.map((l) => ({
+      name: l.name,
+      remaining: l.remaining,
+      monthlyPayment: l.monthlyPayment,
+    })),
+  }
+
+  const result = await askClaude({ messages: parsed.messages, context })
+  return c.json(result)
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────
