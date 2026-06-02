@@ -504,3 +504,30 @@ export async function getCategoryBreakdown(userId: string, month: string) {
     .where(and(eq(categorySummaries.userId, userId), eq(categorySummaries.month, month)))
     .orderBy(desc(categorySummaries.amount))
 }
+
+/**
+ * Nombre d'opérations de DÉPENSE par catégorie pour le mois (colonne « N opér. »
+ * de l'onglet Catégories d'Analytics). DÉRIVÉ du ledger, mêmes filtres que le donut
+ * dérivé (`amount < 0`, hors Transfert) → cohérent avec `getCategoryBreakdown`.
+ * Scopé `user_id`. Renvoie `{ categoryId, txnCount }[]` ; une catégorie sans dépense
+ * du mois est simplement absente (compteur 0 côté route). Le mois courant porte le
+ * ledger vivant ; un mois passé (sans transactions) renverrait une série vide — Analytics
+ * vise le mois courant (`DEMO_MONTH`), ce qui est l'usage prévu.
+ */
+export function getCategoryTxnCounts(userId: string, month: string) {
+  return db
+    .select({
+      categoryId: transactions.categoryId,
+      txnCount: sql<number>`count(*)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        like(transactions.occurredAt, `${month}-%`),
+        lt(transactions.amount, 0),
+        ne(transactions.type, 'Transfert'),
+      ),
+    )
+    .groupBy(transactions.categoryId)
+}

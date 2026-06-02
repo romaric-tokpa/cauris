@@ -9,6 +9,7 @@ import { getSessionUserId } from './session'
 import {
   getMonthlySummary,
   getCategoryBreakdown,
+  getCategoryTxnCounts,
   listMonthlySummaries,
   listAccounts,
   listCategories,
@@ -200,6 +201,115 @@ api.get('/dashboard', async (c) => {
     notifications: notifs,
     loan,
   })
+})
+
+/* ───────────────────────────────── Analytics ───────────────────────────────
+ * Écran d'analyse (Phase 10). Un SEUL payload scopé, composé EXCLUSIVEMENT de la
+ * façade (mêmes dérivations que le dashboard et l'écran Budgets) → chaque chiffre
+ * Analytics == dashboard == budgets par construction. Aucun agrégat nouveau non
+ * dérivé : seul `getCategoryTxnCounts` (COUNT scoped du ledger) s'ajoute, réclamé
+ * par la colonne « N opér. ». ?month=YYYY-MM (défaut DEMO_MONTH).
+ *
+ * Deltas MoM = RÉELS (mois courant vs précédent de la série) ; `null` si pas de M-1.
+ * Pas de trend PAR CATÉGORIE (aucun snapshot de catégorie passé → non dérivable :
+ * on ne l'invente pas). Les moyennes (onglet Tendances) sont la moyenne de la série,
+ * sans delta (aucune mesure naturelle → pas de badge inventé). */
+api.get('/analytics', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const month = c.req.query('month') ?? DEMO_MONTH
+
+  const [months, breakdown, counts, budgetRows] = await Promise.all([
+    listMonthlySummaries(userId), // série chrono ; mois courant DÉRIVÉ du ledger
+    getCategoryBreakdown(userId, month),
+    getCategoryTxnCounts(userId, month),
+    listBudgets(userId, month),
+  ])
+
+  // Taux d'épargne PRÉCIS (épargne / revenus, en %) — base des KPI et deltas.
+  const rate = (epargne: number, revenus: number) => (revenus ? (epargne / revenus) * 100 : 0)
+
+  // Mois courant + précédent dans la série (pour les deltas MoM réels).
+  const idx = months.findIndex((m) => m.month === month)
+  const cur = idx >= 0 ? months[idx] : null
+  const prev = idx > 0 ? months[idx - 1] : null
+
+  const depenses = cur?.depenses ?? 0
+  const revenus = cur?.revenus ?? 0
+  const epargne = cur?.epargne ?? 0
+  const savingsRate = Math.round(rate(epargne, revenus)) // 238 000/850 000 → 28
+
+  // Delta % m/m à une décimale (recopie le format wireframe « +5,5 % »). null si pas de M-1.
+  const deltaPct = (now: number, before: number) =>
+    before ? Math.round(((now - before) / before) * 1000) / 10 : null
+
+  const kpis = {
+    depenses,
+    revenus,
+    epargne,
+    savingsRate,
+    depensesDeltaPct: prev ? deltaPct(depenses, prev.depenses ?? 0) : null,
+    revenusDeltaPct: prev ? deltaPct(revenus, prev.revenus ?? 0) : null,
+    // Écart en POINTS de taux (taux courant − taux M-1), une décimale. Taux non arrondis.
+    savingsRateDeltaPts: prev
+      ? Math.round((rate(epargne, revenus) - rate(prev.epargne ?? 0, prev.revenus ?? 0)) * 10) / 10
+      : null,
+  }
+
+  // Moyennes de la série (onglet Tendances). Taux moyen = ratio des moyennes
+  // (cohérent avec le calcul du taux courant), pas la moyenne des taux.
+  const n = months.length || 1
+  const revenusAvg = Math.round(months.reduce((s, m) => s + (m.revenus ?? 0), 0) / n)
+  const depensesAvg = Math.round(months.reduce((s, m) => s + (m.depenses ?? 0), 0) / n)
+  const epargneAvg = Math.round(months.reduce((s, m) => s + (m.epargne ?? 0), 0) / n)
+  const averages = {
+    revenusAvg,
+    depensesAvg,
+    epargneAvg,
+    savingsRateAvg: Math.round(rate(epargneAvg, revenusAvg)),
+  }
+
+  const cashflow = months.map((m) => ({ m: m.month, rev: m.revenus, dep: m.depenses, epa: m.epargne }))
+
+  // « N opér. » par catégorie (dérivé) ; absent = 0.
+  const countByCat = new Map(counts.map((r) => [r.categoryId, r.txnCount]))
+  const breakdownOut = breakdown.map((b) => ({
+    categoryId: b.categoryId,
+    name: b.name,
+    colorToken: b.colorToken,
+    amount: b.amount,
+    v: depenses ? Math.round((b.amount / depenses) * 100) : 0, // même % que le donut dashboard
+    txnCount: countByCat.get(b.categoryId) ?? 0,
+  }))
+
+  // Budget vs réel = MÊME mesure que l'écran Budgets (enveloppe stockée + budgetMeta).
+  const bRows = budgetRows.map((b) => {
+    const { pct, tone } = budgetMeta(b.spent, b.cap)
+    return {
+      categoryId: b.categoryId,
+      categoryName: b.categoryName,
+      colorToken: b.colorToken,
+      cap: b.cap,
+      spent: b.spent,
+      pct,
+      tone,
+      ecart: b.spent - b.cap,
+      txnCount: b.txnCount,
+    }
+  })
+  const totalCap = bRows.reduce((s, b) => s + b.cap, 0)
+  const totalSpent = bRows.reduce((s, b) => s + b.spent, 0)
+  const budgets = {
+    rows: bRows,
+    totals: {
+      cap: totalCap,
+      spent: totalSpent,
+      ecart: totalSpent - totalCap,
+      tauxConso: budgetMeta(totalSpent, totalCap).pct,
+    },
+  }
+
+  return c.json({ period: month, kpis, averages, cashflow, breakdown: breakdownOut, budgets })
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────
