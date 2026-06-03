@@ -46,6 +46,37 @@ export async function getAccountById(userId: string, id: string) {
   return rows[0] ?? null
 }
 
+/** Données d'écriture d'un compte (solde entier FCFA ; `blocked` géré à part). */
+export interface AccountWriteInput {
+  name: string
+  bank: string
+  type: string
+  accountNumber: string
+  balance: number
+}
+
+export function createAccount(userId: string, input: AccountWriteInput) {
+  return db.insert(accounts).values({ userId, ...input }).returning()
+}
+
+/** Écriture scopée : ne met à jour que si (id, user_id) correspond. */
+export function updateAccount(userId: string, id: string, input: AccountWriteInput) {
+  return db
+    .update(accounts)
+    .set(input)
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .returning()
+}
+
+/** Blocage / déblocage scopé (le solde réel est conservé ; masqué au niveau route). */
+export function setAccountBlocked(userId: string, id: string, blocked: boolean) {
+  return db
+    .update(accounts)
+    .set({ blocked })
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .returning()
+}
+
 /* ───────────────────────────── Catégories ────────────────────────────── */
 export function listCategories(userId: string) {
   return db

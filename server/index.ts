@@ -27,6 +27,10 @@ import {
   listBudgets,
   getBudgetById,
   getAccountById,
+  createAccount,
+  updateAccount,
+  setAccountBlocked,
+  type AccountWriteInput,
   listGoals,
   listContributions,
   getGoalById,
@@ -879,6 +883,32 @@ function maskAccount(a: AccountRow) {
   }
 }
 
+// Types de compte canoniques (filtres liste = Trésorerie/Épargne/Mobile money ;
+// « Espèces » = cash, sans onglet dédié). Rejette tout le reste (pas de type fantôme).
+const ACCOUNT_TYPES = ['Trésorerie', 'Épargne', 'Mobile money', 'Espèces']
+
+/** Valide les données d'un compte (création/édition). → input ou message. */
+function parseAccountInput(body: unknown): { input: AccountWriteInput } | { error: string } {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  if (!name) return { error: 'Nom du compte requis.' }
+
+  const type = b.type
+  if (typeof type !== 'string' || !ACCOUNT_TYPES.includes(type))
+    return { error: 'Type de compte invalide.' }
+
+  const bank = typeof b.bank === 'string' ? b.bank.trim() : ''
+  const accountNumber = typeof b.accountNumber === 'string' ? b.accountNumber.trim() : ''
+
+  const balance = b.balance
+  if (typeof balance !== 'number' || !Number.isInteger(balance) || balance < 0)
+    return { error: 'Solde : entier FCFA positif ou nul requis.' }
+
+  return { input: { name, bank, type, accountNumber, balance } }
+}
+
 // Liste des comptes (soldes bloqués masqués) + patrimoine agrégé serveur. Scopée.
 // Sert AUSSI de liste de référence aux sélecteurs de formulaire (id/name).
 api.get('/accounts', async (c) => {
@@ -908,6 +938,56 @@ api.get('/accounts/:id', async (c) => {
   if (!a) return c.json({ error: 'not found' }, 404)
   const recentTransactions = await listTransactionsDetailed(userId, { accountId: a.id, limit: 5 })
   return c.json({ account: maskAccount(a), recentTransactions })
+})
+
+/* ───────────── Écritures comptes (création / édition / blocage) ─────────────
+ * Scopées session + appartenance (SELECT → 404). Solde entier FCFA. Le masquage
+ * du solde bloqué (maskAccount) reste appliqué en sortie → cohérent après écriture.
+ * Débloque le cold start : un nouvel utilisateur crée son 1er compte ici. */
+
+// Création de compte.
+api.post('/accounts', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseAccountInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createAccount(userId, parsed.input)
+  return c.json({ account: maskAccount(created) }, 201)
+})
+
+// Édition (remplacement complet du formulaire). Appartenance → 404.
+api.patch('/accounts/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getAccountById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseAccountInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [updated] = await updateAccount(userId, id, parsed.input)
+  return c.json({ account: maskAccount(updated) })
+})
+
+// Blocage. Appartenance → 404. Le solde réel est conservé mais masqué en sortie.
+api.post('/accounts/:id/block', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getAccountById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setAccountBlocked(userId, existing.id, true)
+  return c.json({ account: maskAccount(updated) })
+})
+
+// Déblocage. Appartenance → 404.
+api.post('/accounts/:id/unblock', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getAccountById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setAccountBlocked(userId, existing.id, false)
+  return c.json({ account: maskAccount(updated) })
 })
 
 // Liste filtrée + stats d'en-tête.
