@@ -47,8 +47,14 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  listRecurrences,
+  getRecurrenceById,
+  createRecurrence,
+  updateRecurrence,
+  deleteRecurrence,
   type TransactionFilter,
   type TransactionWriteInput,
+  type RecurrenceWriteInput,
 } from './db/queries'
 
 // Mois de démonstration (période de réf. produit : Mai 2026 ; le seed s'y arrête).
@@ -807,6 +813,54 @@ async function parseTxnInput(
   return { input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt } }
 }
 
+// Seule fréquence livrée (cf. wireframe « Chaque mois, le 1er ») — on rejette le
+// reste pour ne pas exposer d'option fantôme côté front.
+const RECURRENCE_FREQUENCIES = ['monthly']
+
+/** Valide une récurrence + dérive le signe (charge → négatif) + vérifie l'appartenance. */
+async function parseRecurrenceInput(
+  userId: string,
+  body: unknown,
+): Promise<{ input: RecurrenceWriteInput } | { error: string }> {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  if (!name) return { error: 'Libellé requis.' }
+
+  const magnitude = b.amount
+  if (typeof magnitude !== 'number' || !Number.isInteger(magnitude) || magnitude <= 0)
+    return { error: 'Montant : entier FCFA strictement positif requis.' }
+
+  const frequency = b.frequency
+  if (typeof frequency !== 'string' || !RECURRENCE_FREQUENCIES.includes(frequency))
+    return { error: 'Fréquence invalide.' }
+
+  const nextDate = b.nextDate
+  if (typeof nextDate !== 'string' || !ISO_DATE.test(nextDate))
+    return { error: 'Prochaine date invalide (AAAA-MM-JJ).' }
+
+  if (typeof b.known !== 'boolean') return { error: 'Statut invalide.' }
+  const known = b.known
+
+  let categoryId: string | null = null
+  if (b.categoryId != null) {
+    if (typeof b.categoryId !== 'string' || !(await userOwnsCategory(userId, b.categoryId)))
+      return { error: 'Catégorie invalide ou non autorisée.' }
+    categoryId = b.categoryId
+  }
+
+  let accountId: string | null = null
+  if (b.accountId != null) {
+    if (typeof b.accountId !== 'string' || !(await userOwnsAccount(userId, b.accountId)))
+      return { error: 'Compte invalide ou non autorisé.' }
+    accountId = b.accountId
+  }
+
+  // Charge récurrente → stockée négative (miroir de la convention Dépense).
+  return { input: { name, amount: -magnitude, frequency, nextDate, known, categoryId, accountId } }
+}
+
 /**
  * Projection d'un compte vers le front. SÉCURITÉ : le solde RÉEL d'un compte BLOQUÉ
  * n'est JAMAIS sérialisé (`balance: null`) — le front rend « ••• ••• » à partir du
@@ -920,6 +974,55 @@ api.delete('/transactions/:id', async (c) => {
   const existing = await getTransactionById(userId, id)
   if (!existing) return c.json({ error: 'not found' }, 404)
   await deleteTransaction(userId, id)
+  return c.json({ status: 'ok' })
+})
+
+/* ──────────────────────────────── Récurrences ───────────────────────────────
+ * CRUD de l'entité `recurrences` (charges qui reviennent). Scopées session +
+ * appartenance (SELECT → 404 avant PATCH/DELETE), même patron que transactions.
+ * Le client envoie une MAGNITUDE ; le serveur stocke le signe (charge → négatif). */
+
+// Liste (triée par prochaine échéance).
+api.get('/recurrences', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const rows = await listRecurrences(userId)
+  return c.json({ recurrences: rows })
+})
+
+// Création.
+api.post('/recurrences', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseRecurrenceInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createRecurrence(userId, parsed.input)
+  return c.json({ recurrence: created }, 201)
+})
+
+// Édition (remplacement complet du formulaire). Appartenance → 404.
+api.patch('/recurrences/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getRecurrenceById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseRecurrenceInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [updated] = await updateRecurrence(userId, id, parsed.input)
+  return c.json({ recurrence: updated })
+})
+
+// Suppression. Appartenance → 404.
+api.delete('/recurrences/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getRecurrenceById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  await deleteRecurrence(userId, id)
   return c.json({ status: 'ok' })
 })
 

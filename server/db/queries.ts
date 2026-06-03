@@ -407,6 +407,47 @@ export function listRecurrences(userId: string) {
     .orderBy(asc(recurrences.nextDate))
 }
 
+/** Lecture scopée (appartenance) → row | null (patron 404 avant PATCH/DELETE). */
+export async function getRecurrenceById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(recurrences)
+    .where(and(eq(recurrences.userId, userId), eq(recurrences.id, id)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Données d'écriture d'une récurrence (amount DÉJÀ signé par l'appelant). */
+export interface RecurrenceWriteInput {
+  name: string
+  amount: number
+  frequency: string
+  nextDate: string
+  known: boolean
+  categoryId: string | null
+  accountId: string | null
+}
+
+export function createRecurrence(userId: string, input: RecurrenceWriteInput) {
+  return db.insert(recurrences).values({ userId, ...input }).returning()
+}
+
+/** Écriture scopée : ne met à jour que si (id, user_id) correspond. */
+export function updateRecurrence(userId: string, id: string, input: RecurrenceWriteInput) {
+  return db
+    .update(recurrences)
+    .set(input)
+    .where(and(eq(recurrences.id, id), eq(recurrences.userId, userId)))
+    .returning()
+}
+
+/** Suppression scopée. */
+export function deleteRecurrence(userId: string, id: string) {
+  return db
+    .delete(recurrences)
+    .where(and(eq(recurrences.id, id), eq(recurrences.userId, userId)))
+}
+
 /* ════════════════════════════ Façade agrégats ════════════════════════════
  * POINT CLÉ. Les écrans n'appellent QUE cette façade, jamais les tables
  * `monthly_summaries` / `category_summaries` directement.
