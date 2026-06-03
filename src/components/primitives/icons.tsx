@@ -274,6 +274,12 @@ export const ICONS = {
       <path d="M14.5 8H18v3.5" />
     </>
   ),
+  pause: (
+    <>
+      <path d="M9 5v14" />
+      <path d="M15 5v14" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>
 
 export type IconName = keyof typeof ICONS

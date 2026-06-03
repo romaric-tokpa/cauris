@@ -218,3 +218,121 @@
   max-width: 32ch;
   line-height: 1.45;
 }
+
+/* ───────────────────────── Transfert (drawer) ───────────────────────── */
+.transferSwap {
+  display: flex;
+  justify-content: center;
+}
+.swapIco {
+  width: 34px;
+  height: 34px;
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.transferRow {
+  align-items: center;
+}
+.transferRowTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ───────────────────────── Récurrences (vue entité) ──────────────────── */
+.recHeadLabel {
+  font-size: 12px;
+}
+.recTotal {
+  font-size: 22px;
+  margin-top: 3px;
+}
+.recHeadRight {
+  align-items: flex-end;
+}
+.recPill {
+  background: var(--panel-2);
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.recDetected {
+  font-size: 11.5px;
+  margin-top: 6px;
+}
+.recTable {
+  overflow: hidden;
+}
+.recActionsCol {
+  width: 90px;
+}
+.recName {
+  font-weight: 600;
+}
+.recActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.recIconBtn {
+  width: 30px;
+  height: 30px;
+}
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.detectCard {
+  gap: 12px;
+  align-items: flex-start;
+}
+.detectIco {
+  background: var(--accent-wash);
+  color: var(--accent);
+  flex: none;
+}
+.detectTitle {
+  font-weight: 700;
+  font-size: 13px;
+}
+.detectText {
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* Récurrences — mobile */
+.recMobNew {
+  margin-top: 2px;
+}
+.recMobTotal {
+  font-size: 18px;
+}
+.recMobRow {
+  padding: 10px 0;
+  cursor: pointer;
+}
+.recMobIco {
+  width: 34px;
+  height: 34px;
+}
+.recMobText {
+  flex: 1;
+  min-width: 0;
+}
+.recMobName {
+  font-weight: 600;
+  font-size: 13px;
+}
+.recMobSub {
+  font-size: 11px;
+  margin-top: 2px;
+}
+.recMobEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 12px;
+}

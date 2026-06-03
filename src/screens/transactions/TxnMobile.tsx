@@ -3,17 +3,10 @@ import { Card } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { money } from '../../lib/money'
 import { formatIsoDay } from '../../lib/date'
+import { TxnChips } from './parts'
 import { txnIcon, accountLabel } from './helpers'
 import type { TxnListResponse, TxnRow } from './useTransactions'
 import styles from './transactions.module.css'
-
-const TABS = [
-  { label: 'Tous', value: '' },
-  { label: 'Revenus', value: 'Revenu' },
-  { label: 'Dépenses', value: 'Dépense' },
-  { label: 'Transferts', value: 'Transfert' },
-  { label: 'Récurrentes', value: 'Récurrente' },
-]
 
 function Row({ t, onClick }: { t: TxnRow; onClick: () => void }) {
   return (
@@ -63,21 +56,7 @@ export function TxnMobile({ data, filters, setFilter, onRowClick, className = ''
   return (
     <div className={className}>
       {/* tabs */}
-      <div className={`r ${styles.mobChips} ${styles.g7}`}>
-        {TABS.map((t) => (
-          <span
-            key={t.label}
-            className={'chip ' + styles.mobChip + (filters.type === t.value ? ' on' : '')}
-            role="button"
-            aria-pressed={filters.type === t.value}
-            tabIndex={0}
-            onClick={() => setFilter('type', t.value)}
-            onKeyDown={(e) => e.key === 'Enter' && setFilter('type', t.value)}
-          >
-            {t.label}
-          </span>
-        ))}
-      </div>
+      <TxnChips active={filters.type} onSelect={(v) => setFilter('type', v)} />
 
       {/* stats */}
       <div className={`r ${styles.g12}`}>

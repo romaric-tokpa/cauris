@@ -1,9 +1,52 @@
 import { Icon } from '../../components/primitives'
+import { TABS } from './helpers'
 import styles from './transactions.module.css'
 
 export interface SelectOption {
   value: string
   label: string
+}
+
+/** Sous-nav desktop (`.subnav`/`.si`) — partagée liste transactions ↔ vue récurrences. */
+export function TxnSubnav({ active, onSelect }: { active: string; onSelect: (v: string) => void }) {
+  return (
+    <div className="subnav">
+      {TABS.map((t) => (
+        <span
+          key={t.label}
+          className={'si' + (active === t.value ? ' on' : '')}
+          role="button"
+          aria-pressed={active === t.value}
+          tabIndex={0}
+          onClick={() => onSelect(t.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSelect(t.value)}
+        >
+          {t.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** Sous-nav mobile (chips) — partagée liste transactions ↔ vue récurrences. */
+export function TxnChips({ active, onSelect }: { active: string; onSelect: (v: string) => void }) {
+  return (
+    <div className={`r ${styles.mobChips} ${styles.g7}`}>
+      {TABS.map((t) => (
+        <span
+          key={t.label}
+          className={'chip ' + styles.mobChip + (active === t.value ? ' on' : '')}
+          role="button"
+          aria-pressed={active === t.value}
+          tabIndex={0}
+          onClick={() => onSelect(t.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSelect(t.value)}
+        >
+          {t.label}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 /** Sélecteur de formulaire : `.inp` (texte + chevron) avec un <select> natif invisible. */

@@ -3,18 +3,10 @@ import { Card } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { money } from '../../lib/money'
 import { formatIsoDay } from '../../lib/date'
-import { FilterChip } from './parts'
+import { FilterChip, TxnSubnav } from './parts'
 import { txnIcon, accountLabel } from './helpers'
 import type { TxnListResponse, TxnRow, AccountRef, CategoryRef } from './useTransactions'
 import styles from './transactions.module.css'
-
-const TABS = [
-  { label: 'Tous', value: '' },
-  { label: 'Revenus', value: 'Revenu' },
-  { label: 'Dépenses', value: 'Dépense' },
-  { label: 'Transferts', value: 'Transfert' },
-  { label: 'Récurrentes', value: 'Récurrente' },
-]
 
 interface Props {
   data: TxnListResponse
@@ -55,21 +47,7 @@ export function TxnDesktop({
       </div>
 
       {/* tabs */}
-      <div className="subnav">
-        {TABS.map((t) => (
-          <span
-            key={t.label}
-            className={'si' + (filters.type === t.value ? ' on' : '')}
-            role="button"
-            aria-pressed={filters.type === t.value}
-            tabIndex={0}
-            onClick={() => setFilter('type', t.value)}
-            onKeyDown={(e) => e.key === 'Enter' && setFilter('type', t.value)}
-          >
-            {t.label}
-          </span>
-        ))}
-      </div>
+      <TxnSubnav active={filters.type} onSelect={(v) => setFilter('type', v)} />
 
       {/* filtres */}
       <div className={`r between wrap ${styles.filterStrip} ${styles.g12}`}>

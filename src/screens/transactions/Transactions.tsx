@@ -3,9 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { useTransactions, useAccounts, useCategories, type TxnRow } from './useTransactions'
+import { useRecurrences, type RecurrenceRow } from './useRecurrences'
+import { RECURRENCES_TAB } from './helpers'
 import { TxnDesktop } from './TxnDesktop'
 import { TxnMobile } from './TxnMobile'
+import { RecurrencesDesktop, RecurrencesMobile } from './Recurrences'
 import { TransactionForm } from './TransactionForm'
+import { RecurrenceForm } from './RecurrenceForm'
 import styles from './transactions.module.css'
 
 /** Vrai en dessous du breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
@@ -50,11 +54,30 @@ function Skeleton() {
   )
 }
 
+function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className={styles.centerState}>
+      <Card className={styles.skeleton}>
+        <div className="r">
+          <Icon name="alert" size={20} className="t-neg" />
+        </div>
+        <div>{message}</div>
+        <button type="button" className="btn primary" onClick={onRetry}>
+          Réessayer
+        </button>
+      </Card>
+    </div>
+  )
+}
+
 export function Transactions() {
   const [params, setParams] = useSearchParams()
   const isMobile = useIsMobile()
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<TxnRow | undefined>(undefined)
+  // Drawer récurrence (distinct du drawer transaction).
+  const [recOpen, setRecOpen] = useState(false)
+  const [recEditing, setRecEditing] = useState<RecurrenceRow | undefined>(undefined)
 
   // Filtres lus depuis l'URL (persistants, partageables, survivent au retour).
   const filters: Record<string, string> = {
@@ -75,6 +98,10 @@ export function Transactions() {
     )
   }
 
+  // L'onglet « Récurrentes » bascule sur la vue ENTITÉ (table `recurrences`),
+  // pas un filtre de la liste des transactions.
+  const isRecurrences = filters.type === RECURRENCES_TAB
+
   // Périmètre temporel : honore from/to de l'URL s'ils sont fournis (ex. lien
   // « Voir les transactions liées » d'un budget → catégorie + bornes du mois), sinon
   // retombe sur le mois courant. Le chip « Mai 2026 » reste un VRAI périmètre par
@@ -83,6 +110,7 @@ export function Transactions() {
   const from = params.get('from') || '2026-05-01'
   const to = params.get('to') || '2026-05-31'
   const list = useTransactions({ ...filters, from, to })
+  const recs = useRecurrences(isRecurrences)
   const accountsQ = useAccounts()
   const categoriesQ = useCategories()
 
@@ -116,20 +144,26 @@ export function Transactions() {
     }
   }
 
-  if (list.isPending) return <Skeleton />
-  if (list.isError || !list.data) {
-    return (
-      <div className={styles.centerState}>
-        <Card className={styles.skeleton}>
-          <div className="r">
-            <Icon name="alert" size={20} className="t-neg" />
-          </div>
-          <div>Impossible de charger les transactions.</div>
-          <button type="button" className="btn primary" onClick={() => void list.refetch()}>
-            Réessayer
-          </button>
-        </Card>
-      </div>
+  const openNewRec = () => {
+    setRecEditing(undefined)
+    setRecOpen(true)
+  }
+  const openEditRec = (r: RecurrenceRow) => {
+    setRecEditing(r)
+    setRecOpen(true)
+  }
+  const closeRec = () => {
+    setRecOpen(false)
+    setRecEditing(undefined)
+  }
+
+  // Chargement / erreur : gate sur la requête pertinente selon l'onglet.
+  if (isRecurrences ? recs.isPending : list.isPending) return <Skeleton />
+  if (isRecurrences ? recs.isError || !recs.data : list.isError || !list.data) {
+    return isRecurrences ? (
+      <ErrorCard message="Impossible de charger les récurrences." onRetry={() => void recs.refetch()} />
+    ) : (
+      <ErrorCard message="Impossible de charger les transactions." onRetry={() => void list.refetch()} />
     )
   }
 
@@ -140,26 +174,52 @@ export function Transactions() {
   return (
     <>
       <h1 className={styles.srOnly}>Transactions</h1>
-      <TxnDesktop
-        data={list.data}
-        filters={filters}
-        setFilter={setFilter}
-        accounts={accounts}
-        categories={categories}
-        onAdd={openAdd}
-        onRowClick={openEdit}
-        className={styles.desktop}
-      />
-      <TxnMobile
-        data={list.data}
-        filters={filters}
-        setFilter={setFilter}
-        onRowClick={openEdit}
-        className={styles.mobile}
-      />
 
-      {/* Le drawer se rend TOUJOURS quand on l'ouvre : si aucun compte n'existe,
-       *  il explique pourquoi au lieu de laisser le bouton « Ajouter » muet
+      {isRecurrences ? (
+        <>
+          <RecurrencesDesktop
+            data={recs.data ?? []}
+            filters={filters}
+            setFilter={setFilter}
+            onNew={openNewRec}
+            onEdit={openEditRec}
+            className={styles.desktop}
+          />
+          <RecurrencesMobile
+            data={recs.data ?? []}
+            filters={filters}
+            setFilter={setFilter}
+            onNew={openNewRec}
+            onEdit={openEditRec}
+            className={styles.mobile}
+          />
+        </>
+      ) : (
+        list.data && (
+          <>
+            <TxnDesktop
+              data={list.data}
+              filters={filters}
+              setFilter={setFilter}
+              accounts={accounts}
+              categories={categories}
+              onAdd={openAdd}
+              onRowClick={openEdit}
+              className={styles.desktop}
+            />
+            <TxnMobile
+              data={list.data}
+              filters={filters}
+              setFilter={setFilter}
+              onRowClick={openEdit}
+              className={styles.mobile}
+            />
+          </>
+        )
+      )}
+
+      {/* Drawer transaction — se rend TOUJOURS quand on l'ouvre : si aucun compte
+       *  n'existe, il explique pourquoi au lieu de laisser le bouton « Ajouter » muet
        *  (anti-inerte — un bouton agit ou se justifie, jamais cliquable sans effet). */}
       {isMobile ? (
         <BottomSheet open={formVisible} onClose={close} title={editing ? 'Modifier' : 'Ajouter'}>
@@ -193,6 +253,34 @@ export function Transactions() {
           ) : (
             <NoAccountNotice onClose={close} />
           )}
+        </Drawer>
+      )}
+
+      {/* Drawer récurrence (Nouvelle / Modifier). */}
+      {isMobile ? (
+        <BottomSheet open={recOpen} onClose={closeRec} title={recEditing ? 'Modifier' : 'Nouvelle'}>
+          <RecurrenceForm
+            key={recEditing?.id ?? 'new'}
+            initial={recEditing}
+            accounts={accounts}
+            categories={categories}
+            stacked
+            onClose={closeRec}
+          />
+        </BottomSheet>
+      ) : (
+        <Drawer
+          open={recOpen}
+          onClose={closeRec}
+          title={recEditing ? 'Modifier la récurrence' : 'Nouvelle récurrence'}
+        >
+          <RecurrenceForm
+            key={recEditing?.id ?? 'new'}
+            initial={recEditing}
+            accounts={accounts}
+            categories={categories}
+            onClose={closeRec}
+          />
         </Drawer>
       )}
     </>
