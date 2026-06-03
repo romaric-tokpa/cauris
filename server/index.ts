@@ -41,6 +41,9 @@ import {
   listGoals,
   listContributions,
   getGoalById,
+  createGoal,
+  updateGoal,
+  type GoalWriteInput,
   createContribution,
   listLoans,
   getLoanWithSchedule,
@@ -112,6 +115,42 @@ async function parseBudgetInput(
   if (typeof b.rollover !== 'boolean') return { error: 'Report invalide.' }
 
   return { input: { categoryId, cap, frequency, alertPct, rollover: b.rollover } }
+}
+
+/**
+ * Valide la saisie d'un objectif (création / édition). Champs modélisés du wireframe
+ * « Nouvel objectif » : nom, montant cible, déjà épargné, date cible. (« Compte dédié » et
+ * « Contribution automatique » sont décoratifs côté wireframe — non persistés ici.)
+ * Le wireframe ne montre PAS de priorité → aucune priorité inventée.
+ */
+function parseGoalInput(body: unknown): { input: GoalWriteInput } | { error: string } {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  if (!name) return { error: 'Nom de l’objectif requis.' }
+
+  const targetAmount = b.targetAmount
+  if (typeof targetAmount !== 'number' || !Number.isInteger(targetAmount) || targetAmount <= 0)
+    return { error: 'Montant cible : entier FCFA strictement positif requis.' }
+
+  // « Déjà épargné » : optionnel, entier ≥ 0 (0 par défaut). Posé à la création seulement.
+  let currentAmount = 0
+  if (b.currentAmount != null) {
+    if (typeof b.currentAmount !== 'number' || !Number.isInteger(b.currentAmount) || b.currentAmount < 0)
+      return { error: 'Déjà épargné : entier FCFA positif ou nul requis.' }
+    currentAmount = b.currentAmount
+  }
+
+  // Date cible : optionnelle (null si non fournie) ; sinon AAAA-MM-JJ stricte.
+  let targetDate: string | null = null
+  if (b.targetDate != null && b.targetDate !== '') {
+    if (typeof b.targetDate !== 'string' || !ISO_DATE.test(b.targetDate))
+      return { error: 'Date cible invalide (AAAA-MM-JJ).' }
+    targetDate = b.targetDate
+  }
+
+  return { input: { name, targetAmount, currentAmount, targetDate } }
 }
 
 /** Delta % m/m signé à une décimale, format « +5,5 % » (miroir de ai.ts deltaPct). */
@@ -1237,8 +1276,8 @@ api.delete('/recurrences/:id', async (c) => {
  * Lecture (liste + détail avec historique) + ajout de contribution. Scopées session.
  * Une contribution incrémente goals.current_amount de façon ATOMIQUE (et ne touche
  * PAS le solde du compte source — dette assumée Phase 7, cf. createContribution).
- * La CRÉATION / ÉDITION d'objectif est DIFFÉRÉE (target_date/target_amount modélisés
- * et lus, mais leur saisie exige un écran absent du wireframe — non inventé ici). */
+ * CRÉATION / ÉDITION d'objectif : POST/PATCH /goals (drawer « Nouvel objectif » du
+ * wireframe). La contribution reste le SEUL flux qui fait progresser current_amount. */
 
 // Jour de référence produit (currentDate) — borne le statut « En retard ».
 const TODAY = '2026-06-01'
@@ -1316,6 +1355,35 @@ api.get('/goals/:id', async (c) => {
     ...goalMeta(g),
   }
   return c.json({ goal, contributions })
+})
+
+/* ───────────── Écritures objectifs (création / édition) ─────────────
+ * Scopées session + appartenance (SELECT → 404). Le wireframe « Nouvel objectif » fixe
+ * les champs ; la contribution (progression) reste un flux distinct, non touché ici. */
+
+// Création. `currentAmount` (« Déjà épargné ») posé ici ; ensuite seul un versement le fait bouger.
+api.post('/goals', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseGoalInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createGoal(userId, parsed.input)
+  return c.json({ goal: { ...created, ...goalMeta(created) } }, 201)
+})
+
+// Édition (nom / cible / date). Appartenance → 404. `currentAmount` inchangé (piloté par versements).
+api.patch('/goals/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getGoalById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseGoalInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const { name, targetAmount, targetDate } = parsed.input
+  const [updated] = await updateGoal(userId, existing.id, { name, targetAmount, targetDate })
+  return c.json({ goal: { ...updated, ...goalMeta(updated) } })
 })
 
 // Ajout d'une contribution : crée la ligne ET fait progresser l'objectif (atomique).

@@ -411,6 +411,36 @@ export async function getGoalById(userId: string, id: string) {
   return rows[0] ?? null
 }
 
+/**
+ * Données d'écriture d'un objectif. `currentAmount` (« Déjà épargné ») n'est posé qu'à la
+ * CRÉATION ; en édition il reste piloté par les contributions (source de vérité de la
+ * progression) — on ne le réécrit pas pour ne pas casser l'invariant Σ(contributions).
+ */
+export interface GoalWriteInput {
+  name: string
+  targetAmount: number
+  currentAmount: number
+  targetDate: string | null
+}
+
+/** Création scopée d'un objectif (validé par l'appelant : nom non vide, cible entière > 0). */
+export function createGoal(userId: string, input: GoalWriteInput) {
+  return db.insert(goals).values({ userId, ...input }).returning()
+}
+
+/** Édition scopée (nom / cible / date) — `currentAmount` inchangé (cf. GoalWriteInput). */
+export function updateGoal(
+  userId: string,
+  id: string,
+  input: Pick<GoalWriteInput, 'name' | 'targetAmount' | 'targetDate'>,
+) {
+  return db
+    .update(goals)
+    .set(input)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning()
+}
+
 /** Entrée d'écriture d'une contribution (montant entier FCFA > 0, validé par l'appelant). */
 export interface ContributionWriteInput {
   goalId: string
