@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { useTransactions, useAccounts, useCategories, type TxnRow } from './useTransactions'
@@ -20,6 +20,25 @@ function useIsMobile(): boolean {
     return () => mq.removeEventListener('change', onChange)
   }, [])
   return m
+}
+
+/** Contenu du drawer d'ajout quand l'utilisateur n'a encore aucun compte : on ne
+ *  peut pas saisir d'opération sans compte de destination → on l'explique et on
+ *  l'oriente, plutôt que d'ouvrir un formulaire inutilisable. */
+function NoAccountNotice({ onClose }: { onClose: () => void }) {
+  return (
+    <div className={styles.noAccount}>
+      <div className={`row-ico ${styles.noAccountIco}`}>
+        <Icon name="wallet" size={20} />
+      </div>
+      <div className={styles.noAccountText}>
+        Ajoutez d'abord un compte pour pouvoir enregistrer une transaction.
+      </div>
+      <Link to="/comptes" className="btn primary" onClick={onClose}>
+        <Icon name="plus" size={16} /> Créer un compte
+      </Link>
+    </div>
+  )
 }
 
 function Skeleton() {
@@ -67,6 +86,13 @@ export function Transactions() {
   const accountsQ = useAccounts()
   const categoriesQ = useCategories()
 
+  // Ouverture par lien : le FAB mobile navigue vers `/transactions?new=1`. On DÉRIVE
+  // l'ouverture du drawer depuis l'URL (pas de setState dans un effet) → fonctionne que
+  // l'écran soit déjà monté ou non. `close()` retire le param pour ne pas rouvrir au
+  // refresh / retour.
+  const newRequested = params.get('new') === '1'
+  const formVisible = formOpen || newRequested
+
   const openAdd = () => {
     setEditing(undefined)
     setFormOpen(true)
@@ -78,6 +104,16 @@ export function Transactions() {
   const close = () => {
     setFormOpen(false)
     setEditing(undefined)
+    if (newRequested) {
+      setParams(
+        (prev) => {
+          const p = new URLSearchParams(prev)
+          p.delete('new')
+          return p
+        },
+        { replace: true },
+      )
+    }
   }
 
   if (list.isPending) return <Skeleton />
@@ -122,9 +158,12 @@ export function Transactions() {
         className={styles.mobile}
       />
 
-      {formReady &&
-        (isMobile ? (
-          <BottomSheet open={formOpen} onClose={close} title={editing ? 'Modifier' : 'Ajouter'}>
+      {/* Le drawer se rend TOUJOURS quand on l'ouvre : si aucun compte n'existe,
+       *  il explique pourquoi au lieu de laisser le bouton « Ajouter » muet
+       *  (anti-inerte — un bouton agit ou se justifie, jamais cliquable sans effet). */}
+      {isMobile ? (
+        <BottomSheet open={formVisible} onClose={close} title={editing ? 'Modifier' : 'Ajouter'}>
+          {formReady ? (
             <TransactionForm
               key={editing?.id ?? 'new'}
               initial={editing}
@@ -133,13 +172,17 @@ export function Transactions() {
               stacked
               onClose={close}
             />
-          </BottomSheet>
-        ) : (
-          <Drawer
-            open={formOpen}
-            onClose={close}
-            title={editing ? 'Modifier la transaction' : 'Ajouter une transaction'}
-          >
+          ) : (
+            <NoAccountNotice onClose={close} />
+          )}
+        </BottomSheet>
+      ) : (
+        <Drawer
+          open={formVisible}
+          onClose={close}
+          title={editing ? 'Modifier la transaction' : 'Ajouter une transaction'}
+        >
+          {formReady ? (
             <TransactionForm
               key={editing?.id ?? 'new'}
               initial={editing}
@@ -147,8 +190,11 @@ export function Transactions() {
               categories={categories}
               onClose={close}
             />
-          </Drawer>
-        ))}
+          ) : (
+            <NoAccountNotice onClose={close} />
+          )}
+        </Drawer>
+      )}
     </>
   )
 }

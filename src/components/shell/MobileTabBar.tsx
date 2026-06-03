@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { BottomSheet } from '../ui'
 import { signOut } from '../../lib/auth-client'
@@ -17,6 +17,7 @@ const MAIN_PATHS = ['/', '/transactions', '/budgets']
 export function MobileTabBar({ className = '' }: { className?: string }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const moreActive = !MAIN_PATHS.includes(pathname)
 
   const onLogout = async () => {
@@ -34,7 +35,16 @@ export function MobileTabBar({ className = '' }: { className?: string }) {
         <NavLink to="/transactions" className={tabClass}>
           <Icon name="exchange" size={20} /> Transac.
         </NavLink>
-        <button type="button" className="fab" aria-label="Ajouter">
+        {/* Action principale mobile — ouvre le drawer d'ajout de transaction
+         *  (Transactions lit `?new=1` au montage, cf. Transactions.tsx). */}
+        <button
+          type="button"
+          className="fab"
+          aria-label="Ajouter une transaction"
+          onClick={() => {
+            void navigate('/transactions?new=1')
+          }}
+        >
           <Icon name="plus" size={22} />
         </button>
         <NavLink to="/budgets" className={tabClass}>

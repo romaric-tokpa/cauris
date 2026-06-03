@@ -28,6 +28,19 @@ test('Transactions : nav client-side → clic immédiat « Ajouter » ouvre le d
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 })
 })
 
+test('Mobile : le FAB « + » ouvre le drawer d’ajout de transaction', async ({ page }) => {
+  // Angle mort historique : le FAB de la barre basse mobile n'avait AUCUN onClick
+  // (bouton mort). Il navigue désormais vers `/transactions?new=1` → drawer d'ajout.
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.goto('/')
+  await page.getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' })
+
+  await page.getByRole('button', { name: 'Ajouter une transaction' }).click()
+
+  await expect(page).toHaveURL(/\/transactions/)
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 })
+})
+
 test('Paramètres : nav client-side → clic immédiat « Modifier » ouvre le drawer mot de passe', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1200 })
   await page.goto('/')
