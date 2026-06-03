@@ -353,8 +353,17 @@ export interface BudgetWriteInput {
   period: string
 }
 
-export function createBudget(userId: string, input: BudgetWriteInput) {
-  return db.insert(budgets).values({ userId, ...input }).returning()
+/**
+ * `spent` d'un budget NEUF = dépenses RÉELLES de la catégorie sur la période, calculées
+ * par l'appelant (route) et passées ici → snapshot STOCKÉ à la création. RÈGLE D'ASYMÉTRIE
+ * (documentée, ne pas re-questionner) :
+ *  - budgets SEEDÉS : `spent` = enveloppe d'origine, indépendante du ledger (distinction Phase 6) ;
+ *  - budgets NEUFS : `spent` = dépense catégorie dérivée à la création (évite un 0 % trompeur
+ *    quand on crée un budget en milieu de mois sur une catégorie déjà consommée).
+ * Dans les deux cas `spent` est ensuite STOCKÉ (ni l'un ni l'autre ne se re-dérive à la volée).
+ */
+export function createBudget(userId: string, input: BudgetWriteInput, spent: number) {
+  return db.insert(budgets).values({ userId, ...input, spent }).returning()
 }
 
 /** Ajustement scopé du plafond + réglages (catégorie/période/spent inchangés). */

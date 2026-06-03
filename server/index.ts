@@ -807,7 +807,12 @@ api.post('/budgets', async (c) => {
   const body: unknown = await c.req.json().catch(() => null)
   const parsed = await parseBudgetInput(userId, body)
   if ('error' in parsed) return c.json({ error: parsed.error }, 400)
-  const [created] = await createBudget(userId, { ...parsed.input, period: DEMO_MONTH })
+  // `spent` NEUF = dépenses RÉELLES de la catégorie ce mois (dérivé du ledger), pour
+  // refléter le consommé existant (≠ 0 % trompeur). Snapshot stocké ensuite (cf.
+  // createBudget : seedé = enveloppe stockée / neuf = dérivé à la création).
+  const breakdown = await getCategoryBreakdown(userId, DEMO_MONTH)
+  const spent = breakdown.find((x) => x.categoryId === parsed.input.categoryId)?.amount ?? 0
+  const [created] = await createBudget(userId, { ...parsed.input, period: DEMO_MONTH }, spent)
   return c.json({ budget: { ...created, ...budgetMeta(created.spent, created.cap) } }, 201)
 })
 

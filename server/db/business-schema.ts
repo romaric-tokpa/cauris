@@ -122,7 +122,9 @@ export const budgets = sqliteTable(
       .references(() => categories.id, { onDelete: 'cascade' }),
     cap: integer('cap').notNull(),
     // `spent` = enveloppe STOCKÉE (≠ dépense de catégorie dérivée du ledger ; distinction
-    // Phase 6 à préserver). Un budget créé par l'utilisateur démarre à spent = 0.
+    // Phase 6 à préserver). RÈGLE : budgets SEEDÉS gardent leur enveloppe d'origine ;
+    // budgets NEUFS (POST) démarrent à `spent` = dépenses catégorie dérivées À LA CRÉATION
+    // (cf. createBudget) — pas 0. Stocké dans les deux cas (jamais re-dérivé à la volée).
     spent: integer('spent').default(0).notNull(),
     txnCount: integer('txn_count').default(0).notNull(),
     period: text('period').notNull(), // YYYY-MM : mois d'application du budget
