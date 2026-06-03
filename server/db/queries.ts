@@ -77,6 +77,53 @@ export function setAccountBlocked(userId: string, id: string, blocked: boolean) 
     .returning()
 }
 
+/**
+ * MODÈLE B — SOURCE UNIQUE DES SOLDES COURANTS (dérivés). Tout consommateur de solde
+ * passe par ici : `accounts.balance` est le SOLDE INITIAL, et le courant =
+ * `initial + Σ(mouvements du compte)`.
+ *
+ * Mouvements (montant signé : revenu > 0, dépense/transfert < 0) :
+ *  - dépense / revenu / récurrente : `compte(accountId) += amount`
+ *  - transfert : `source(accountId) += amount` (débit) ET `dest(transferAccountId) += −amount` (crédit)
+ *
+ * Les **contributions NE débitent PAS** le compte (statu quo Phase 7, dette MISE À JOUR :
+ * une contribution est un TRANSFERT vers de l'épargne fléchée, pas une dépense ; la débiter
+ * sans compter l'objectif dans le patrimoine casserait l'invariant « l'argent disparaît ».
+ * À traiter avec l'intégration objectifs ↔ patrimoine — chantier SÉPARÉ).
+ *
+ * Renvoie une Map { accountId → solde courant dérivé } (NON masqué : le masquage du compte
+ * bloqué est appliqué APRÈS, au niveau route).
+ */
+export async function computeAccountBalances(userId: string): Promise<Map<string, number>> {
+  const [accts, txns] = await Promise.all([
+    listAccounts(userId),
+    db
+      .select({
+        accountId: transactions.accountId,
+        transferAccountId: transactions.transferAccountId,
+        amount: transactions.amount,
+      })
+      .from(transactions)
+      .where(eq(transactions.userId, userId)),
+  ])
+  const balances = new Map<string, number>(accts.map((a) => [a.id, a.balance]))
+  for (const t of txns) {
+    balances.set(t.accountId, (balances.get(t.accountId) ?? 0) + t.amount)
+    if (t.transferAccountId)
+      balances.set(t.transferAccountId, (balances.get(t.transferAccountId) ?? 0) - t.amount)
+  }
+  return balances
+}
+
+/** Patrimoine = Σ des soldes courants dérivés (soldes RÉELS, bloqués inclus). Un transfert
+ *  interne (−X source, +X dest) laisse cette somme INCHANGÉE (invariant). */
+export async function computeNetWorth(userId: string): Promise<number> {
+  const balances = await computeAccountBalances(userId)
+  let total = 0
+  for (const v of balances.values()) total += v
+  return total
+}
+
 /* ───────────────────────────── Catégories ────────────────────────────── */
 export function listCategories(userId: string) {
   return db

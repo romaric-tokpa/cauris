@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { eq, and } from 'drizzle-orm'
 import { db, client } from './client'
+import { computeAccountBalances, computeNetWorth } from './queries'
 import { auth } from '../auth'
 import { user } from './auth-schema'
 import {
@@ -111,6 +112,8 @@ async function seed() {
     om: randomUUID(),
     wave: randomUUID(),
   }
+  // Modèle B : `balance` = solde INITIAL. Posé à 0 ici puis BACK-CALCULÉ après l'insert
+  // des transactions (cf. plus bas) pour que le solde DÉRIVÉ reproduise les cibles wireframe.
   await db.insert(accounts).values([
     {
       id: acc.courant,
@@ -119,7 +122,7 @@ async function seed() {
       bank: 'NSIA Banque',
       type: 'Trésorerie',
       accountNumber: '•• 4821',
-      balance: 1120000,
+      balance: 0,
       blocked: false,
       sort: 0,
     },
@@ -130,7 +133,7 @@ async function seed() {
       bank: 'Ecobank',
       type: 'Épargne',
       accountNumber: '•• 7390',
-      balance: 980000,
+      balance: 0,
       blocked: false,
       sort: 1,
     },
@@ -141,7 +144,7 @@ async function seed() {
       bank: 'Mobile money',
       type: 'Mobile money',
       accountNumber: '07 •• 12',
-      balance: 245000,
+      balance: 0,
       blocked: false,
       sort: 2,
     },
@@ -152,7 +155,7 @@ async function seed() {
       bank: 'Mobile money',
       type: 'Mobile money',
       accountNumber: '05 •• 88',
-      balance: 135000,
+      balance: 0,
       blocked: true,
       sort: 3,
     },
@@ -294,6 +297,24 @@ async function seed() {
       type: r.t,
     })),
   )
+
+  /* ── Modèle B — back-calcul des soldes INITIAUX ──
+     On veut que le solde DÉRIVÉ (initial + Σ mouvements de transactions) == cible wireframe.
+     ⇒ initial = cible − Σ(mouvements). Σ(mouvements) calculé en mémoire depuis `rows`
+     (même règle que computeAccountBalances : leg propre + leg destination du transfert ;
+     les contributions NE comptent PAS — statu quo Phase 7). */
+  const TARGET: Record<Acc, number> = { courant: 1120000, epargne: 980000, om: 245000, wave: 135000 }
+  const movement: Record<Acc, number> = { courant: 0, epargne: 0, om: 0, wave: 0 }
+  for (const r of rows) {
+    movement[r.a] += r.m
+    if (r.tr) movement[r.tr] += -r.m
+  }
+  for (const k of Object.keys(TARGET) as Acc[]) {
+    await db
+      .update(accounts)
+      .set({ balance: TARGET[k] - movement[k] })
+      .where(eq(accounts.id, acc[k]))
+  }
 
   /* ── Budgets (budgetsFull) — Mai 2026. Ids explicites : le budget Transport est
      la cible deep-link de la notif « Budget Transport dépassé ». ── */
@@ -648,9 +669,14 @@ async function seed() {
   /* ───────────────── Assertions d'agrégats (échec = throw) ───────────────── */
   console.log('\nVérification des agrégats vs wireframe :')
 
-  const accs = await db.select().from(accounts).where(eq(accounts.userId, uid))
-  const totalBal = accs.reduce((s, a) => s + a.balance, 0)
-  check('Solde total (Σ accounts.balance)', totalBal === 2480000, `${totalBal} = 2 480 000`)
+  // Modèle B : on vérifie les soldes DÉRIVÉS (via la VRAIE façade, pas la colonne brute).
+  const derived = await computeAccountBalances(uid)
+  check('Solde dérivé — Compte courant', derived.get(acc.courant) === 1120000, `${derived.get(acc.courant)} = 1 120 000`) // prettier-ignore
+  check('Solde dérivé — Épargne', derived.get(acc.epargne) === 980000, `${derived.get(acc.epargne)} = 980 000`) // prettier-ignore
+  check('Solde dérivé — Orange Money', derived.get(acc.om) === 245000, `${derived.get(acc.om)} = 245 000`) // prettier-ignore
+  check('Solde dérivé — Wave', derived.get(acc.wave) === 135000, `${derived.get(acc.wave)} = 135 000`) // prettier-ignore
+  const net = await computeNetWorth(uid)
+  check('Patrimoine (Σ soldes dérivés)', net === 2480000, `${net} = 2 480 000`)
 
   /* — DÉRIVABILITÉ : le ledger de MAI somme EXACTEMENT aux totaux (preuve que la
      façade pourra dériver). Transferts exclus des revenus/dépenses. — */

@@ -51,6 +51,10 @@ export const accounts = sqliteTable(
     bank: text('bank').notNull(),
     type: text('type').notNull(),
     accountNumber: text('account_number').notNull(),
+    // Modèle B — SOLDE INITIAL (point de départ), PAS le solde courant. Le solde
+    // courant affiché est DÉRIVÉ : `balance + Σ(mouvements du compte)` via
+    // `computeAccountBalances` (queries.ts). Ne JAMAIS lire `balance` comme un solde
+    // courant. (Peut être négatif : c'est un point de calcul, jamais affiché tel quel.)
     balance: integer('balance').notNull(),
     blocked: integer('blocked', { mode: 'boolean' }).default(false).notNull(),
     sort: integer('sort').default(0).notNull(),

@@ -68,7 +68,13 @@ export default defineConfig({
       testMatch: /.*\.fidelity\.ts/,
       snapshotPathTemplate: '{testDir}/baselines/{arg}-{platform}{ext}',
       use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
-      dependencies: ['setup'],
+      // Dépend de `smoke` (pas seulement `setup`) : la régression visuelle doit capturer
+      // un état SEED QUIESCENT. Sous le Modèle B (soldes dérivés), un test smoke qui crée
+      // une transaction/transfert décale transitoirement les soldes d'Aïcha — s'il tournait
+      // EN PARALLÈLE d'une capture comptes/dashboard, la baseline divergerait. Les smoke
+      // mutant Aïcha nettoient derrière eux ; séquencer fidelity APRÈS smoke garantit la
+      // quiescence (et isole de tout futur test smoke mutant).
+      dependencies: ['setup', 'smoke'],
     },
   ],
 

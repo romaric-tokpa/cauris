@@ -30,6 +30,8 @@ import {
   createAccount,
   updateAccount,
   setAccountBlocked,
+  computeAccountBalances,
+  computeNetWorth,
   type AccountWriteInput,
   listGoals,
   listContributions,
@@ -137,7 +139,7 @@ api.get('/dashboard', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const month = c.req.query('month') ?? DEMO_MONTH
 
-  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, recent, cats, notifs, loanRows] =
+  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, recent, cats, notifs, loanRows, balances] =
     await Promise.all([
       listAccounts(userId),
       getMonthlySummary(userId, month),
@@ -149,9 +151,12 @@ api.get('/dashboard', async (c) => {
       listCategories(userId),
       listNotifications(userId),
       listLoans(userId),
+      computeAccountBalances(userId),
     ])
 
-  const total = accountsRows.reduce((s, a) => s + a.balance, 0)
+  // « Solde total » = Σ soldes COURANTS dérivés (Modèle B). Bouge à chaque mouvement.
+  let total = 0
+  for (const v of balances.values()) total += v
   const depenses = summary?.depenses ?? 0
 
   // Delta solde : valeur EXACTE du wireframe, stockée en dixièmes (32) → % (3,2).
@@ -196,9 +201,9 @@ api.get('/dashboard', async (c) => {
     categoryName: t.categoryId ? (catName.get(t.categoryId) ?? '') : '',
   }))
 
-  // Solde d'un compte bloqué masqué AUSSI ici (cohérence : jamais en clair). Le KPI
-  // « Solde total » (`total`) reste l'agrégat serveur des soldes réels (incl. bloqué).
-  const accounts = accountsRows.map(maskAccount)
+  // Solde d'un compte bloqué masqué AUSSI ici (cohérence : jamais en clair). Soldes
+  // courants DÉRIVÉS (Modèle B) ; le KPI « Solde total » = Σ de ces dérivés.
+  const accounts = accountsRows.map((a) => maskAccount(a, balances.get(a.id) ?? 0))
 
   const lr = loanRows[0] ?? null
   const loan = lr
@@ -462,9 +467,9 @@ function parseChatMessages(body: unknown): { messages: ChatMessage[] } | { error
 // Compose le contexte financier scopé (LECTURE SEULE) — même façade que /api/dashboard,
 // donc chiffres == dashboard/analytics/budgets. Partagé par /ai/chat et /ai/insights.
 async function buildAiContext(userId: string): Promise<FinancialContext> {
-  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, loanRows] =
+  const [total, summary, months, breakdown, budgetRows, goalRows, loanRows] =
     await Promise.all([
-      listAccounts(userId),
+      computeNetWorth(userId),
       getMonthlySummary(userId, DEMO_MONTH),
       listMonthlySummaries(userId),
       getCategoryBreakdown(userId, DEMO_MONTH),
@@ -472,7 +477,6 @@ async function buildAiContext(userId: string): Promise<FinancialContext> {
       listGoals(userId),
       listLoans(userId),
     ])
-  const total = accountsRows.reduce((s, a) => s + a.balance, 0)
   const depenses = summary?.depenses ?? null
   const revenus = summary?.revenus ?? null
   const epargne = summary?.epargne ?? null
@@ -603,9 +607,9 @@ api.get('/ai/goals/:id/projection', async (c) => {
 api.get('/ai/forecasts', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const [context, accountsRows, months] = await Promise.all([
+  const [context, netWorth, months] = await Promise.all([
     buildAiContext(userId),
-    listAccounts(userId),
+    computeNetWorth(userId),
     listMonthlySummaries(userId),
   ])
   // Solde net mensuel moyen sur les mois COMPLETS (revenus + dépenses non nuls).
@@ -623,7 +627,7 @@ api.get('/ai/forecasts', async (c) => {
       ? deltaPctLabel(context.depenses, context.depensesPrev)
       : null
   const forecast: ForecastTarget = {
-    current: accountsRows.reduce((s, a) => s + a.balance, 0),
+    current: netWorth,
     monthlyNet,
     monthsCount: complete.length,
     expenseTrend,
@@ -866,12 +870,14 @@ async function parseRecurrenceInput(
 }
 
 /**
- * Projection d'un compte vers le front. SÉCURITÉ : le solde RÉEL d'un compte BLOQUÉ
- * n'est JAMAIS sérialisé (`balance: null`) — le front rend « ••• ••• » à partir du
- * flag `blocked`, jamais d'un masquage cosmétique. (CLAUDE.md : solde masqué.)
+ * Projection d'un compte vers le front. `derivedBalance` = solde COURANT dérivé
+ * (Modèle B, via `computeAccountBalances`) — JAMAIS la colonne `balance` brute (= initial).
+ * SÉCURITÉ : le solde d'un compte BLOQUÉ est calculé mais n'est JAMAIS sérialisé
+ * (`balance: null`, masquage appliqué APRÈS le calcul) — le front rend « ••• ••• » à
+ * partir du flag `blocked`. (CLAUDE.md : solde masqué.)
  */
 type AccountRow = Awaited<ReturnType<typeof listAccounts>>[number]
-function maskAccount(a: AccountRow) {
+function maskAccount(a: AccountRow, derivedBalance: number) {
   return {
     id: a.id,
     name: a.name,
@@ -879,7 +885,7 @@ function maskAccount(a: AccountRow) {
     type: a.type,
     accountNumber: a.accountNumber,
     blocked: a.blocked,
-    balance: a.blocked ? null : a.balance,
+    balance: a.blocked ? null : derivedBalance,
   }
 }
 
@@ -914,15 +920,25 @@ function parseAccountInput(body: unknown): { input: AccountWriteInput } | { erro
 api.get('/accounts', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const [rows, months] = await Promise.all([listAccounts(userId), listMonthlySummaries(userId)])
-  // Patrimoine total = Σ des soldes RÉELS (incl. bloqué), calculé SERVEUR : le total
-  // inclut Wave (fidèle au wireframe) sans jamais exposer son solde individuel.
-  const patrimoineTotal = rows.reduce((s, a) => s + a.balance, 0)
+  const [rows, months, balances] = await Promise.all([
+    listAccounts(userId),
+    listMonthlySummaries(userId),
+    computeAccountBalances(userId),
+  ])
+  // Patrimoine total = Σ des soldes COURANTS dérivés (incl. bloqué), calculé SERVEUR :
+  // inclut Wave (fidèle au wireframe) sans jamais exposer son solde individuel. Un
+  // transfert interne (−X source, +X dest) laisse ce total INCHANGÉ.
+  let patrimoineTotal = 0
+  for (const v of balances.values()) patrimoineTotal += v
   // Spark = épargne CUMULÉE des mois — proxy RÉEL de la TENDANCE du patrimoine (pas
   // les soldes absolus mensuels ; le vrai historique de solde = chantier dédié futur).
   let cum = 0
   const patrimoineSpark = months.map((m) => (cum += m.epargne ?? 0))
-  return c.json({ accounts: rows.map(maskAccount), patrimoineTotal, patrimoineSpark })
+  return c.json({
+    accounts: rows.map((a) => maskAccount(a, balances.get(a.id) ?? 0)),
+    patrimoineTotal,
+    patrimoineSpark,
+  })
 })
 api.get('/categories', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
@@ -936,8 +952,11 @@ api.get('/accounts/:id', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const a = await getAccountById(userId, c.req.param('id'))
   if (!a) return c.json({ error: 'not found' }, 404)
-  const recentTransactions = await listTransactionsDetailed(userId, { accountId: a.id, limit: 5 })
-  return c.json({ account: maskAccount(a), recentTransactions })
+  const [recentTransactions, balances] = await Promise.all([
+    listTransactionsDetailed(userId, { accountId: a.id, limit: 5 }),
+    computeAccountBalances(userId),
+  ])
+  return c.json({ account: maskAccount(a, balances.get(a.id) ?? 0), recentTransactions })
 })
 
 /* ───────────── Écritures comptes (création / édition / blocage) ─────────────
@@ -952,11 +971,15 @@ api.post('/accounts', async (c) => {
   const body: unknown = await c.req.json().catch(() => null)
   const parsed = parseAccountInput(body)
   if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  // Compte neuf = aucun mouvement → solde courant dérivé == solde initial saisi.
   const [created] = await createAccount(userId, parsed.input)
-  return c.json({ account: maskAccount(created) }, 201)
+  return c.json({ account: maskAccount(created, created.balance) }, 201)
 })
 
-// Édition (remplacement complet du formulaire). Appartenance → 404.
+// Édition. Appartenance → 404. RÉCONCILIATION (Modèle B, Q1) : la saisie « Solde
+// actuel » = solde COURANT voulu → on stocke `initial = saisi − Σ(mouvements)` pour que
+// le dérivé redevienne exactement la valeur saisie. (`initial` peut être négatif : point
+// de calcul, jamais affiché tel quel.)
 api.patch('/accounts/:id', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
@@ -966,18 +989,23 @@ api.patch('/accounts/:id', async (c) => {
   const body: unknown = await c.req.json().catch(() => null)
   const parsed = parseAccountInput(body)
   if ('error' in parsed) return c.json({ error: parsed.error }, 400)
-  const [updated] = await updateAccount(userId, id, parsed.input)
-  return c.json({ account: maskAccount(updated) })
+  const balances = await computeAccountBalances(userId)
+  const movementSum = (balances.get(id) ?? existing.balance) - existing.balance
+  const initialBalance = parsed.input.balance - movementSum
+  const [updated] = await updateAccount(userId, id, { ...parsed.input, balance: initialBalance })
+  // Dérivé après update = initialBalance + movementSum = solde saisi.
+  return c.json({ account: maskAccount(updated, parsed.input.balance) })
 })
 
-// Blocage. Appartenance → 404. Le solde réel est conservé mais masqué en sortie.
+// Blocage. Appartenance → 404. Le solde dérivé est calculé mais masqué en sortie.
 api.post('/accounts/:id/block', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const existing = await getAccountById(userId, c.req.param('id'))
   if (!existing) return c.json({ error: 'not found' }, 404)
   const [updated] = await setAccountBlocked(userId, existing.id, true)
-  return c.json({ account: maskAccount(updated) })
+  const balances = await computeAccountBalances(userId)
+  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0) })
 })
 
 // Déblocage. Appartenance → 404.
@@ -987,7 +1015,8 @@ api.post('/accounts/:id/unblock', async (c) => {
   const existing = await getAccountById(userId, c.req.param('id'))
   if (!existing) return c.json({ error: 'not found' }, 404)
   const [updated] = await setAccountBlocked(userId, existing.id, false)
-  return c.json({ account: maskAccount(updated) })
+  const balances = await computeAccountBalances(userId)
+  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0) })
 })
 
 // Liste filtrée + stats d'en-tête.
