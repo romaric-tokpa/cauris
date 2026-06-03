@@ -28,6 +28,19 @@ test('Transactions : nav client-side → clic immédiat « Ajouter » ouvre le d
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 })
 })
 
+test('Dashboard : clic « Ajouter une transaction » → /transactions, drawer ouvert', async ({ page }) => {
+  // Le bouton du dashboard n'avait aucun onClick (mort). Il navigue désormais vers
+  // `/transactions?new=1` → l'écran Transactions ouvre le drawer depuis l'URL.
+  await page.setViewportSize({ width: 1440, height: 1200 })
+  await page.goto('/')
+  await page.getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' })
+
+  await page.getByRole('button', { name: /Ajouter une transaction/i }).click()
+
+  await expect(page).toHaveURL(/\/transactions/)
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 })
+})
+
 test('Mobile : le FAB « + » ouvre le drawer d’ajout de transaction', async ({ page }) => {
   // Angle mort historique : le FAB de la barre basse mobile n'avait AUCUN onClick
   // (bouton mort). Il navigue désormais vers `/transactions?new=1` → drawer d'ajout.

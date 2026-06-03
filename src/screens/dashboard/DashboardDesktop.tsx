@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Icon, Donut, Bars, Progress, type IconName } from '../../components/primitives'
 import { Card, Badge, KpiTile } from '../../components/ui'
 import { money } from '../../lib/money'
@@ -86,6 +86,7 @@ export function DashboardDesktop({
   greeting: string
   className?: string
 }) {
+  const navigate = useNavigate()
   const cashflow = d.cashflow.map((c) => ({ m: formatIsoMonthLabel(c.m), rev: c.rev, dep: c.dep }))
   const donutCats = [...d.breakdown]
     .slice(0, 4)
@@ -104,10 +105,25 @@ export function DashboardDesktop({
           <div className={styles.greeting}>{greeting}</div>
         </div>
         <div className={`r ${styles.g10}`}>
-          <button type="button" className="btn">
+          {/* Pas de filtrage à l'échelle du dashboard (vue de synthèse) → honnêtement
+           *  désactivé plutôt qu'inerte. Le vrai filtrage vit sur /transactions. */}
+          <button
+            type="button"
+            className={`btn ${styles.soon}`}
+            disabled
+            title="Bientôt disponible"
+          >
             <Icon name="filter" size={16} /> Filtres
           </button>
-          <button type="button" className="btn primary">
+          {/* Réutilise le mécanisme d'ouverture par URL (comme le FAB mobile) :
+           *  Transactions ouvre le drawer d'ajout depuis `?new=1`. Pas de drawer local. */}
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => {
+              void navigate('/transactions?new=1')
+            }}
+          >
             <Icon name="plus" size={16} /> Ajouter une transaction
           </button>
         </div>

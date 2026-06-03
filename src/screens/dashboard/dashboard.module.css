@@ -3,6 +3,12 @@
    opacités) vivent ICI ; couleurs via tokens uniquement. Le padding/gap externe
    est fourni par AppShell `.content` (24/28 desktop · 0 18 84 mobile). */
 
+/* Bouton « à venir » honnête (dimmé, non interactif) — cf. anti-inerte. */
+.soon {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Toggle desktop/mobile aligné sur le breakpoint du shell (901 / 900). */
 .desktop {
   display: flex;
