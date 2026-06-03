@@ -106,3 +106,73 @@ function OnbComptes() {
   );
 }
 window.OnbComptes = OnbComptes;
+
+// ---- Cold start : calibrage du coach (parcours 7) ----
+function ColdStep({ step, title, sub, children, cta = "Continuer" }) {
+  const { Icon } = window.WF;
+  return (
+    <PhoneFrame>
+      <div className="r between" style={{ marginBottom: 16, paddingTop: 4 }}>
+        <div className="icon-btn" style={{ width: 34, height: 34 }}><Icon name="chevron" size={16} style={{ transform: "rotate(180deg)" }} /></div>
+        <span className="t-faint" style={{ fontSize: 12, fontWeight: 600 }}>Configuration du coach · {step} sur 3</span>
+        <span className="card-link" style={{ fontSize: 12.5 }}>Passer</span>
+      </div>
+      <div className="steps" style={{ marginBottom: 22 }}>{[1, 2, 3].map((i) => <i key={i} className={i <= step ? "on" : ""} />)}</div>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.02em" }}>{title}</div>
+        {sub && <div className="t-faint" style={{ fontSize: 13, marginTop: 5, lineHeight: 1.4 }}>{sub}</div>}
+      </div>
+      <div className="c" style={{ gap: 13, flex: 1 }}>{children}</div>
+      <button className="btn primary block" style={{ padding: 14, fontSize: 14 }}>{cta}</button>
+    </PhoneFrame>
+  );
+}
+
+function OnbCapture() {
+  const { data: D } = window.WF;
+  return (
+    <ColdStep step={1} title="Comment préférez-vous saisir ?" sub="On adapte la capture à votre quotidien. Modifiable à tout moment.">
+      {D.captureModes.map((m, i) => <Choice key={m.id} ic={m.ic} l={m.l} sub={m.sub} on={i < 2} />)}
+    </ColdStep>
+  );
+}
+window.OnbCapture = OnbCapture;
+
+function OnbCanaux() {
+  const { Icon, data: D } = window.WF;
+  return (
+    <ColdStep step={2} title="Vos canaux dominants" sub="Cash et mobile money sont au cœur du suivi.">
+      {D.canaux.map((c, i) => <Choice key={c.id} ic={c.ic} l={c.l} sub={c.sub} on={i !== 3} />)}
+      <div className="wf-card soft wf-pad-sm r" style={{ gap: 11, marginTop: 2 }}>
+        <Icon name="cash" size={18} className="t-muted" />
+        <span style={{ fontSize: 12 }}>Pour le cash, vous choisirez un suivi <b>détaillé</b> ou <b>allégé</b> (enveloppe).</span>
+      </div>
+    </ColdStep>
+  );
+}
+window.OnbCanaux = OnbCanaux;
+
+function OnbCoach() {
+  const { Icon } = window.WF;
+  return (
+    <ColdStep step={3} title="Le ton de votre coach" sub="Vous gardez la main : il observe et conseille, sans culpabiliser." cta="Terminer">
+      <div>
+        <span className="lbl">Jusqu'où peut-il aller ?</span>
+        <div className="scale">
+          <div className="lv">Observation</div>
+          <div className="lv on">Recomm.</div>
+          <div className="lv">Opposition</div>
+        </div>
+      </div>
+      <div>
+        <span className="lbl">Fréquence des alertes</span>
+        <div className="seg-full"><button>Temps réel</button><button className="on">Synthèse</button><button>Hebdo</button></div>
+      </div>
+      <div className="wf-card soft wf-pad-sm r" style={{ gap: 11, marginTop: 2 }}>
+        <div className="set-ico" style={{ width: 34, height: 34, background: "var(--warn-wash)", color: "var(--warn)" }}><Icon name="shield" size={17} /></div>
+        <div><div style={{ fontWeight: 700, fontSize: 12.5 }}>Coach débutant</div><div className="t-faint" style={{ fontSize: 11.5, lineHeight: 1.4 }}>Au départ, analyses prudentes et factuelles. La fiabilité augmente avec vos données.</div></div>
+      </div>
+    </ColdStep>
+  );
+}
+window.OnbCoach = OnbCoach;

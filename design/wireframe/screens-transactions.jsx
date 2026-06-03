@@ -18,6 +18,7 @@ function TxnDesk() {
             <span className="chip">Catégorie : Toutes <Icon name="chevron" size={13} /></span>
             <span className="chip"><Icon name="filter" size={14} /> Plus de filtres</span>
           </div>
+          <span className="chip" style={{ borderColor: "var(--accent)", color: "var(--accent)" }}><Icon name="phone" size={14} /> 3 SMS détectés <span className="badge ok" style={{ marginLeft: 2 }}>Nouveau</span></span>
         </div>
         <div className="wf-card wf-pad r" style={{ gap: 0 }}>
           <div className="stat"><div className="sl">Entrées</div><div className="sv t-pos">+970 000</div></div>
@@ -57,6 +58,16 @@ function TxnDesk() {
           <div className="icon-btn" style={{ width: 32, height: 32 }}><Icon name="plus" size={16} style={{ transform: "rotate(45deg)" }} /></div>
         </div>
         <div className="drawer-b">
+          {/* capture multi-canal — entrée vers les nouveaux modes */}
+          <div>
+            <span className="lbl">Capture rapide</span>
+            <div className="r" style={{ gap: 8 }}>
+              <button className="btn block" style={{ padding: "10px 8px", flexDirection: "column", gap: 5, height: "auto" }}><Icon name="mic" size={17} /> <span style={{ fontSize: 11.5 }}>Note vocale</span></button>
+              <button className="btn block" style={{ padding: "10px 8px", flexDirection: "column", gap: 5, height: "auto" }}><Icon name="message" size={17} /> <span style={{ fontSize: 11.5 }}>Langage naturel</span></button>
+              <button className="btn block" style={{ padding: "10px 8px", flexDirection: "column", gap: 5, height: "auto" }}><Icon name="phone" size={17} /> <span style={{ fontSize: 11.5 }}>Depuis un SMS</span></button>
+            </div>
+            <div className="r" style={{ gap: 8, alignItems: "center", margin: "12px 0 2px" }}><div className="wf-hr" style={{ flex: 1 }} /><span className="t-faint" style={{ fontSize: 11 }}>ou saisie manuelle</span><div className="wf-hr" style={{ flex: 1 }} /></div>
+          </div>
           <div>
             <span className="lbl">Type</span>
             <div className="seg-full"><button className="on">Dépense</button><button>Revenu</button><button>Transfert</button></div>
@@ -64,6 +75,12 @@ function TxnDesk() {
           <div>
             <span className="lbl">Montant</span>
             <div className="inp big"><span>25 000</span><span className="kpi-cur">FCFA</span></div>
+          </div>
+          <div>
+            <span className="lbl">Canal de paiement</span>
+            <div className="r" style={{ gap: 7, flexWrap: "wrap" }}>
+              {D.canaux.map((c, i) => <span key={c.id} className={"chip" + (i === 1 ? " on" : "")} style={{ fontSize: 12 }}><Icon name={c.ic} size={13} /> {c.l}</span>)}
+            </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div><span className="lbl">Compte</span><div className="inp"><span>Orange Money</span><Icon name="chevron" size={15} className="t-faint" /></div></div>
@@ -118,7 +135,7 @@ function TxnRow({ t }) {
 window.TxnMob = TxnMob;
 
 function TxnAddMob() {
-  const { Icon } = window.WF;
+  const { Icon, data: D } = window.WF;
   return (
     <MobShell active="Transactions" tab="txn" title="Transactions" sub="Mai 2026">
       <div style={{ opacity: .4, pointerEvents: "none" }}>
@@ -128,11 +145,17 @@ function TxnAddMob() {
       <div className="sheet">
         <div className="sheet-grip" />
         <div className="r between"><div style={{ fontWeight: 800, fontSize: 17 }}>Ajouter</div><div className="icon-btn" style={{ width: 32, height: 32 }}><Icon name="plus" size={16} style={{ transform: "rotate(45deg)" }} /></div></div>
+        <div className="r" style={{ gap: 8 }}>
+          <button className="btn block" style={{ padding: "9px 6px", flexDirection: "column", gap: 4, height: "auto" }}><Icon name="mic" size={16} /> <span style={{ fontSize: 10.5 }}>Vocal</span></button>
+          <button className="btn block" style={{ padding: "9px 6px", flexDirection: "column", gap: 4, height: "auto" }}><Icon name="message" size={16} /> <span style={{ fontSize: 10.5 }}>Langage</span></button>
+          <button className="btn block" style={{ padding: "9px 6px", flexDirection: "column", gap: 4, height: "auto" }}><Icon name="phone" size={16} /> <span style={{ fontSize: 10.5 }}>SMS</span></button>
+        </div>
+        <div className="r" style={{ gap: 8, alignItems: "center" }}><div className="wf-hr" style={{ flex: 1 }} /><span className="t-faint" style={{ fontSize: 10.5 }}>ou manuellement</span><div className="wf-hr" style={{ flex: 1 }} /></div>
         <div className="seg-full"><button className="on">Dépense</button><button>Revenu</button><button>Transfert</button></div>
         <div><span className="lbl">Montant</span><div className="inp big"><span>25 000</span><span className="kpi-cur">FCFA</span></div></div>
+        <div><span className="lbl">Canal de paiement</span><div className="r" style={{ gap: 7, flexWrap: "wrap" }}>{D.canaux.map((c, i) => <span key={c.id} className={"chip" + (i === 1 ? " on" : "")} style={{ fontSize: 11.5 }}><Icon name={c.ic} size={12} /> {c.l}</span>)}</div></div>
         <div><span className="lbl">Compte</span><div className="inp"><span>Orange Money</span><Icon name="chevron" size={15} className="t-faint" /></div></div>
         <div><span className="lbl">Catégorie</span><div className="inp"><span>Alimentation</span><Icon name="chevron" size={15} className="t-faint" /></div></div>
-        <div><span className="lbl">Date</span><div className="inp"><span>31 mai 2026</span><Icon name="calendar" size={15} className="t-faint" /></div></div>
         <button className="btn primary block" style={{ padding: "13px" }}>Enregistrer la transaction</button>
       </div>
     </MobShell>

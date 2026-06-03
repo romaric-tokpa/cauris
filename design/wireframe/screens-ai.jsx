@@ -77,6 +77,12 @@ function AssistantDesk() {
           <div className="r" style={{ gap: 8, flexWrap: "wrap" }}>
             {D.suggestions.slice(0, 3).map((s) => <span key={s} className="chip" style={{ fontSize: 11.5 }}>{s}</span>)}
           </div>
+          {/* lien vers l'avis transparent du coach */}
+          <div className="wf-card wf-pad-sm r" style={{ gap: 12, alignItems: "center", background: "var(--panel)" }}>
+            <div className="row-ico" style={{ width: 34, height: 34, background: "var(--accent-wash)", color: "var(--accent)" }}><Icon name="layers" size={17} /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 13 }}>Besoin d'un arbitrage ?</div><div className="t-faint" style={{ fontSize: 11.5 }}>Obtenez un avis détaillé en 4 couches (données · analyse · confiance · reco).</div></div>
+            <span className="card-link" style={{ whiteSpace: "nowrap" }}>Avis du coach <Icon name="chevron" size={13} /></span>
+          </div>
           <div className="ask">
             <Icon name="message" size={17} />
             <span style={{ flex: 1 }}>Posez une question sur vos finances…</span>
@@ -86,6 +92,13 @@ function AssistantDesk() {
 
         {/* right rail */}
         <div className="c" style={{ gap: 14 }}>
+          {/* coach governance link */}
+          <div className="wf-card wf-pad">
+            <div className="r between" style={{ marginBottom: 12 }}><div className="card-title">Votre coach</div><span className="badge ok">{D.coachMaturity.labels[D.coachMaturity.level - 1]}</span></div>
+            <div className="mat" style={{ marginBottom: 12 }}>{D.coachMaturity.labels.map((_, i) => <i key={i} className={i < D.coachMaturity.level ? "on" : ""} />)}</div>
+            <div className="row-line" style={{ padding: "10px 0", borderTop: "none" }}><Icon name="layers" size={15} className="t-faint" /><span style={{ fontSize: 12.5, fontWeight: 500, flex: 1 }}>Complétude des données</span><span className="t-mono t-muted" style={{ fontSize: 12 }}>{D.completeness.score}%</span></div>
+            <div className="row-line" style={{ padding: "10px 0" }}><Icon name="sliders" size={15} className="t-faint" /><span style={{ fontSize: 12.5, fontWeight: 500, flex: 1 }}>Réglages : ton & mémoire</span><Icon name="chevron" size={14} className="t-faint" /></div>
+          </div>
           <div className="wf-card wf-pad">
             <div className="card-title" style={{ marginBottom: 12 }}>Questions fréquentes</div>
             <div className="c">
@@ -264,8 +277,32 @@ function AssistantMob() {
       <div className="r" style={{ gap: 7, flexWrap: "wrap" }}>
         {D.suggestions.slice(0, 2).map((s) => <span key={s} className="chip" style={{ fontSize: 11 }}>{s}</span>)}
       </div>
+      <div className="wf-card wf-pad-sm r" style={{ gap: 11, alignItems: "center" }}>
+        <div className="row-ico" style={{ width: 30, height: 30, background: "var(--accent-wash)", color: "var(--accent)" }}><Icon name="layers" size={15} /></div>
+        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 12.5 }}>Avis du coach</div><div className="t-faint" style={{ fontSize: 11 }}>Analyse transparente en 4 couches</div></div>
+        <Icon name="chevron" size={15} className="t-faint" />
+      </div>
       <div className="ask"><Icon name="message" size={16} /><span style={{ flex: 1 }}>Posez une question…</span><div className="icon-btn" style={{ width: 30, height: 30, background: "var(--solid)", color: "var(--on-solid)", border: "none" }}><Icon name="send" size={15} /></div></div>
     </MobShell>
   );
 }
 window.AssistantMob = AssistantMob;
+
+// ---------- Insights (mobile) ----------
+function AIInsightsMob() {
+  const { Icon, data: D } = window.WF;
+  return (
+    <MobShell active="Assistant" tab="more" title="Insights" sub={D.insights.length + " observations · mai 2026"}>
+      <div className="r between">
+        <div className="r" style={{ gap: 7 }}>
+          {["Tout", "Alertes", "Prévisions"].map((t, i) => <span key={t} className={"chip" + (i === 0 ? " on" : "")} style={{ fontSize: 11.5, padding: "5px 11px" }}>{t}</span>)}
+        </div>
+        <span className="card-link" style={{ fontSize: 11.5 }}><Icon name="repeat" size={13} /> Actualiser</span>
+      </div>
+      <div className="c" style={{ gap: 11 }}>
+        {D.insights.map((n, i) => <InsightCard key={i} n={n} compact />)}
+      </div>
+    </MobShell>
+  );
+}
+window.AIInsightsMob = AIInsightsMob;

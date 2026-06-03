@@ -3,7 +3,7 @@ function ComptesDesk() {
   const { Icon, Spark, money, data: D } = window.WF;
   const total = D.comptesFull.reduce((s, c) => s + c.bal, 0);
   return (
-    <DeskShell active="Comptes" eyebrow="3 comptes actifs · 1 bloqué" title="Comptes"
+    <DeskShell active="Comptes" eyebrow="4 comptes actifs · 1 bloqué" title="Comptes"
       actions={[{ l: "Ajouter un compte", ic: "plus", primary: true }]}>
       <div className="subnav">
         {["Tous", "Trésorerie", "Épargne", "Mobile money", "Bloqués"].map((t, i) => <span key={t} className={"si" + (i === 0 ? " on" : "")}>{t}</span>)}
@@ -17,7 +17,7 @@ function ComptesDesk() {
           <div className="wf-card wf-pad" key={c.name} style={{ borderColor: c.blocked ? "var(--neg)" : undefined }}>
             <div className="r between" style={{ marginBottom: 16 }}>
               <div className="r" style={{ gap: 12, opacity: c.blocked ? 0.6 : 1 }}>
-                <div className="row-ico" style={{ width: 42, height: 42, background: c.blocked ? "var(--neg-wash)" : c.type === "Mobile money" ? "var(--accent-wash)" : "var(--panel-2)", color: c.blocked ? "var(--neg)" : c.type === "Mobile money" ? "var(--accent)" : "var(--ink-soft)" }}><Icon name={c.blocked ? "lock" : c.type === "Épargne" ? "target" : "wallet"} size={20} /></div>
+                <div className="row-ico" style={{ width: 42, height: 42, background: c.blocked ? "var(--neg-wash)" : c.type === "Espèces" ? "var(--warn-wash)" : c.type === "Mobile money" ? "var(--accent-wash)" : "var(--panel-2)", color: c.blocked ? "var(--neg)" : c.type === "Espèces" ? "var(--warn)" : c.type === "Mobile money" ? "var(--accent)" : "var(--ink-soft)" }}><Icon name={c.blocked ? "lock" : c.type === "Épargne" ? "target" : c.type === "Espèces" ? "cash" : "wallet"} size={20} /></div>
                 <div><div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div><div className="t-faint" style={{ fontSize: 11.5 }}>{c.bank} · {c.num}</div></div>
               </div>
               <div className="r" style={{ gap: 8 }}>
@@ -27,7 +27,7 @@ function ComptesDesk() {
             </div>
             <div className="r between" style={{ alignItems: "flex-end", opacity: c.blocked ? 0.6 : 1 }}>
               <div><div className="t-faint" style={{ fontSize: 11 }}>Solde</div><div className="kpi-val" style={{ fontSize: 20, marginTop: 2 }}>{c.blocked ? "•••\u202f•••" : money(c.bal)} <span className="kpi-cur">FCFA</span></div></div>
-              <span className="card-link">{c.blocked ? <>Débloquer <Icon name="unlock" size={13} /></> : <>Voir les opérations <Icon name="chevron" size={13} /></>}</span>
+              <span className="card-link">{c.blocked ? <>Débloquer <Icon name="unlock" size={13} /></> : c.type === "Espèces" ? <>Mode enveloppe <Icon name="chevron" size={13} /></> : <>Voir les opérations <Icon name="chevron" size={13} /></>}</span>
             </div>
             {c.blocked && <div className="r" style={{ gap: 7, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line-soft)", color: "var(--neg)", fontSize: 11.5, fontWeight: 600 }}><Icon name="lock" size={13} /> Paiements et retraits suspendus</div>}
           </div>

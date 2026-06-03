@@ -8,7 +8,8 @@ const StatusBar = () => (
 
 // ============================ VARIANTE A ============================
 const MobileA = () => {
-  const { Icon, Bars, Progress, money, data: D } = window.WF;
+  const { Icon, Bars, Progress, Spark, money, data: D } = window.WF;
+  const [masked, setMasked] = React.useState(false);
   return (
     <div className="wf" style={{ background: "var(--bg)" }}>
       <StatusBar />
@@ -26,12 +27,42 @@ const MobileA = () => {
 
       <div className="scrollcol" style={{ padding: "0 18px 84px" }}>
         {/* solde hero */}
-        <div className="wf-card wf-pad feature-card">
-          <div style={{ fontSize: 11.5, opacity: .7, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase" }}>Solde total</div>
-          <div className="kpi-val" style={{ fontSize: 30, marginTop: 8 }}>{money(D.total)} <span style={{ fontSize: 14, opacity: .6 }}>FCFA</span></div>
-          <div className="r" style={{ gap: 8, marginTop: 8, fontSize: 12 }}>
-            <span className="r" style={{ gap: 3, color: "#9fe0bf", fontWeight: 700 }}><Icon name="up" size={13} /> +3,2 %</span>
-            <span style={{ opacity: .6 }}>vs avril</span>
+        <div className="wf-card wf-pad feature-card" style={{ position: "relative", overflow: "hidden" }}>
+          <div className="r between">
+            <div className="r" style={{ gap: 9 }}>
+              <span style={{ fontSize: 11, opacity: .7, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase" }}>Solde total</span>
+              <div onClick={() => setMasked((m) => !m)} style={{ display: "grid", placeItems: "center", width: 24, height: 24, borderRadius: 7, background: "rgba(255,255,255,.14)", cursor: "pointer", color: "#fff" }}>
+                <Icon name={masked ? "eyeOff" : "eye"} size={14} />
+              </div>
+            </div>
+            <span className="r" style={{ gap: 5, fontSize: 11.5, fontWeight: 600, color: "#fff", background: "rgba(255,255,255,.14)", padding: "5px 10px", borderRadius: 999 }}><Icon name="wallet" size={13} /> Tous les comptes <Icon name="chevron" size={12} /></span>
+          </div>
+
+          <div className="kpi-val" style={{ fontSize: 32, marginTop: 12, letterSpacing: "-.02em" }}>
+            {masked ? "•• ••• •••" : money(D.total)} <span style={{ fontSize: 14, opacity: .55 }}>FCFA</span>
+          </div>
+
+          <div className="r" style={{ gap: 8, marginTop: 9 }}>
+            <span className="r" style={{ gap: 4, color: "#9fe0bf", fontWeight: 700, fontSize: 12, background: "rgba(120,220,170,.16)", padding: "4px 9px", borderRadius: 999 }}><Icon name="up" size={13} /> +3,2 %</span>
+            <span style={{ opacity: .6, fontSize: 12 }}>+78 000 FCFA ce mois</span>
+          </div>
+
+          {/* trend */}
+          <div style={{ marginTop: 14 }}>
+            <Spark pts={D.spark} w={318} h={46} stroke="rgba(255,255,255,.9)" fill="rgba(255,255,255,.12)" />
+          </div>
+
+          {/* in / out */}
+          <div className="r" style={{ marginTop: 6, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,.14)" }}>
+            <div style={{ flex: 1 }}>
+              <div className="r" style={{ gap: 6, opacity: .7, fontSize: 11, fontWeight: 600 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: "#9fe0bf" }} /> Entrées</div>
+              <div className="kpi-val" style={{ fontSize: 15, marginTop: 4 }}>{masked ? "•••" : "+" + money(D.revenus)}</div>
+            </div>
+            <div style={{ width: 1, background: "rgba(255,255,255,.14)" }} />
+            <div style={{ flex: 1, paddingLeft: 16 }}>
+              <div className="r" style={{ gap: 6, opacity: .7, fontSize: 11, fontWeight: 600 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: "#f0a58e" }} /> Sorties</div>
+              <div className="kpi-val" style={{ fontSize: 15, marginTop: 4 }}>{masked ? "•••" : "−" + money(D.depenses)}</div>
+            </div>
           </div>
         </div>
 

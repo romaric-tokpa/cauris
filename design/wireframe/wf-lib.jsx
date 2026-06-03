@@ -46,12 +46,30 @@ const ICONS = {
   edit: <><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></>,
   card: <><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></>,
   eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/></>,
+  eyeOff: <><path d="M4 4l16 16"/><path d="M9.6 5.8A9.3 9.3 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3 3.6M6.2 7.7A16 16 0 0 0 2.5 12S6 18.5 12 18.5c.9 0 1.7-.1 2.5-.4"/><path d="M9.8 10a2.6 2.6 0 0 0 3.7 3.7"/></>,
   inbox: <><path d="M4 13l2.5-7.5h11L20 13"/><path d="M4 13v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5h-5l-1.5 2.5h-3L9 13z"/></>,
   alert: <><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.5" r="1" fill="currentColor" stroke="none"/></>,
   message: <><path d="M5 5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H10l-4 3.2V15H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8.5 9.5h7M8.5 12h4"/></>,
   send: <><path d="M5 12l14-7-5.5 15-3-6z"/><path d="M19 5l-8 7"/></>,
   repeat: <><path d="M19 12a7 7 0 1 1-2.2-5.1"/><path d="M20 4.5V9h-4.5"/></>,
   trendUp: <><path d="M4 20h16"/><path d="M5 16l4.5-4.5 3 3L18 8"/><path d="M14.5 8H18v3.5"/></>,
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21M8.5 21h7"/></>,
+  stop: <><rect x="6" y="6" width="12" height="12" rx="2.5"/></>,
+  layers: <><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></>,
+  sliders: <><path d="M5 5v6M5 15v4M12 5v3M12 12v7M19 5v8M19 17v2"/><circle cx="5" cy="13" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="19" cy="15" r="2"/></>,
+  phone: <><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></>,
+  cash: <><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></>,
+  pause: <><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></>,
+  refresh: <><path d="M3.5 12a8.5 8.5 0 0 1 14.5-6M20.5 12a8.5 8.5 0 0 1-14.5 6"/><path d="M18 3v3.5h-3.5M6 21v-3.5h3.5"/></>,
+  finger: <><path d="M12 4.5c-3 0-5.5 2.4-5.5 5.4v2.3"/><path d="M12 8.2a1.9 1.9 0 0 0-1.9 1.9v3.7a8 8 0 0 1-.7 3.3"/><path d="M12 10.1v3.6a12 12 0 0 1-1.3 5.5"/><path d="M15.5 10.4v3.3a16 16 0 0 1-.9 5.3"/><path d="M17.5 12.4V10a5.5 5.5 0 0 0-8.4-4.7"/></>,
+  mail: <><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M4 7.5l8 5 8-5"/></>,
+  chat: <><path d="M4 5.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9l-4 3.5V17H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z"/></>,
+  upload: <><path d="M12 16V5M8 9l4-4 4 4M5 19h14"/></>,
+  cloud: <><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 9.5a3.5 3.5 0 0 1 .5 8.5z"/></>,
+  folder: <><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2.5h8a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 18.5H5A1.5 1.5 0 0 1 3.5 17z"/></>,
+  book: <><path d="M5 4.5h11A2.5 2.5 0 0 1 18.5 7v12.5H7A2 2 0 0 1 5 17.5z"/><path d="M5 4.5v13"/><path d="M9 8.5h6M9 11.5h4"/></>,
+  palette: <><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 2-1.8 0-1.3-1.3-1.5-1.3-2.7 0-.8.7-1.5 1.6-1.5H16a4.5 4.5 0 0 0 4.5-4.5C20.5 6.4 16.7 3.5 12 3.5z"/><circle cx="8" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="16" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></>,
+  clock: <><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>,
 };
 
 function Icon({ name, size = 20, stroke = 1.7, className = "" }) {
@@ -102,14 +120,14 @@ function Bars({ data, height = 140 }) {
 }
 
 // ---- sparkline ----------------------------------------------------------
-function Spark({ pts, w = 160, h = 44, stroke = "var(--accent)" }) {
+function Spark({ pts, w = 160, h = 44, stroke = "var(--accent)", fill = "var(--accent-wash)" }) {
   const max = Math.max(...pts), min = Math.min(...pts);
   const span = max - min || 1;
   const step = w / (pts.length - 1);
   const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(h - ((p - min) / span) * (h - 6) - 3).toFixed(1)}`).join(" ");
   return (
     <svg className="wf-spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <path d={`${d} L${w},${h} L0,${h} Z`} fill="var(--accent-wash)" stroke="none" />
+      <path d={`${d} L${w},${h} L0,${h} Z`} fill={fill} stroke="none" />
       <path d={d} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -241,6 +259,7 @@ const data = {
     { name: "Épargne", bank: "Ecobank", bal: 980000, type: "Épargne", num: "•• 7390" },
     { name: "Orange Money", bank: "Mobile money", bal: 245000, type: "Mobile money", num: "07 •• 12" },
     { name: "Wave", bank: "Mobile money", bal: 135000, type: "Mobile money", num: "05 •• 88", blocked: true },
+    { name: "Espèces", bank: "Enveloppe · mode allégé", bal: 38000, type: "Espèces", num: "réconcilié 24 mai" },
   ],
   compteOps: [
     { name: "Salaire", cat: "Revenu", amt: 850000, when: "28 mai" },
@@ -339,6 +358,126 @@ const data = {
     "Quel sera mon solde en fin de mois ?",
     "Comment atteindre mon objectif plus vite ?",
     "Quelles dépenses sont inhabituelles ?",
+  ],
+
+  // ---- couche de capture multi-canal ----
+  canaux: [
+    { id: "wave", l: "Wave", sub: "Mobile money", ic: "card" },
+    { id: "om", l: "Orange Money", sub: "Mobile money", ic: "card" },
+    { id: "cash", l: "Cash", sub: "Espèces", ic: "cash" },
+    { id: "banque", l: "Banque", sub: "NSIA / Ecobank", ic: "bank" },
+  ],
+  captureModes: [
+    { id: "voice", ic: "mic", l: "Note vocale", sub: "Dictez, l'app structure" },
+    { id: "chat", ic: "message", l: "Langage naturel", sub: "« Wave 3500 déjeuner »" },
+    { id: "quick", ic: "bolt", l: "Saisie rapide", sub: "Formulaire ultra-court" },
+    { id: "sms", ic: "phone", l: "SMS auto (Android)", sub: "Complémentaire" },
+  ],
+  voiceDraft: {
+    transcript: "Wave 3 500 pour le déjeuner",
+    fields: [
+      { k: "Montant", v: "3 500 FCFA", conf: "high" },
+      { k: "Type", v: "Dépense", conf: "high" },
+      { k: "Canal", v: "Wave", conf: "high" },
+      { k: "Catégorie", v: "Alimentation", conf: "med" },
+      { k: "Compte", v: "Wave", conf: "high" },
+      { k: "Date", v: "Aujourd'hui · 13:24", conf: "high" },
+    ],
+  },
+  smsInbox: [
+    { from: "Wave", raw: "Paiement de 3 500 FCFA chez RESTO BELLEVILLE. Solde : 131 500 FCFA.", amt: -3500, cat: "Alimentation", when: "13:24", conf: "high" },
+    { from: "Orange Money", raw: "Transfert reçu de 150 000 FCFA. Nouveau solde 395 000 FCFA.", amt: 150000, cat: "Revenu", when: "Hier", conf: "high" },
+    { from: "NSIA", raw: "Achat 12 800 FCFA TOTAL ENERGIES par carte ****4821.", amt: -12800, cat: "Transport", when: "Hier", conf: "med" },
+  ],
+  reconcile: [
+    { name: "SMS Wave non rattaché", sub: "3 500 FCFA · RESTO BELLEVILLE", kind: "sms" },
+    { name: "Retrait DAB à catégoriser", sub: "50 000 FCFA · 19 mai", kind: "cat" },
+    { name: "Doublon possible", sub: "Yango 6 200 FCFA × 2 le 26 mai", kind: "dup" },
+  ],
+  cashEnvelope: { cap: 100000, spent: 62000, left: 38000, lastReconcile: "24 mai" },
+
+  // ---- coach : transparence & gouvernance ----
+  completeness: {
+    score: 78,
+    items: [
+      { l: "Comptes connectés", v: "4 / 4", ok: true },
+      { l: "Transactions du mois", v: "Suivi régulier", ok: true },
+      { l: "Charges fixes déclarées", v: "5 / 6", ok: true },
+      { l: "Cash réconcilié", v: "Il y a 8 jours", ok: false },
+    ],
+  },
+  coachMaturity: { level: 2, labels: ["Débutant", "En apprentissage", "Fiable"] },
+  coachAdvice: {
+    niveau: "Recommandation",
+    tone: "warn",
+    question: "Est-ce que je peux m'offrir un téléphone à 250 000 FCFA ce mois-ci ?",
+    observe: "Solde courant 1 120 000 · 2 échéances à venir (loyer 135 000, prêt 145 000) · épargne du mois 238 000.",
+    analyse: "Après charges fixes et plafonds de budgets, votre marge disponible d'ici fin de mois est d'environ 92 000 FCFA.",
+    confiance: 82,
+    reco: "Cet achat dépasse votre marge du mois. Le repousser de 3 semaines (après le salaire) évite de puiser dans le fonds d'urgence.",
+    options: ["Reporter au 28 (après salaire)", "Étaler sur l'épargne Ordinateur", "Ajuster le budget Loisirs"],
+  },
+  interventionLevels: [
+    { l: "Observation", sub: "Information factuelle, sans recommandation.", tone: "", ic: "eye" },
+    { l: "Alerte douce", sub: "Signal faible ou dérive naissante.", tone: "warn", ic: "bell" },
+    { l: "Recommandation", sub: "Arbitrage conseillé, avec justification.", tone: "ok", ic: "target" },
+    { l: "Opposition explicite", sub: "Rare · fort enjeu · confiance élevée.", tone: "over", ic: "alert" },
+  ],
+
+  // ---- gestion des catégories ----
+  categoriesDep: [
+    { name: "Alimentation", ic: "wallet", color: "#3a3a3e", budget: "200 000", n: 24 },
+    { name: "Transport", ic: "exchange", color: "#6f6f76", budget: "50 000", n: 12 },
+    { name: "Logement", ic: "bank", color: "#9a9aa1", budget: "—", n: 1 },
+    { name: "Factures", ic: "card", color: "#c1c1c6", budget: "60 000", n: 6 },
+    { name: "Loisirs", ic: "target", color: "#b58a4a", budget: "50 000", n: 9 },
+    { name: "Santé", ic: "shield", color: "#8a6f9a", budget: "—", n: 3 },
+  ],
+  categoriesRev: [
+    { name: "Salaire", ic: "up", color: "#2f7d57", budget: "—", n: 1 },
+    { name: "Transferts reçus", ic: "exchange", color: "#3f8f6a", budget: "—", n: 4 },
+    { name: "Autres revenus", ic: "wallet", color: "#5aa183", budget: "—", n: 2 },
+  ],
+
+  // ---- import / export ----
+  importFormats: [
+    { l: "Relevé CSV", sub: "Banque, mobile money", ic: "folder" },
+    { l: "Fichier Excel", sub: ".xlsx, .xls", ic: "book" },
+    { l: "Format OFX / QIF", sub: "Standard bancaire", ic: "bank" },
+  ],
+  exportFormats: ["PDF", "CSV", "Excel"],
+
+  // ---- sauvegarde ----
+  backups: [
+    { when: "Aujourd'hui · 08:12", size: "2,4 Mo", auto: true },
+    { when: "Hier · 08:05", size: "2,4 Mo", auto: true },
+    { when: "29 mai · 08:09", size: "2,3 Mo", auto: true },
+    { when: "24 mai · 21:40", size: "2,3 Mo", auto: false },
+  ],
+
+  // ---- centre d'aide ----
+  faq: [
+    { q: "Comment ajouter une transaction en espèces ?", c: "Capture" },
+    { q: "Pourquoi un budget passe-t-il en rouge ?", c: "Budgets" },
+    { q: "Comment fonctionne la lecture des SMS ?", c: "Capture" },
+    { q: "Le coach peut-il se tromper ?", c: "Coach IA" },
+    { q: "Mes données sont-elles partagées ?", c: "Confidentialité" },
+    { q: "Comment bloquer un compte ?", c: "Comptes" },
+  ],
+  helpGuides: [
+    { l: "Bien démarrer", sub: "5 min · prise en main", ic: "flag" },
+    { l: "Maîtriser les budgets", sub: "Plafonds & alertes", ic: "gauge" },
+    { l: "Le coach en 4 couches", sub: "Comprendre ses avis", ic: "layers" },
+  ],
+
+  // ---- préférences push ----
+  pushCats: [
+    { l: "Dépassement de budget", sub: "Quand un plafond est atteint", on: true, ic: "gauge" },
+    { l: "Échéances de prêt", sub: "Rappel avant prélèvement", on: true, ic: "bank" },
+    { l: "Objectifs", sub: "Progrès et contributions", on: true, ic: "target" },
+    { l: "Anomalies détectées", sub: "Dépenses inhabituelles", on: true, ic: "alert" },
+    { l: "Résumé hebdomadaire", sub: "Bilan chaque lundi", on: false, ic: "analytics" },
+    { l: "Conseils du coach", sub: "Recommandations clés", on: false, ic: "sliders" },
   ],
 };
 

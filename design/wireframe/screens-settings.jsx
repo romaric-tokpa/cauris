@@ -6,6 +6,7 @@ function Switch({ on }) {
 const SET_NAV = [
   { ic: "user", l: "Profil" },
   { ic: "gear", l: "Préférences" },
+  { ic: "sliders", l: "Coach IA & capture" },
   { ic: "shield", l: "Sécurité" },
   { ic: "tag", l: "Catégories" },
   { ic: "download", l: "Import / Export" },
@@ -43,6 +44,15 @@ function ParamsDesk() {
             <div className="set-row"><div className="set-ico"><Icon name="globe" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Langue</div><div className="t-faint" style={{ fontSize: 11.5 }}>Langue de l'application</div></div><span className="inp" style={{ padding: "8px 12px" }}>Français <Icon name="chevron" size={14} className="t-faint" /></span></div>
             <div className="set-row"><div className="set-ico"><Icon name="moon" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Mode sombre</div><div className="t-faint" style={{ fontSize: 11.5 }}>Thème de l'interface</div></div><Switch on={false} /></div>
             <div className="set-row"><div className="set-ico"><Icon name="bell" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Notifications push</div><div className="t-faint" style={{ fontSize: 11.5 }}>Alertes budgets, échéances, objectifs</div></div><Switch on={true} /></div>
+          </div>
+
+          {/* coach IA & capture */}
+          <div className="wf-card wf-pad">
+            <div className="card-title" style={{ marginBottom: 6 }}>Coach IA & capture</div>
+            <div className="set-row"><div className="set-ico"><Icon name="sliders" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Ton & niveau d'intervention</div><div className="t-faint" style={{ fontSize: 11.5 }}>Recommandation · synthèse</div></div><span className="card-link">Configurer <Icon name="chevron" size={13} /></span></div>
+            <div className="set-row"><div className="set-ico"><Icon name="layers" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Mémoire comportementale</div><div className="t-faint" style={{ fontSize: 11.5 }}>Habitudes, objectifs, préférences</div></div><Switch on={true} /></div>
+            <div className="set-row"><div className="set-ico"><Icon name="phone" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Lecture des SMS (Android)</div><div className="t-faint" style={{ fontSize: 11.5 }}>Capture complémentaire · chaque opération validée</div></div><Switch on={true} /></div>
+            <div className="set-row"><div className="set-ico"><Icon name="cash" size={18} /></div><div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13.5 }}>Suivi du cash</div><div className="t-faint" style={{ fontSize: 11.5 }}>Mode enveloppe (allégé)</div></div><span className="inp" style={{ padding: "8px 12px" }}>Enveloppe <Icon name="chevron" size={14} className="t-faint" /></span></div>
           </div>
 
           {/* sécurité */}
@@ -84,6 +94,12 @@ function ParamsMob() {
         <Row ic="globe" l="Langue" sub="Français" />
         <Row ic="moon" l="Mode sombre" right={<Switch on={false} />} />
         <Row ic="bell" l="Notifications push" right={<Switch on={true} />} />
+      </Group>
+      <Group title="Coach IA & capture">
+        <Row ic="sliders" l="Ton & intervention" sub="Recommandation · synthèse" />
+        <Row ic="layers" l="Mémoire comportementale" right={<Switch on={true} />} />
+        <Row ic="phone" l="Lecture des SMS (Android)" right={<Switch on={true} />} />
+        <Row ic="cash" l="Suivi du cash" sub="Mode enveloppe" />
       </Group>
       <Group title="Sécurité">
         <Row ic="lock" l="Code PIN" sub="Modifié il y a 2 mois" />
