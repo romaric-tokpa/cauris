@@ -1,11 +1,10 @@
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { MobileHeader } from './MobileHeader'
 import { MobileTabBar } from './MobileTabBar'
 import { PageTitleContext } from './pageTitle'
-import { RouteFallback } from '../../app/guards'
 import styles from './AppShell.module.css'
 
 /** Shell responsive : desktop = Cockpit (sidebar + header), mobile = barre basse + FAB.
@@ -21,9 +20,7 @@ export function AppShell() {
           <Header className={styles.desktopOnly} />
           <MobileHeader className={styles.mobileOnly} />
           <div className={styles.content}>
-            <Suspense fallback={<RouteFallback />}>
-              <Outlet />
-            </Suspense>
+            <Outlet />
           </div>
           <MobileTabBar className={styles.mobileOnly} />
         </main>
