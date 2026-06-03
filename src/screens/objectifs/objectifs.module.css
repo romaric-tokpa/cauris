@@ -295,6 +295,17 @@
   font-weight: 600;
   font-size: 13px;
 }
+/* Archiver (réversible) : ton sobre, pas le rouge destructif. Pleine largeur centrée. */
+.archiveBtn {
+  justify-content: center;
+  color: var(--ink-soft);
+}
+/* Supprimer (dur, sans contribution) : ton destructif --neg, comme « Supprimer » du wireframe. */
+.deleteBtn {
+  justify-content: center;
+  color: var(--neg);
+  border-color: var(--neg);
+}
 
 /* ───────────────────────── États (chargement / erreur) ────────────────────── */
 .skeleton {

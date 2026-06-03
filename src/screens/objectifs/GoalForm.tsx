@@ -28,13 +28,42 @@ function initialState(initial: GoalRow | undefined): FormState {
  * reste piloté par les contributions). « Compte dédié » et « Contribution automatique »
  * sont DÉCORATIFS dans le wireframe : rendus en désactivé honnête, jamais persistés.
  */
-export function GoalForm({ initial, onClose }: { initial?: GoalRow; onClose: () => void }) {
+export function GoalForm({
+  initial,
+  onClose,
+  onExit,
+  hasContributions = false,
+}: {
+  initial?: GoalRow
+  onClose: () => void
+  /** Sortie de cycle de vie (archive/suppression) : l'objectif disparaît → on quitte le détail. */
+  onExit?: () => void
+  /** Vrai si l'objectif a au moins une contribution → suppression dure interdite (archiver). */
+  hasContributions?: boolean
+}) {
   const [s, setS] = useState<FormState>(() => initialState(initial))
   const [error, setError] = useState('')
-  const { create, update } = useGoalMutations()
+  const { create, update, archive, remove } = useGoalMutations()
   const isEdit = Boolean(initial)
-  const submitting = create.isPending || update.isPending
+  const submitting = create.isPending || update.isPending || archive.isPending || remove.isPending
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setS((p) => ({ ...p, [k]: v }))
+
+  const onErr = (e: unknown) => setError(e instanceof Error ? e.message : 'Erreur réseau.')
+  const exit = onExit ?? onClose
+
+  // Archivage = retrait de la liste (réversible). Vit dans le drawer de modification,
+  // comme « Bloquer ce compte » / « Archiver ce budget ».
+  const onArchive = () => {
+    if (!initial) return
+    setError('')
+    archive.mutate(initial.id, { onSuccess: exit, onError: onErr })
+  }
+  // Suppression dure : offerte SEULEMENT sans contribution (sinon le serveur renvoie 409).
+  const onDelete = () => {
+    if (!initial) return
+    setError('')
+    remove.mutate(initial.id, { onSuccess: exit, onError: onErr })
+  }
 
   const submit = () => {
     setError('')
@@ -42,7 +71,6 @@ export function GoalForm({ initial, onClose }: { initial?: GoalRow; onClose: () 
     if (!Number.isInteger(s.targetAmount) || s.targetAmount <= 0)
       return setError('Montant cible positif requis.')
     const targetDate = s.targetDate || null
-    const onErr = (e: unknown) => setError(e instanceof Error ? e.message : 'Erreur réseau.')
     if (isEdit && initial)
       update.mutate(
         { id: initial.id, data: { name: s.name.trim(), targetAmount: s.targetAmount, targetDate } },
@@ -126,6 +154,31 @@ export function GoalForm({ initial, onClose }: { initial?: GoalRow; onClose: () 
         </div>
         <Switch on={false} label="Contribution automatique" disabled title="Bientôt disponible" />
       </div>
+
+      {/* Sortie de cycle de vie (modification seule) : Archiver (sobre, réversible) +
+          Supprimer (destructif) UNIQUEMENT sans contribution — sinon on archive. */}
+      {isEdit && (
+        <>
+          <button
+            type="button"
+            className={`btn block ${styles.archiveBtn}`}
+            onClick={onArchive}
+            disabled={submitting}
+          >
+            <Icon name="inbox" size={15} /> Archiver cet objectif
+          </button>
+          {!hasContributions && (
+            <button
+              type="button"
+              className={`btn block ${styles.deleteBtn}`}
+              onClick={onDelete}
+              disabled={submitting}
+            >
+              <Icon name="trash" size={15} /> Supprimer
+            </button>
+          )}
+        </>
+      )}
 
       <div className={styles.drawerActions}>
         <button type="button" className="btn block" onClick={onClose} disabled={submitting}>

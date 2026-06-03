@@ -103,7 +103,20 @@ export function useGoalMutations() {
       apiMutate<{ goal: GoalRow }>(`/api/goals/${id}`, 'PATCH', data),
     onSuccess: invalidate,
   })
-  return { create, update }
+  const archive = useMutation({
+    mutationFn: (id: string) => apiMutate<{ goal: GoalRow }>(`/api/goals/${id}/archive`, 'POST'),
+    onSuccess: invalidate,
+  })
+  const unarchive = useMutation({
+    mutationFn: (id: string) => apiMutate<{ goal: GoalRow }>(`/api/goals/${id}/unarchive`, 'POST'),
+    onSuccess: invalidate,
+  })
+  // Suppression dure (refusée côté serveur si contributions → 409, message remonté).
+  const remove = useMutation({
+    mutationFn: (id: string) => apiMutate<{ ok: true }>(`/api/goals/${id}`, 'DELETE'),
+    onSuccess: invalidate,
+  })
+  return { create, update, archive, unarchive, remove }
 }
 
 /** Ajout d'une contribution → invalide la liste/détail objectifs ET le dashboard

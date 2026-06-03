@@ -389,8 +389,13 @@ export function setBudgetArchived(userId: string, id: string, archived: boolean)
 }
 
 /* ─────────────────────────────── Objectifs ───────────────────────────── */
+/** Objectifs ACTIFS du user (les archivés disparaissent de la liste — pas de vue dédiée). */
 export function listGoals(userId: string) {
-  return db.select().from(goals).where(eq(goals.userId, userId)).orderBy(asc(goals.createdAt))
+  return db
+    .select()
+    .from(goals)
+    .where(and(eq(goals.userId, userId), eq(goals.archived, false)))
+    .orderBy(asc(goals.createdAt))
 }
 
 export function listContributions(userId: string, goalId: string) {
@@ -437,6 +442,32 @@ export function updateGoal(
   return db
     .update(goals)
     .set(input)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning()
+}
+
+/** Archivage / réactivation scopé (réversible — l'archivé disparaît juste de la liste). */
+export function setGoalArchived(userId: string, id: string, archived: boolean) {
+  return db
+    .update(goals)
+    .set({ archived })
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning()
+}
+
+/** Nombre de contributions d'un objectif (garde la suppression dure : 0 → supprimable). */
+export async function countGoalContributions(userId: string, goalId: string): Promise<number> {
+  const rows = await db
+    .select({ id: contributions.id })
+    .from(contributions)
+    .where(and(eq(contributions.userId, userId), eq(contributions.goalId, goalId)))
+  return rows.length
+}
+
+/** Suppression dure scopée (n'à appeler QUE si 0 contribution — cf. route). */
+export function deleteGoal(userId: string, id: string) {
+  return db
+    .delete(goals)
     .where(and(eq(goals.id, id), eq(goals.userId, userId)))
     .returning()
 }

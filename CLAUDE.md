@@ -19,6 +19,7 @@ Règles projet chargées à chaque session. **Source de vérité du rendu : `src
 - **Contrôle d'accès** : pas de RLS — toute requête est **scopée au `user_id` authentifié dans la couche serveur**. Ne jamais renvoyer de données non scopées.
 - IA : **API Anthropic appelée côté serveur uniquement** (route Hono), la clé ne touche jamais le client.
 - Tests : Vitest + RTL (unités), **Playwright** (e2e + régression visuelle).
+- **Réflexe migrations** : après tout changement de schéma (`server/db/*-schema.ts`), `npm run db:generate` PUIS `npm run db:migrate` sur le **`local.db` de dev** (il ne se migre pas seul ; une colonne manquante en dev = 500 sur les routes qui la lisent). L'e2e migre+seed un DB neuf à chaque run, donc le risque ne se voit qu'en dev local.
 
 ## Rendu — non négociable
 

@@ -43,6 +43,9 @@ import {
   getGoalById,
   createGoal,
   updateGoal,
+  setGoalArchived,
+  countGoalContributions,
+  deleteGoal,
   type GoalWriteInput,
   createContribution,
   listLoans,
@@ -1384,6 +1387,45 @@ api.patch('/goals/:id', async (c) => {
   const { name, targetAmount, targetDate } = parsed.input
   const [updated] = await updateGoal(userId, existing.id, { name, targetAmount, targetDate })
   return c.json({ goal: { ...updated, ...goalMeta(updated) } })
+})
+
+// Archivage (réversible) — un objectif contribué se retire de la liste sans perdre son
+// historique. Appartenance → 404.
+api.post('/goals/:id/archive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getGoalById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setGoalArchived(userId, existing.id, true)
+  return c.json({ goal: { ...updated, ...goalMeta(updated) } })
+})
+
+// Réactivation. Appartenance → 404. (Pas de vue archivés côté objectifs : usage API/futur.)
+api.post('/goals/:id/unarchive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getGoalById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setGoalArchived(userId, existing.id, false)
+  return c.json({ goal: { ...updated, ...goalMeta(updated) } })
+})
+
+// Suppression DURE — autorisée UNIQUEMENT si l'objectif n'a AUCUNE contribution : on ne
+// détruit jamais un historique de versements (un objectif contribué s'archive → 409).
+// Appartenance → 404.
+api.delete('/goals/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getGoalById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const count = await countGoalContributions(userId, existing.id)
+  if (count > 0)
+    return c.json(
+      { error: 'Objectif avec contributions : archivez-le plutôt que de le supprimer.' },
+      409,
+    )
+  await deleteGoal(userId, existing.id)
+  return c.json({ ok: true })
 })
 
 // Ajout d'une contribution : crée la ligne ET fait progresser l'objectif (atomique).

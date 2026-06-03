@@ -1,0 +1,1 @@
+ALTER TABLE `goals` ADD `archived` integer DEFAULT false NOT NULL;

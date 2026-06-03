@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Icon, Donut, Progress } from '../../components/primitives'
 import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { EmptyState } from '../../components/states'
@@ -62,9 +62,14 @@ export function ObjectifDetail() {
 function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: AccountRef[] }) {
   const { goal: g, contributions } = data
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const [formOpen, setFormOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   useSetPageTitle(g.name)
+  // Sortie de cycle de vie : après archive/suppression, l'objectif n'existe plus → liste.
+  const onExit = () => {
+    void navigate('/objectifs')
+  }
 
   // « Contribution moyenne » = fait DÉRIVABLE (moyenne des contributions affichées).
   const avg = contributions.length
@@ -236,11 +241,21 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
       {/* drawer (desktop) / bottom sheet (mobile) — Modifier l'objectif */}
       {isMobile ? (
         <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Modifier l’objectif">
-          <GoalForm initial={g} onClose={() => setEditOpen(false)} />
+          <GoalForm
+            initial={g}
+            hasContributions={contributions.length > 0}
+            onExit={onExit}
+            onClose={() => setEditOpen(false)}
+          />
         </BottomSheet>
       ) : (
         <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Modifier l’objectif">
-          <GoalForm initial={g} onClose={() => setEditOpen(false)} />
+          <GoalForm
+            initial={g}
+            hasContributions={contributions.length > 0}
+            onExit={onExit}
+            onClose={() => setEditOpen(false)}
+          />
         </Drawer>
       )}
     </>

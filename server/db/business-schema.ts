@@ -149,6 +149,10 @@ export const goals = sqliteTable(
     currentAmount: integer('current_amount').default(0).notNull(),
     // Dette onboarding (Phase 2 → écran Objectifs Phase 7) : saisie réelle à venir.
     targetDate: text('target_date'), // YYYY-MM-DD | null
+    // Sortie de cycle de vie : un objectif contribué s'ARCHIVE (réversible, disparaît
+    // de la liste — pas de vue archivés dédiée côté objectifs). La suppression dure
+    // est réservée aux objectifs SANS contribution (préserve l'historique).
+    archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
     ...timestamps(),
   },
   (t) => [index('goals_user_idx').on(t.userId)],
