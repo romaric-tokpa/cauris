@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Progress } from '../../components/primitives'
+import { Icon, Progress } from '../../components/primitives'
 import { Card, Badge } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { money } from '../../lib/money'
@@ -12,12 +12,13 @@ interface Props {
   summary: BudgetsSummary
   tab: string
   setTab: (t: string) => void
+  onNew: () => void
   className?: string
 }
 
 /** Liste budgets mobile — portée 1:1 de BudgetMob (screens-budgets.jsx). Pas de
  *  Gauge (Progress uniquement), 3 chips (pas d'onglet Archivés). */
-export function BudgetsMobile({ budgets, summary, tab, setTab, className = '' }: Props) {
+export function BudgetsMobile({ budgets, summary, tab, setTab, onNew, className = '' }: Props) {
   const visible = filterByTab(budgets, tab)
 
   return (
@@ -50,6 +51,10 @@ export function BudgetsMobile({ budgets, summary, tab, setTab, className = '' }:
         </div>
         <Progress pct={summary.pct} tone="warn" />
       </Card>
+
+      <button type="button" className="btn primary block" onClick={onNew}>
+        <Icon name="plus" size={16} /> Créer un budget
+      </button>
 
       {/* list */}
       {visible.length === 0 ? (

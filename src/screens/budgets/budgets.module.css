@@ -283,3 +283,47 @@
   justify-content: center;
   min-height: 50vh;
 }
+
+/* ───────────────── Formulaire budget (drawer / sheet) ──────────────── */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.alertChips {
+  gap: 7px;
+}
+.alertChip {
+  font-size: 12px;
+}
+.rolloverRow {
+  align-items: center;
+}
+.rolloverTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ───────────────── Budgets archivés (table) ──────────────── */
+.archTable {
+  overflow: hidden;
+}
+.archActionsCol {
+  width: 110px;
+}
+.archName {
+  font-weight: 600;
+}
+/* Bouton rendu comme un lien (card-link) — reset des styles natifs de <button>. */
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}

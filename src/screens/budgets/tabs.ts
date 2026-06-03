@@ -12,11 +12,10 @@ export const STATUS: Record<BudgetRow['tone'], string> = {
   ok: 'Sur la voie',
 }
 
-/** Filtre par onglet : Actifs = tous ; En alerte = warn ; Dépassés = over ;
- *  Archivés = aucun (pas de notion d'archivage en base → état vide soigné). */
+/** Filtre par onglet : Actifs = tous ; En alerte = warn ; Dépassés = over.
+ *  « Archivés » est une VUE dédiée (table, requête séparée) — géré en amont, pas ici. */
 export function filterByTab(budgets: BudgetRow[], tab: string): BudgetRow[] {
   if (tab === 'En alerte') return budgets.filter((b) => b.tone === 'warn')
   if (tab === 'Dépassés') return budgets.filter((b) => b.tone === 'over')
-  if (tab === 'Archivés') return []
   return budgets
 }

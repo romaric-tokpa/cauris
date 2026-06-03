@@ -34,10 +34,11 @@ test('Shell : segment période — « Mois » actif, portées non livrées désa
 
 // ──────────────── Actions principales par écran ────────────────
 
-test('Budgets : « Créer un budget » honnêtement désactivé', async ({ page }) => {
+test('Budgets : « Créer un budget » ouvre le drawer de création (A1)', async ({ page }) => {
   await bootDesktop(page)
   await page.getByRole('link', { name: 'Budgets' }).click()
-  await expect(page.getByRole('button', { name: /Créer un budget/ })).toBeDisabled()
+  await page.getByRole('button', { name: /Créer un budget/ }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
 })
 
 test('Objectifs : « Créer un objectif » honnêtement désactivé', async ({ page }) => {

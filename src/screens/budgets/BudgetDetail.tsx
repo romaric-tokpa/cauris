@@ -1,12 +1,28 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Icon, Progress } from '../../components/primitives'
-import { Card } from '../../components/ui'
+import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { useSetPageTitle } from '../../components/shell/pageTitle'
 import { money } from '../../lib/money'
 import { formatIsoDay } from '../../lib/date'
 import { useBudget, useBudgetAdvice, type BudgetDetailResponse } from './useBudgets'
+import { BudgetForm } from './BudgetForm'
 import styles from './budgets.module.css'
+
+/** Vrai en dessous du breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
+function useIsMobile(): boolean {
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setM(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return m
+}
 
 function Skeleton() {
   return (
@@ -43,6 +59,8 @@ export function BudgetDetail() {
 
 function Detail({ data }: { data: BudgetDetailResponse }) {
   const { budget: b, categoryTotal, linkedTransactions } = data
+  const isMobile = useIsMobile()
+  const [editOpen, setEditOpen] = useState(false)
   // Conseil IA — seul le cas dépassement l'affiche (cf. bandeau ci-dessous).
   const advice = useBudgetAdvice(b.id, b.tone === 'over')
   // Titre de l'app bar mobile (la route /budgets/:id n'est pas dans la nav).
@@ -54,8 +72,7 @@ function Detail({ data }: { data: BudgetDetailResponse }) {
 
   const actions = (
     <>
-      {/* Ajustement du plafond = à venir (Phase ultérieure) — bouton honnête. */}
-      <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
+      <button type="button" className="btn" onClick={() => setEditOpen(true)}>
         <Icon name="gear" size={16} /> Ajuster le plafond
       </button>
       <Link to={linkUrl} className="btn primary">
@@ -212,6 +229,16 @@ function Detail({ data }: { data: BudgetDetailResponse }) {
           )}
         </Card>
       </div>
+
+      {isMobile ? (
+        <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Ajuster">
+          <BudgetForm initial={b} onClose={() => setEditOpen(false)} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Ajuster le plafond">
+          <BudgetForm initial={b} onClose={() => setEditOpen(false)} />
+        </Drawer>
+      )}
     </>
   )
 }
