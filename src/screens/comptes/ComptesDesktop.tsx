@@ -17,11 +17,13 @@ interface Props {
   data: ComptesResponse
   tab: string
   setTab: (t: string) => void
+  onAdd: () => void
+  onToggleBlock: (a: AccountRow) => void
   className?: string
 }
 
 /** Liste comptes desktop — portée 1:1 de ComptesDesk (screens-comptes.jsx). */
-export function ComptesDesktop({ data, tab, setTab, className = '' }: Props) {
+export function ComptesDesktop({ data, tab, setTab, onAdd, onToggleBlock, className = '' }: Props) {
   const { accounts, patrimoineTotal, patrimoineSpark } = data
   const visible = filterByTab(accounts, tab)
   const actifs = accounts.filter((a) => !a.blocked).length
@@ -37,8 +39,7 @@ export function ComptesDesktop({ data, tab, setTab, className = '' }: Props) {
           </div>
           <div className={styles.pageTitle}>Comptes</div>
         </div>
-        {/* Création de compte = à venir. */}
-        <button type="button" className={`btn primary ${styles.soon}`} disabled title="Bientôt disponible">
+        <button type="button" className="btn primary" onClick={onAdd}>
           <Icon name="plus" size={16} /> Ajouter un compte
         </button>
       </div>
@@ -96,12 +97,12 @@ export function ComptesDesktop({ data, tab, setTab, className = '' }: Props) {
                 </div>
                 <div className={`r ${styles.accTags}`}>
                   {c.blocked ? <Badge tone="over">Bloqué</Badge> : <Tag>{c.type}</Tag>}
-                  {/* Blocage/déblocage = à venir. */}
                   <button
                     type="button"
-                    className={`icon-btn ${styles.iconBtnSm} ${styles.soon}`}
-                    disabled
+                    className={`icon-btn ${styles.iconBtnSm}`}
+                    onClick={() => onToggleBlock(c)}
                     title={c.blocked ? 'Débloquer' : 'Bloquer le compte'}
+                    aria-label={c.blocked ? `Débloquer ${c.name}` : `Bloquer ${c.name}`}
                   >
                     <Icon name={c.blocked ? 'unlock' : 'lock'} size={16} />
                   </button>
@@ -116,9 +117,13 @@ export function ComptesDesktop({ data, tab, setTab, className = '' }: Props) {
                   </div>
                 </div>
                 {c.blocked ? (
-                  <span className={`card-link ${styles.soon}`}>
+                  <button
+                    type="button"
+                    className={`card-link ${styles.linkBtn}`}
+                    onClick={() => onToggleBlock(c)}
+                  >
                     Débloquer <Icon name="unlock" size={13} />
-                  </span>
+                  </button>
                 ) : (
                   <Link to={`/comptes/${c.id}`} className="card-link">
                     Voir les opérations <Icon name="chevron" size={13} />

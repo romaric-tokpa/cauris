@@ -1,13 +1,29 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
-import { Card } from '../../components/ui'
+import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { useSetPageTitle } from '../../components/shell/pageTitle'
 import { money } from '../../lib/money'
 import { maskedBalance } from '../../lib/account'
 import { formatIsoDay } from '../../lib/date'
-import { useAccount, type CompteDetailResponse } from './useComptes'
+import { useAccount, useCompteMutations, type CompteDetailResponse } from './useComptes'
+import { AccountForm } from './AccountForm'
 import styles from './comptes.module.css'
+
+/** Vrai en dessous du breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
+function useIsMobile(): boolean {
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setM(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return m
+}
 
 function Skeleton() {
   return (
@@ -44,18 +60,30 @@ export function ComptesDetail() {
 function Detail({ data }: { data: CompteDetailResponse }) {
   const { account: a, recentTransactions } = data
   useSetPageTitle(a.name)
+  const isMobile = useIsMobile()
+  const [editOpen, setEditOpen] = useState(false)
+  const { block, unblock } = useCompteMutations()
   const linkUrl = `/transactions?accountId=${a.id}`
 
-  // Transfert / Opération / Blocage = à venir (lecture seule Phase 8).
+  const toggleBlock = () => {
+    const m = a.blocked ? unblock : block
+    m.mutate(a.id)
+  }
+  const toggling = block.isPending || unblock.isPending
+
+  // Modifier + Blocage = RÉELS (A1). Transfert / Opération = à venir (.soon honnête).
   const actions = (
     <>
+      <button type="button" className="btn" onClick={() => setEditOpen(true)}>
+        <Icon name="edit" size={16} /> Modifier
+      </button>
       <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
         <Icon name="exchange" size={16} /> Transfert
       </button>
       <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
         <Icon name="plus" size={16} /> Opération
       </button>
-      <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
+      <button type="button" className="btn" onClick={toggleBlock} disabled={toggling}>
         <Icon name={a.blocked ? 'unlock' : 'lock'} size={16} />{' '}
         {a.blocked ? 'Débloquer' : 'Bloquer le compte'}
       </button>
@@ -128,6 +156,16 @@ function Detail({ data }: { data: CompteDetailResponse }) {
           Voir toutes les opérations
         </Link>
       </div>
+
+      {isMobile ? (
+        <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Modifier">
+          <AccountForm initial={a} stacked onClose={() => setEditOpen(false)} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Modifier le compte">
+          <AccountForm initial={a} onClose={() => setEditOpen(false)} />
+        </Drawer>
+      )}
     </>
   )
 }

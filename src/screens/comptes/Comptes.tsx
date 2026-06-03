@@ -1,10 +1,26 @@
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
-import { Card } from '../../components/ui'
-import { useComptes } from './useComptes'
+import { Card, Drawer, BottomSheet } from '../../components/ui'
+import { useComptes, useCompteMutations, type AccountRow } from './useComptes'
 import { ComptesDesktop } from './ComptesDesktop'
 import { ComptesMobile } from './ComptesMobile'
+import { AccountForm } from './AccountForm'
 import styles from './comptes.module.css'
+
+/** Vrai en dessous du breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
+function useIsMobile(): boolean {
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setM(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return m
+}
 
 function Skeleton() {
   return (
@@ -17,6 +33,8 @@ function Skeleton() {
 
 export function Comptes() {
   const [params, setParams] = useSearchParams()
+  const isMobile = useIsMobile()
+  const [addOpen, setAddOpen] = useState(false)
   const tab = params.get('tab') ?? 'Tous'
   const setTab = (t: string) => {
     setParams(
@@ -31,6 +49,12 @@ export function Comptes() {
   }
 
   const q = useComptes()
+  const { block, unblock } = useCompteMutations()
+  // Bascule blocage depuis une carte de la liste (action immédiate, réversible).
+  const toggleBlock = (a: AccountRow) => {
+    const m = a.blocked ? unblock : block
+    m.mutate(a.id)
+  }
 
   if (q.isPending) return <Skeleton />
   if (q.isError || !q.data) {
@@ -49,11 +73,36 @@ export function Comptes() {
     )
   }
 
+  const close = () => setAddOpen(false)
+
   return (
     <>
       <h1 className={styles.srOnly}>Comptes</h1>
-      <ComptesDesktop data={q.data} tab={tab} setTab={setTab} className={styles.desktop} />
-      <ComptesMobile data={q.data} tab={tab} setTab={setTab} className={styles.mobile} />
+      <ComptesDesktop
+        data={q.data}
+        tab={tab}
+        setTab={setTab}
+        onAdd={() => setAddOpen(true)}
+        onToggleBlock={toggleBlock}
+        className={styles.desktop}
+      />
+      <ComptesMobile
+        data={q.data}
+        tab={tab}
+        setTab={setTab}
+        onAdd={() => setAddOpen(true)}
+        className={styles.mobile}
+      />
+
+      {isMobile ? (
+        <BottomSheet open={addOpen} onClose={close} title="Ajouter">
+          <AccountForm stacked onClose={close} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={addOpen} onClose={close} title="Ajouter un compte">
+          <AccountForm onClose={close} />
+        </Drawer>
+      )}
     </>
   )
 }

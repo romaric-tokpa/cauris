@@ -46,10 +46,11 @@ test('Objectifs : « Créer un objectif » honnêtement désactivé', async ({ p
   await expect(page.getByRole('button', { name: /Créer un objectif/ })).toBeDisabled()
 })
 
-test('Comptes : « Ajouter un compte » honnêtement désactivé', async ({ page }) => {
+test('Comptes : « Ajouter un compte » ouvre le drawer de création (A1)', async ({ page }) => {
   await bootDesktop(page)
   await page.getByRole('link', { name: 'Comptes' }).click()
-  await expect(page.getByRole('button', { name: /Ajouter un compte/ })).toBeDisabled()
+  await page.getByRole('button', { name: /Ajouter un compte/ }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
 })
 
 test('Analytics : « Exporter le rapport » et « Période » honnêtement désactivés', async ({ page }) => {

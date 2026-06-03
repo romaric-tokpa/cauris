@@ -17,12 +17,13 @@ interface Props {
   data: ComptesResponse
   tab: string
   setTab: (t: string) => void
+  onAdd: () => void
   className?: string
 }
 
 /** Liste comptes mobile — EXTRAPOLÉE sobrement de la carte desktop (le wireframe
  *  n'a pas de liste mobile des comptes). Mêmes onglets, cartes empilées. */
-export function ComptesMobile({ data, tab, setTab, className = '' }: Props) {
+export function ComptesMobile({ data, tab, setTab, onAdd, className = '' }: Props) {
   const { accounts, patrimoineTotal, patrimoineSpark } = data
   const visible = filterByTab(accounts, tab)
 
@@ -82,6 +83,10 @@ export function ComptesMobile({ data, tab, setTab, className = '' }: Props) {
         <Spark pts={patrimoineSpark} w={320} h={40} />
         <span className={`t-faint ${styles.patSub}`}>épargne cumulée · 6 mois</span>
       </Card>
+
+      <button type="button" className="btn primary block" onClick={onAdd}>
+        <Icon name="plus" size={16} /> Ajouter un compte
+      </button>
 
       {visible.length === 0 ? (
         <EmptyState icon="wallet" title="Aucun compte" text="Aucun compte dans ce filtre." />

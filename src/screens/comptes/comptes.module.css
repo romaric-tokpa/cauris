@@ -257,3 +257,55 @@
   justify-content: center;
   min-height: 50vh;
 }
+
+/* ───────────────── Formulaire compte (drawer / sheet) ──────────────── */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.typeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.typeChoice {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+}
+.typeLabel {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.includeRow {
+  align-items: center;
+}
+.includeTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+.blockBtn {
+  justify-content: center;
+  color: var(--neg);
+  border-color: var(--neg);
+}
+/* Bouton rendu comme un lien (card-link) — reset des styles natifs de <button>. */
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
