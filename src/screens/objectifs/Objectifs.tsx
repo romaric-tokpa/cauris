@@ -1,10 +1,26 @@
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
-import { Card } from '../../components/ui'
+import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { useGoals } from './useObjectifs'
 import { ObjectifsDesktop } from './ObjectifsDesktop'
 import { ObjectifsMobile } from './ObjectifsMobile'
+import { GoalForm } from './GoalForm'
 import styles from './objectifs.module.css'
+
+/** Vrai sous le breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
+function useIsMobile(): boolean {
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setM(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return m
+}
 
 function Skeleton() {
   return (
@@ -17,6 +33,8 @@ function Skeleton() {
 
 export function Objectifs() {
   const [params, setParams] = useSearchParams()
+  const isMobile = useIsMobile()
+  const [formOpen, setFormOpen] = useState(false)
   const tab = params.get('tab') ?? 'En cours'
   const setTab = (t: string) => {
     setParams(
@@ -50,11 +68,34 @@ export function Objectifs() {
   }
 
   const { goals } = q.data
+  const close = () => setFormOpen(false)
   return (
     <>
       <h1 className={styles.srOnly}>Objectifs</h1>
-      <ObjectifsDesktop goals={goals} tab={tab} setTab={setTab} className={styles.desktop} />
-      <ObjectifsMobile goals={goals} tab={tab} setTab={setTab} className={styles.mobile} />
+      <ObjectifsDesktop
+        goals={goals}
+        tab={tab}
+        setTab={setTab}
+        onNew={() => setFormOpen(true)}
+        className={styles.desktop}
+      />
+      <ObjectifsMobile
+        goals={goals}
+        tab={tab}
+        setTab={setTab}
+        onNew={() => setFormOpen(true)}
+        className={styles.mobile}
+      />
+
+      {isMobile ? (
+        <BottomSheet open={formOpen} onClose={close} title="Nouvel objectif">
+          <GoalForm onClose={close} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={formOpen} onClose={close} title="Nouvel objectif">
+          <GoalForm onClose={close} />
+        </Drawer>
+      )}
     </>
   )
 }

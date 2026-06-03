@@ -8,6 +8,7 @@ import { money } from '../../lib/money'
 import { formatIsoDay, formatIsoMonthYear } from '../../lib/date'
 import { useAccounts, type AccountRef } from '../transactions/useTransactions'
 import { ContributionForm } from './ContributionForm'
+import { GoalForm } from './GoalForm'
 import { useGoal, useGoalProjection, type GoalDetailResponse } from './useObjectifs'
 import styles from './objectifs.module.css'
 
@@ -62,6 +63,7 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
   const { goal: g, contributions } = data
   const isMobile = useIsMobile()
   const [formOpen, setFormOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   useSetPageTitle(g.name)
 
   // « Contribution moyenne » = fait DÉRIVABLE (moyenne des contributions affichées).
@@ -74,8 +76,7 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
 
   const actions = (
     <>
-      {/* Édition de l'objectif = à venir (dette onboarding différée). */}
-      <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
+      <button type="button" className="btn" onClick={() => setEditOpen(true)}>
         <Icon name="gear" size={16} /> Modifier
       </button>
       <button type="button" className="btn primary" onClick={() => setFormOpen(true)}>
@@ -229,6 +230,17 @@ function Detail({ data, accounts }: { data: GoalDetailResponse; accounts: Accoun
       ) : (
         <Drawer open={formOpen} onClose={() => setFormOpen(false)} title="Ajouter une contribution">
           <ContributionForm goal={g} accounts={accounts} onClose={() => setFormOpen(false)} />
+        </Drawer>
+      )}
+
+      {/* drawer (desktop) / bottom sheet (mobile) — Modifier l'objectif */}
+      {isMobile ? (
+        <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Modifier l’objectif">
+          <GoalForm initial={g} onClose={() => setEditOpen(false)} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Modifier l’objectif">
+          <GoalForm initial={g} onClose={() => setEditOpen(false)} />
         </Drawer>
       )}
     </>

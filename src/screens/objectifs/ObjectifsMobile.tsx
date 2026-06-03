@@ -11,11 +11,12 @@ interface Props {
   goals: GoalRow[]
   tab: string
   setTab: (t: string) => void
+  onNew: () => void
   className?: string
 }
 
 /** Liste objectifs mobile — portée 1:1 de ObjMob (screens-objectifs.jsx). */
-export function ObjectifsMobile({ goals, tab, setTab, className = '' }: Props) {
+export function ObjectifsMobile({ goals, tab, setTab, onNew, className = '' }: Props) {
   const visible = filterByTab(goals, tab)
 
   return (
@@ -67,8 +68,7 @@ export function ObjectifsMobile({ goals, tab, setTab, className = '' }: Props) {
         </div>
       )}
 
-      {/* Création d'objectif = à venir (dette onboarding différée). */}
-      <button type="button" className={`btn block ${styles.soon}`} disabled title="Bientôt disponible">
+      <button type="button" className="btn block" onClick={onNew}>
         <Icon name="plus" size={16} /> Nouvel objectif
       </button>
     </div>

@@ -277,6 +277,24 @@
   gap: 10px;
   width: 100%;
 }
+/* Grille 2 colonnes du drawer objectif (Déjà épargné · Date cible) — wireframe. */
+.formGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* Champ décoratif (Compte dédié) : rendu mais inerte → atténué + curseur honnête. */
+.soonInp {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.autoRow {
+  align-items: center;
+}
+.autoTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
 
 /* ───────────────────────── États (chargement / erreur) ────────────────────── */
 .skeleton {

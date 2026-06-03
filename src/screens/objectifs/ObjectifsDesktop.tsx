@@ -11,6 +11,7 @@ interface Props {
   goals: GoalRow[]
   tab: string
   setTab: (t: string) => void
+  onNew: () => void
   className?: string
 }
 
@@ -20,7 +21,7 @@ interface Props {
  * EXTRAPOLATION sobre de la carte-objectif mobile (Donut + Progress + montant),
  * cohérente avec le pattern liste de Budgets. Onglets identiques au mobile + Archivés.
  */
-export function ObjectifsDesktop({ goals, tab, setTab, className = '' }: Props) {
+export function ObjectifsDesktop({ goals, tab, setTab, onNew, className = '' }: Props) {
   const visible = filterByTab(goals, tab)
 
   return (
@@ -31,8 +32,7 @@ export function ObjectifsDesktop({ goals, tab, setTab, className = '' }: Props) 
           <div className="t-eyebrow">Mai 2026</div>
           <div className={styles.pageTitle}>Objectifs</div>
         </div>
-        {/* Création d'objectif = à venir (dette onboarding différée). */}
-        <button type="button" className={`btn primary ${styles.soon}`} disabled title="Bientôt disponible">
+        <button type="button" className="btn primary" onClick={onNew}>
           <Icon name="plus" size={16} /> Créer un objectif
         </button>
       </div>

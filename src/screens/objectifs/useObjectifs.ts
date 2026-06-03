@@ -37,6 +37,15 @@ export interface ContributionPayload {
   occurredAt: string
 }
 
+/** Charge utile d'écriture d'un objectif. `currentAmount` (« Déjà épargné ») n'est
+ *  envoyé qu'à la CRÉATION ; en édition il reste piloté par les contributions. */
+export interface GoalWritePayload {
+  name: string
+  targetAmount: number
+  currentAmount?: number
+  targetDate: string | null
+}
+
 export function useGoals() {
   return useQuery({
     queryKey: ['goals'],
@@ -74,6 +83,27 @@ export function useGoalProjection(id: string) {
     queryKey: ['goals', id, 'projection'],
     queryFn: () => apiFetch<GoalProjection>(`/api/ai/goals/${id}/projection`),
   })
+}
+
+/** create/update objectif → invalident la liste/détail objectifs ET le dashboard
+ *  (widget objectifs dérivé). `['goals']` couvre `['goals', id]` + projection (préfixe). */
+export function useGoalMutations() {
+  const qc = useQueryClient()
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['goals'] })
+    void qc.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+  const create = useMutation({
+    mutationFn: (data: GoalWritePayload) =>
+      apiMutate<{ goal: GoalRow }>('/api/goals', 'POST', data),
+    onSuccess: invalidate,
+  })
+  const update = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: GoalWritePayload }) =>
+      apiMutate<{ goal: GoalRow }>(`/api/goals/${id}`, 'PATCH', data),
+    onSuccess: invalidate,
+  })
+  return { create, update }
 }
 
 /** Ajout d'une contribution → invalide la liste/détail objectifs ET le dashboard
