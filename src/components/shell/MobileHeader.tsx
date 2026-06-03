@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { findNavByPath } from './nav'
 import { usePageTitle } from './pageTitle'
@@ -17,6 +17,7 @@ export function MobileHeader({
   onBack?: () => void
 }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   // Titre fourni par l'écran (ex. « Bonjour, Aïcha ») sinon libellé de la route.
   const override = usePageTitle()
   const title = override ?? findNavByPath(pathname)?.label ?? 'Cauris'
@@ -41,7 +42,12 @@ export function MobileHeader({
         </div>
       </div>
       <div className={`r ${styles.right}`}>
-        <button type="button" className={`icon-btn ${styles.bell}`} aria-label="Notifications">
+        <button
+          type="button"
+          className={`icon-btn ${styles.bell}`}
+          aria-label="Notifications"
+          onClick={() => void navigate('/notifications')}
+        >
           <Icon name="bell" size={17} />
           <span className="dot" />
         </button>

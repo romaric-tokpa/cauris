@@ -207,6 +207,12 @@
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(var(--shadow-rgb), 0.06);
 }
+/* Portée non implémentée : honnêtement désactivée, sans dim (fidélité 1:1) — on
+   retire seulement l'affordance de clic. Couleur explicite conservée → pixels stables. */
+.seg button:disabled {
+  cursor: default;
+  color: var(--ink-soft);
+}
 .chip {
   font-size: 12px;
   font-weight: 600;

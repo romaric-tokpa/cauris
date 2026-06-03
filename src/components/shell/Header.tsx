@@ -23,17 +23,22 @@ export function Header({ className = '' }: { className?: string }) {
       </div>
 
       <div className={`r ${styles.actions}`}>
+        {/* Segment période recopié 1:1 du wireframe. L'app n'opère aujourd'hui QUE
+         *  sur le mois (« Mai 2026 ») : « Mois » est l'état réel actif, les autres
+         *  portées ne sont pas implémentées → honnêtement désactivées (disabled +
+         *  title) plutôt que cliquables sans effet. Pas de dim (fidélité §rendu :
+         *  recopie 1:1) ; le `disabled` retire l'affordance de clic trompeuse. */}
         <div className="seg" role="group" aria-label="Période">
-          <button type="button" aria-pressed={false}>
+          <button type="button" aria-pressed={false} disabled title="Bientôt disponible">
             Jour
           </button>
-          <button type="button" aria-pressed={false}>
+          <button type="button" aria-pressed={false} disabled title="Bientôt disponible">
             Semaine
           </button>
           <button type="button" className="on" aria-pressed={true}>
             Mois
           </button>
-          <button type="button" aria-pressed={false}>
+          <button type="button" aria-pressed={false} disabled title="Bientôt disponible">
             Année
           </button>
         </div>
