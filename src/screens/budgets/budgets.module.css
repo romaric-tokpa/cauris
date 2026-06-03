@@ -308,6 +308,12 @@
   font-weight: 600;
   font-size: 13px;
 }
+/* Archiver (édition) — action réversible : ton sobre (muted), pas le rouge destructif
+   de la suppression. Pleine largeur, centré, comme « Bloquer ce compte ». */
+.archiveBtn {
+  justify-content: center;
+  color: var(--ink-soft);
+}
 
 /* ───────────────── Budgets archivés (table) ──────────────── */
 .archTable {

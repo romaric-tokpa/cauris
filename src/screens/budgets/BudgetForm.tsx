@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon } from '../../components/primitives'
 import { Switch } from '../../components/ui'
 import { money } from '../../lib/money'
 import { MoneyInput, ErrorBanner } from '../onboarding/parts'
@@ -36,10 +37,10 @@ function initialState(initial: BudgetRow | undefined): FormState {
 export function BudgetForm({ initial, onClose }: { initial?: BudgetRow; onClose: () => void }) {
   const [s, setS] = useState<FormState>(() => initialState(initial))
   const [error, setError] = useState('')
-  const { create, update } = useBudgetMutations()
+  const { create, update, archive } = useBudgetMutations()
   const categoriesQ = useCategories()
   const isEdit = Boolean(initial)
-  const submitting = create.isPending || update.isPending
+  const submitting = create.isPending || update.isPending || archive.isPending
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setS((p) => ({ ...p, [k]: v }))
 
   // Budget = enveloppe de DÉPENSE → on propose les catégories de dépense.
@@ -61,6 +62,17 @@ export function BudgetForm({ initial, onClose }: { initial?: BudgetRow; onClose:
     if (isEdit && initial)
       update.mutate({ id: initial.id, data: payload }, { onSuccess: onClose, onError: onErr })
     else create.mutate(payload, { onSuccess: onClose, onError: onErr })
+  }
+
+  // Archivage = retrait de la liste active (réversible via l'onglet « Archivés » → Réactiver).
+  // Vit dans le drawer d'ajustement, comme « Bloquer » vit dans l'édition d'un compte.
+  const onArchive = () => {
+    setError('')
+    if (!initial) return
+    archive.mutate(initial.id, {
+      onSuccess: onClose,
+      onError: (e) => setError(e instanceof Error ? e.message : 'Erreur réseau.'),
+    })
   }
 
   return (
@@ -138,6 +150,17 @@ export function BudgetForm({ initial, onClose }: { initial?: BudgetRow; onClose:
           onChange={(v) => set('rollover', v)}
         />
       </div>
+
+      {isEdit && (
+        <button
+          type="button"
+          className={`btn block ${styles.archiveBtn}`}
+          onClick={onArchive}
+          disabled={submitting}
+        >
+          <Icon name="inbox" size={15} /> Archiver ce budget
+        </button>
+      )}
 
       <div className={styles.drawerActions}>
         <button type="button" className="btn block" onClick={onClose} disabled={submitting}>
