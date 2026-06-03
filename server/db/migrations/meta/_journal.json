@@ -43,6 +43,13 @@
       "when": 1780406702362,
       "tag": "0005_medical_santa_claus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1780503242411,
+      "tag": "0006_special_scorpion",
+      "breakpoints": true
     }
   ]
 }

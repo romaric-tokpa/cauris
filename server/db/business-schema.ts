@@ -121,9 +121,16 @@ export const budgets = sqliteTable(
       .notNull()
       .references(() => categories.id, { onDelete: 'cascade' }),
     cap: integer('cap').notNull(),
+    // `spent` = enveloppe STOCKÉE (≠ dépense de catégorie dérivée du ledger ; distinction
+    // Phase 6 à préserver). Un budget créé par l'utilisateur démarre à spent = 0.
     spent: integer('spent').default(0).notNull(),
     txnCount: integer('txn_count').default(0).notNull(),
-    period: text('period').notNull(), // YYYY-MM
+    period: text('period').notNull(), // YYYY-MM : mois d'application du budget
+    // Réglages du formulaire « Nouveau budget » (wireframe) :
+    frequency: text('frequency').notNull().default('Mensuel'), // 'Hebdo' | 'Mensuel' | 'Annuel'
+    alertPct: integer('alert_pct').notNull().default(90), // seuil d'alerte : 80 | 90 | 100
+    rollover: integer('rollover', { mode: 'boolean' }).notNull().default(false), // reporter le non-dépensé
+    archived: integer('archived', { mode: 'boolean' }).notNull().default(false), // onglet « Archivés »
     ...timestamps(),
   },
   (t) => [index('budgets_user_idx').on(t.userId)],

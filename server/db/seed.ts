@@ -357,6 +357,11 @@ async function seed() {
       txnCount: 1,
       period: MONTH,
     },
+    // Budgets ARCHIVÉS (mois clôturés) — alimentent l'onglet « Archivés » + Réactiver.
+    // (Le libellé affiché dérive de la catégorie : modèle sans nom de budget custom.)
+    { userId: uid, categoryId: cat.loisirs, cap: 150000, spent: 142000, txnCount: 8, period: '2025-12', archived: true }, // prettier-ignore
+    { userId: uid, categoryId: cat.factures, cap: 200000, spent: 187500, txnCount: 11, period: '2025-09', archived: true }, // prettier-ignore
+    { userId: uid, categoryId: cat.transport, cap: 300000, spent: 312000, txnCount: 15, period: '2025-08', archived: true }, // prettier-ignore
   ])
 
   /* ── Objectifs (objectifs) ── */

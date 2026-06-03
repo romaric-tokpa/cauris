@@ -25,7 +25,12 @@ import {
   listAccounts,
   listCategories,
   listBudgets,
+  listArchivedBudgets,
   getBudgetById,
+  createBudget,
+  updateBudget,
+  setBudgetArchived,
+  type BudgetWriteInput,
   getAccountById,
   createAccount,
   updateAccount,
@@ -75,6 +80,38 @@ function budgetMeta(spent: number, cap: number): { pct: number; tone: 'over' | '
   const pct = cap ? Math.floor((spent / cap) * 100) : 0
   const tone = pct > 100 ? 'over' : pct >= 90 ? 'warn' : 'ok'
   return { pct, tone }
+}
+
+const BUDGET_FREQUENCIES = ['Hebdo', 'Mensuel', 'Annuel']
+const BUDGET_ALERT_PCTS = [80, 90, 100]
+
+/** Valide un budget (création/édition). `period` ajouté côté route. → input ou message. */
+async function parseBudgetInput(
+  userId: string,
+  body: unknown,
+): Promise<{ input: Omit<BudgetWriteInput, 'period'> } | { error: string }> {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const categoryId = b.categoryId
+  if (typeof categoryId !== 'string' || !(await userOwnsCategory(userId, categoryId)))
+    return { error: 'Catégorie invalide ou non autorisée.' }
+
+  const cap = b.cap
+  if (typeof cap !== 'number' || !Number.isInteger(cap) || cap <= 0)
+    return { error: 'Plafond : entier FCFA strictement positif requis.' }
+
+  const frequency = b.frequency
+  if (typeof frequency !== 'string' || !BUDGET_FREQUENCIES.includes(frequency))
+    return { error: 'Période invalide.' }
+
+  const alertPct = b.alertPct
+  if (typeof alertPct !== 'number' || !BUDGET_ALERT_PCTS.includes(alertPct))
+    return { error: 'Seuil d’alerte invalide.' }
+
+  if (typeof b.rollover !== 'boolean') return { error: 'Report invalide.' }
+
+  return { input: { categoryId, cap, frequency, alertPct, rollover: b.rollover } }
 }
 
 /** Delta % m/m signé à une décimale, format « +5,5 % » (miroir de ai.ts deltaPct). */
@@ -711,10 +748,15 @@ api.get('/ai/anomalies', async (c) => {
  *    getCategoryBreakdown (bouge aux mutations). Pour Transport : 54 000 vs 116 000.
  * Scopées session ; le détail vérifie l'appartenance (getBudgetById → 404). */
 
-// Liste des budgets de la période + résumé d'en-tête.
+// Liste des budgets de la période + résumé d'en-tête. `?archived=true` → onglet « Archivés ».
 api.get('/budgets', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  if (c.req.query('archived') === 'true') {
+    const rows = await listArchivedBudgets(userId)
+    const archived = rows.map((b) => ({ ...b, ...budgetMeta(b.spent, b.cap), ecart: b.spent - b.cap }))
+    return c.json({ budgets: archived })
+  }
   const period = c.req.query('period') ?? DEMO_MONTH
   const rows = await listBudgets(userId, period)
   const budgets = rows.map((b) => ({ ...b, ...budgetMeta(b.spent, b.cap) }))
@@ -751,6 +793,57 @@ api.get('/budgets/:id', async (c) => {
   const categoryTotal = breakdown.find((x) => x.categoryId === b.categoryId)?.amount ?? 0
   const budget = { ...b, ...budgetMeta(b.spent, b.cap), ecart: b.spent - b.cap }
   return c.json({ budget, categoryTotal, linkedTransactions, linkedStats })
+})
+
+/* ───────────── Écritures budgets (création / ajustement / archivage) ─────────────
+ * Scopées session + appartenance (SELECT → 404). Plafond entier FCFA > 0, catégorie
+ * POSSÉDÉE vérifiée. `spent` (enveloppe stockée, distinction Phase 6) n'est PAS touché
+ * par ces écritures : un budget neuf démarre à spent = 0. */
+
+// Création. Période = mois de démo (le budget s'applique au mois courant).
+api.post('/budgets', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseBudgetInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createBudget(userId, { ...parsed.input, period: DEMO_MONTH })
+  return c.json({ budget: { ...created, ...budgetMeta(created.spent, created.cap) } }, 201)
+})
+
+// Ajustement du plafond + réglages. Appartenance → 404. (Catégorie/période inchangées.)
+api.patch('/budgets/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const existing = await getBudgetById(userId, id)
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = await parseBudgetInput(userId, body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const { cap, frequency, alertPct, rollover } = parsed.input
+  const [updated] = await updateBudget(userId, id, { cap, frequency, alertPct, rollover })
+  return c.json({ budget: { ...updated, ...budgetMeta(updated.spent, updated.cap) } })
+})
+
+// Archivage. Appartenance → 404.
+api.post('/budgets/:id/archive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getBudgetById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setBudgetArchived(userId, existing.id, true)
+  return c.json({ budget: { ...updated, ...budgetMeta(updated.spent, updated.cap) } })
+})
+
+// Réactivation. Appartenance → 404.
+api.post('/budgets/:id/unarchive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getBudgetById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setBudgetArchived(userId, existing.id, false)
+  return c.json({ budget: { ...updated, ...budgetMeta(updated.spent, updated.cap) } })
 })
 
 /* ─────────────────────────── Transactions (CRUD) ───────────────────────────

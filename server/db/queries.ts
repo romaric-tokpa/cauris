@@ -294,46 +294,89 @@ export function deleteTransaction(userId: string, id: string) {
 }
 
 /* ─────────────────────────────── Budgets ─────────────────────────────── */
-/** Budgets du mois (jointure catégorie pour nom + token couleur du donut). */
+const budgetCols = {
+  id: budgets.id,
+  categoryId: budgets.categoryId,
+  categoryName: categories.name,
+  colorToken: categories.colorToken,
+  cap: budgets.cap,
+  spent: budgets.spent,
+  txnCount: budgets.txnCount,
+  period: budgets.period,
+  frequency: budgets.frequency,
+  alertPct: budgets.alertPct,
+  rollover: budgets.rollover,
+  archived: budgets.archived,
+}
+
+/** Budgets ACTIFS du mois (jointure catégorie pour nom + token couleur du donut).
+ *  Les budgets archivés sont exclus (cf. listArchivedBudgets). */
 export function listBudgets(userId: string, period?: string) {
-  const conds: SQL[] = [eq(budgets.userId, userId)]
+  const conds: SQL[] = [eq(budgets.userId, userId), eq(budgets.archived, false)]
   if (period) conds.push(eq(budgets.period, period))
   return db
-    .select({
-      id: budgets.id,
-      categoryId: budgets.categoryId,
-      categoryName: categories.name,
-      colorToken: categories.colorToken,
-      cap: budgets.cap,
-      spent: budgets.spent,
-      txnCount: budgets.txnCount,
-      period: budgets.period,
-    })
+    .select(budgetCols)
     .from(budgets)
     .innerJoin(categories, eq(categories.id, budgets.categoryId))
     .where(and(...conds))
     .orderBy(desc(budgets.spent))
 }
 
-/** Détail d'un budget du user (null si inexistant / à autrui). Jointure catégorie
- *  pour nom + token couleur, comme `listBudgets`. Pattern scopé de `getTransactionById`. */
+/** Budgets ARCHIVÉS (tous mois confondus) — onglet « Archivés ». */
+export function listArchivedBudgets(userId: string) {
+  return db
+    .select(budgetCols)
+    .from(budgets)
+    .innerJoin(categories, eq(categories.id, budgets.categoryId))
+    .where(and(eq(budgets.userId, userId), eq(budgets.archived, true)))
+    .orderBy(desc(budgets.period))
+}
+
+/** Détail d'un budget du user (null si inexistant / à autrui). Pattern scopé. */
 export async function getBudgetById(userId: string, id: string) {
   const rows = await db
-    .select({
-      id: budgets.id,
-      categoryId: budgets.categoryId,
-      categoryName: categories.name,
-      colorToken: categories.colorToken,
-      cap: budgets.cap,
-      spent: budgets.spent,
-      txnCount: budgets.txnCount,
-      period: budgets.period,
-    })
+    .select(budgetCols)
     .from(budgets)
     .innerJoin(categories, eq(categories.id, budgets.categoryId))
     .where(and(eq(budgets.id, id), eq(budgets.userId, userId)))
     .limit(1)
   return rows[0] ?? null
+}
+
+/** Données d'écriture d'un budget (plafond entier FCFA ; `spent`/`archived` gérés à part). */
+export interface BudgetWriteInput {
+  categoryId: string
+  cap: number
+  frequency: string
+  alertPct: number
+  rollover: boolean
+  period: string
+}
+
+export function createBudget(userId: string, input: BudgetWriteInput) {
+  return db.insert(budgets).values({ userId, ...input }).returning()
+}
+
+/** Ajustement scopé du plafond + réglages (catégorie/période/spent inchangés). */
+export function updateBudget(
+  userId: string,
+  id: string,
+  input: Pick<BudgetWriteInput, 'cap' | 'frequency' | 'alertPct' | 'rollover'>,
+) {
+  return db
+    .update(budgets)
+    .set(input)
+    .where(and(eq(budgets.id, id), eq(budgets.userId, userId)))
+    .returning()
+}
+
+/** Archivage / réactivation scopé. */
+export function setBudgetArchived(userId: string, id: string, archived: boolean) {
+  return db
+    .update(budgets)
+    .set({ archived })
+    .where(and(eq(budgets.id, id), eq(budgets.userId, userId)))
+    .returning()
 }
 
 /* ─────────────────────────────── Objectifs ───────────────────────────── */
