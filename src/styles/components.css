@@ -1042,6 +1042,49 @@ button.choice {
   border-radius: 999px;
   background: var(--accent);
 }
+
+/* Mini-calendrier (drawer « Choisir une période ») — porté 1:1 de
+   Wireframes Formulaires.html. `#fff` du wireframe → token --on-accent. */
+.cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.cal .cd {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cal .cd.dim {
+  color: var(--ink-faint);
+}
+.cal .cd.hd {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--ink-faint);
+  cursor: default;
+}
+.cal .cd.rng {
+  background: var(--accent-wash);
+  border-radius: 0;
+}
+.cal .cd.e1 {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 8px 0 0 8px;
+}
+.cal .cd.e2 {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 0 8px 8px 0;
+}
+
 .auth-logo {
   display: flex;
   flex-direction: column;

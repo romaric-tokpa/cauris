@@ -91,3 +91,31 @@ export function formatIsoMonthYear(iso: string): string {
   const [y, m] = iso.split('-').map(Number)
   return `${MONTHS_FR_SHORT[m - 1] ?? ''} ${y}`.trim()
 }
+
+/** `2026-05` → `Mai 2026` (mois capitalisé + année — en-tête du calendrier période). */
+export function formatMonthLong(iso: string): string {
+  const [y, m] = iso.split('-').map(Number)
+  const name = MONTHS_FR[m - 1] ?? ''
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${y}`.trim()
+}
+
+/** Décale un `YYYY-MM` de `delta` mois (négatif = passé). Renvoie `YYYY-MM`. */
+export function shiftMonth(iso: string, delta: number): string {
+  const [y, m] = iso.split('-').map(Number)
+  const total = y * 12 + (m - 1) + delta
+  const ny = Math.floor(total / 12)
+  const nm = (total % 12) + 1
+  return `${ny}-${String(nm).padStart(2, '0')}`
+}
+
+/** Nombre de jours du mois d'un `YYYY-MM` (grille du mini-calendrier). */
+export function daysInMonth(iso: string): number {
+  const [y, m] = iso.split('-').map(Number)
+  return new Date(y, m, 0).getDate()
+}
+
+/** Index du jour de semaine (lundi=0 … dimanche=6) du 1ᵉʳ du mois `YYYY-MM`. */
+export function firstWeekdayMondayBased(iso: string): number {
+  const [y, m] = iso.split('-').map(Number)
+  return (new Date(y, m - 1, 1).getDay() + 6) % 7
+}

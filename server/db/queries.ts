@@ -133,6 +133,68 @@ export function listCategories(userId: string) {
     .orderBy(asc(categories.sort))
 }
 
+/** Catégorie scopée par id (appartenance → null si absente / autre user). */
+export async function getCategoryById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Données d'écriture d'une catégorie (validées par l'appelant). `colorToken` ∈ cat-1..6. */
+export interface CategoryWriteInput {
+  name: string
+  kind: string // 'expense' | 'income'
+  colorToken: string | null
+}
+
+/** Création scopée — `sort` placé en fin de liste (max(sort)+1) pour un ordre stable. */
+export async function createCategory(userId: string, input: CategoryWriteInput) {
+  const rows = await db
+    .select({ sort: categories.sort })
+    .from(categories)
+    .where(eq(categories.userId, userId))
+  const nextSort = rows.reduce((m, r) => Math.max(m, r.sort), -1) + 1
+  return db.insert(categories).values({ userId, sort: nextSort, ...input }).returning()
+}
+
+/** Édition scopée (nom / type / couleur). */
+export function updateCategory(userId: string, id: string, input: CategoryWriteInput) {
+  return db
+    .update(categories)
+    .set(input)
+    .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+    .returning()
+}
+
+/** Suppression dure scopée (n'appeler QUE si 0 référence — cf. route + FK RESTRICT). */
+export function deleteCategory(userId: string, id: string) {
+  return db
+    .delete(categories)
+    .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+    .returning()
+}
+
+/** Références d'une catégorie : nombre d'opérations + de budgets liés (garde du 409). */
+export async function countCategoryReferences(
+  userId: string,
+  categoryId: string,
+): Promise<{ transactions: number; budgets: number }> {
+  const [txnRows, budgetRows] = await Promise.all([
+    db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(and(eq(transactions.userId, userId), eq(transactions.categoryId, categoryId))),
+    db
+      .select({ id: budgets.id })
+      .from(budgets)
+      .where(and(eq(budgets.userId, userId), eq(budgets.categoryId, categoryId))),
+  ])
+  return { transactions: txnRows.length, budgets: budgetRows.length }
+}
+
 /* ──────────────────────────── Transactions ───────────────────────────── */
 export interface TransactionFilter {
   type?: string // 'Dépense' | 'Revenu' | 'Transfert' | 'Récurrente'

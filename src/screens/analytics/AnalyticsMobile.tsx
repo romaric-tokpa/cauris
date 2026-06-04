@@ -23,6 +23,8 @@ interface Props {
   data: AnalyticsData
   tab: string
   setTab: (t: string) => void
+  onExport: () => void
+  onPeriod: () => void
   className?: string
 }
 
@@ -173,10 +175,19 @@ function TrendsMob({ data }: { data: AnalyticsData }) {
 /** Écran Analytics mobile — 3 chips (Overview/Catégories/Tendances), porté du .jsx
  *  (pas de « Budget vs réel » sur mobile). Vues Catégories/Tendances : extrapolation
  *  sobre des mêmes données (sans tables denses). Onglets persistés URL. */
-export function AnalyticsMobile({ data, tab, setTab, className = '' }: Props) {
+export function AnalyticsMobile({ data, tab, setTab, onExport, onPeriod, className = '' }: Props) {
   const active = (MOBILE_TABS as readonly string[]).includes(tab) ? tab : 'Overview'
   return (
     <div className={className}>
+      {/* Parité mobile : accès aux actions Période / Exporter (drawers → bottom sheets). */}
+      <div className={`r ${styles.actionRowMob}`}>
+        <button type="button" className={`btn block ${styles.actionBtnMob}`} onClick={onPeriod}>
+          <Icon name="calendar" size={15} /> Période
+        </button>
+        <button type="button" className={`btn primary block ${styles.actionBtnMob}`} onClick={onExport}>
+          <Icon name="download" size={15} /> Exporter
+        </button>
+      </div>
       <div className={`r ${styles.chipRowMob}`}>
         {MOBILE_TABS.map((t) => (
           <span

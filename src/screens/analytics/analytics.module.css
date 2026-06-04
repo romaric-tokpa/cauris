@@ -346,3 +346,81 @@
   justify-content: center;
   min-height: 50vh;
 }
+
+/* ───────────────── Drawers actions (Exporter / Période) ───────────────── */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Export — sélecteur de format (3 colonnes) + cases sections */
+.formatRow {
+  gap: 8px;
+}
+.formatChoice {
+  flex-direction: column;
+  flex: 1;
+  padding: 13px 8px;
+  gap: 7px;
+  align-items: center;
+}
+.formatLabel {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.sectionList {
+  gap: 8px;
+}
+.sectionRow {
+  padding: 11px 13px;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+}
+.sectionLabel {
+  font-weight: 600;
+  font-size: 13px;
+}
+.previewNote {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+/* Période — presets, bornes Du/Au, en-tête calendrier, mois résolu */
+.presetRow {
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.rangeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.calHead {
+  margin-bottom: 12px;
+}
+.calMonth {
+  font-weight: 700;
+  font-size: 13px;
+}
+.durRow {
+  font-size: 12.5px;
+}
+.flip {
+  transform: rotate(180deg);
+}
+
+/* Mobile — barre d'actions (Période / Exporter) au-dessus des onglets */
+.actionRowMob {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.actionBtnMob {
+  font-size: 13px;
+}

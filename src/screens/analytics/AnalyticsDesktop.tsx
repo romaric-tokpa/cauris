@@ -395,11 +395,13 @@ interface Props {
   data: AnalyticsData
   tab: string
   setTab: (t: string) => void
+  onExport: () => void
+  onPeriod: () => void
   className?: string
 }
 
 /** Écran Analytics desktop — 4 onglets portés de screens-analytics(.jsx)/-tabs. */
-export function AnalyticsDesktop({ data, tab, setTab, className = '' }: Props) {
+export function AnalyticsDesktop({ data, tab, setTab, onExport, onPeriod, className = '' }: Props) {
   const eyebrow = tab === 'Tendances' ? '6 derniers mois' : `${formatIsoMonthLabel(data.period)} 2026`
   return (
     <div className={className}>
@@ -410,15 +412,10 @@ export function AnalyticsDesktop({ data, tab, setTab, className = '' }: Props) {
           <div className={styles.pageTitle}>Analytics</div>
         </div>
         <div className={`r ${styles.headActions}`}>
-          <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
+          <button type="button" className="btn" onClick={onPeriod}>
             <Icon name="calendar" size={16} /> Période
           </button>
-          <button
-            type="button"
-            className={`btn primary ${styles.soon}`}
-            disabled
-            title="Bientôt disponible"
-          >
+          <button type="button" className="btn primary" onClick={onExport}>
             <Icon name="down" size={16} /> Exporter le rapport
           </button>
         </div>

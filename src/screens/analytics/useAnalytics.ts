@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '../../lib/api'
 
+/** Mois de démo (Aïcha) = mois max sélectionnable (pas de mois futurs vides). */
+export const DEMO_MONTH = '2026-05'
+
 /** KPIs Overview — totaux du mois courant + deltas MoM RÉELS (null si pas de M-1). */
 export interface AnalyticsKpis {
   depenses: number

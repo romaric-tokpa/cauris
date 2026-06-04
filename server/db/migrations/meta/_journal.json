@@ -57,6 +57,13 @@
       "when": 1780524971862,
       "tag": "0007_spotty_gunslinger",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1780573671390,
+      "tag": "0008_glorious_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

@@ -24,6 +24,12 @@ import {
   listMonthlySummaries,
   listAccounts,
   listCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  countCategoryReferences,
+  type CategoryWriteInput,
   listBudgets,
   listArchivedBudgets,
   getBudgetById,
@@ -154,6 +160,31 @@ function parseGoalInput(body: unknown): { input: GoalWriteInput } | { error: str
   }
 
   return { input: { name, targetAmount, currentAmount, targetDate } }
+}
+
+const CATEGORY_KINDS = new Set(['expense', 'income'])
+const COLOR_TOKEN = /^cat-[1-6]$/
+
+/** Valide l'écriture d'une catégorie : nom non vide, type dépense/revenu, couleur cat-1..6. */
+function parseCategoryInput(body: unknown): { input: CategoryWriteInput } | { error: string } {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  if (!name) return { error: 'Nom de la catégorie requis.' }
+
+  const kind = typeof b.kind === 'string' ? b.kind : ''
+  if (!CATEGORY_KINDS.has(kind)) return { error: 'Type de catégorie invalide (dépense ou revenu).' }
+
+  // Couleur : optionnelle (null), sinon un slot de palette cat-1..6 (jamais un hex).
+  let colorToken: string | null = null
+  if (b.colorToken != null && b.colorToken !== '') {
+    if (typeof b.colorToken !== 'string' || !COLOR_TOKEN.test(b.colorToken))
+      return { error: 'Couleur invalide (cat-1 à cat-6).' }
+    colorToken = b.colorToken
+  }
+
+  return { input: { name, kind, colorToken } }
 }
 
 /** Delta % m/m signé à une décimale, format « +5,5 % » (miroir de ai.ts deltaPct). */
@@ -1083,7 +1114,68 @@ api.get('/accounts', async (c) => {
 api.get('/categories', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  return c.json({ categories: await listCategories(userId) })
+  // Enrichi pour la page Catégories : « N opérations ce mois » (dérivé du ledger) +
+  // « Budget lié » (un budget du mois référence la catégorie). Additif (consommateurs OK).
+  const [cats, counts, budgetRows] = await Promise.all([
+    listCategories(userId),
+    getCategoryTxnCounts(userId, DEMO_MONTH),
+    listBudgets(userId, DEMO_MONTH),
+  ])
+  const countByCat = new Map(counts.map((r) => [r.categoryId, r.txnCount]))
+  const budgetedCats = new Set(budgetRows.map((b) => b.categoryId))
+  const categories = cats.map((cat) => ({
+    ...cat,
+    txnCount: countByCat.get(cat.id) ?? 0,
+    hasBudget: budgetedCats.has(cat.id),
+  }))
+  return c.json({ categories })
+})
+
+// Création de catégorie (nom, type dépense/revenu, couleur cat-1..6). Scopée session.
+api.post('/categories', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseCategoryInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [created] = await createCategory(userId, parsed.input)
+  return c.json({ category: created }, 201)
+})
+
+// Édition de catégorie. Appartenance → 404.
+api.patch('/categories/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getCategoryById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const parsed = parseCategoryInput(body)
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const [updated] = await updateCategory(userId, existing.id, parsed.input)
+  return c.json({ category: updated })
+})
+
+// Suppression — INTERDITE si la catégorie est référencée (≥1 opération OU un budget) :
+// jamais orpheliner des opérations ni détruire un budget en silence → 409 explicite.
+// Appartenance → 404. (Réaffectation hors scope ; FK budgets RESTRICT = filet DB.)
+api.delete('/categories/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getCategoryById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const refs = await countCategoryReferences(userId, existing.id)
+  if (refs.transactions > 0 || refs.budgets > 0) {
+    const parts: string[] = []
+    if (refs.transactions > 0)
+      parts.push(`${refs.transactions} opération${refs.transactions > 1 ? 's' : ''}`)
+    if (refs.budgets > 0) parts.push(`${refs.budgets} budget${refs.budgets > 1 ? 's' : ''}`)
+    return c.json(
+      { error: `Catégorie utilisée par ${parts.join(' et ')} : impossible de la supprimer.` },
+      409,
+    )
+  }
+  await deleteCategory(userId, existing.id)
+  return c.json({ ok: true })
 })
 
 // Détail compte (solde bloqué masqué) + dernières opérations. Appartenance → 404.

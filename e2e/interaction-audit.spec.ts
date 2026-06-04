@@ -55,11 +55,15 @@ test('Comptes : « Ajouter un compte » ouvre le drawer de création (A1)', asyn
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-test('Analytics : « Exporter le rapport » et « Période » honnêtement désactivés', async ({ page }) => {
+test('Analytics : « Exporter le rapport » et « Période » ouvrent leur drawer', async ({ page }) => {
   await bootDesktop(page)
   await page.getByRole('link', { name: 'Analytics' }).click()
-  await expect(page.getByRole('button', { name: /Exporter le rapport/ })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Période' })).toBeDisabled()
+  // Les 2 actions sont désormais RÉELLES (plus de bouton mort) : chaque clic ouvre son drawer.
+  await page.getByRole('button', { name: /Exporter le rapport/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Exporter le rapport' })).toBeVisible()
+  await page.getByRole('button', { name: 'Fermer' }).click()
+  await page.getByRole('button', { name: 'Période' }).click()
+  await expect(page.getByRole('dialog', { name: 'Choisir une période' })).toBeVisible()
 })
 
 test('Notifications : « Tout marquer comme lu » offert + filtre interactif', async ({ page }) => {

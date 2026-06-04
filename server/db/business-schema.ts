@@ -117,9 +117,12 @@ export const budgets = sqliteTable(
   {
     id: pk(),
     userId: userId(),
+    // RESTRICT (et non CASCADE) : supprimer une catégorie référencée par un budget est
+    // INTERDIT au niveau DB (défense en profondeur derrière le garde 409 applicatif) —
+    // jamais détruire un budget en silence via la suppression d'une catégorie.
     categoryId: text('category_id')
       .notNull()
-      .references(() => categories.id, { onDelete: 'cascade' }),
+      .references(() => categories.id, { onDelete: 'restrict' }),
     cap: integer('cap').notNull(),
     // `spent` = enveloppe STOCKÉE (≠ dépense de catégorie dérivée du ledger ; distinction
     // Phase 6 à préserver). RÈGLE : budgets SEEDÉS gardent leur enveloppe d'origine ;
