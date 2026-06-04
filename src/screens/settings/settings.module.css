@@ -37,7 +37,7 @@
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-top: 3px;
+  margin: 3px 0 0;
 }
 
 /* Réglage « à venir » : visiblement inactif, non cliquable (honnête). */
@@ -186,4 +186,268 @@
   font-size: 12.5px;
   margin-top: 2px;
   line-height: 1.45;
+}
+
+/* ───────────── Sous-pages (Catégories / Import-Export / Aide) ───────────── */
+.subPage {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.subHead {
+  margin-bottom: 4px;
+}
+.subHeadLeft {
+  gap: 12px;
+  min-width: 0;
+}
+.headActions {
+  gap: 10px;
+  flex: none;
+}
+/* Bouton retour : mobile uniquement (la nav latérale assure le retour en desktop). */
+.backBtnMob {
+  display: none;
+  flex: none;
+}
+.flip {
+  transform: rotate(180deg);
+}
+.subGrid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
+}
+.navCol {
+  position: sticky;
+  top: 0;
+}
+@media (max-width: 900px) {
+  .subGrid {
+    grid-template-columns: 1fr;
+    margin-top: 14px;
+  }
+  .navCol {
+    display: none;
+  }
+  .backBtnMob {
+    display: grid;
+  }
+  .subHead {
+    margin-bottom: 0;
+  }
+}
+
+/* ───────────── Catégories ───────────── */
+.catFilterCard {
+  align-items: center;
+}
+.catCount {
+  font-size: 12px;
+}
+.catSectionTitle {
+  margin-bottom: 4px;
+}
+/* Pastille d'icône colorée par token cat-N (fond = wash dérivé du token). */
+.catIco {
+  flex: none;
+}
+.cat1 {
+  background: color-mix(in srgb, var(--cat-1) 14%, var(--paper));
+  color: var(--cat-1);
+}
+.cat2 {
+  background: color-mix(in srgb, var(--cat-2) 14%, var(--paper));
+  color: var(--cat-2);
+}
+.cat3 {
+  background: color-mix(in srgb, var(--cat-3) 14%, var(--paper));
+  color: var(--cat-3);
+}
+.cat4 {
+  background: color-mix(in srgb, var(--cat-4) 14%, var(--paper));
+  color: var(--cat-4);
+}
+.cat5 {
+  background: color-mix(in srgb, var(--cat-5) 14%, var(--paper));
+  color: var(--cat-5);
+}
+.cat6 {
+  background: color-mix(in srgb, var(--cat-6) 14%, var(--paper));
+  color: var(--cat-6);
+}
+.catRowText {
+  flex: 1;
+  min-width: 0;
+}
+.catName {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.catMeta {
+  font-size: 11.5px;
+}
+.budgetTag {
+  background: var(--panel-2);
+  color: var(--ink-soft);
+}
+.autoCatCard {
+  gap: 12px;
+  align-items: flex-start;
+}
+.autoCatIco {
+  background: var(--accent-wash);
+  color: var(--accent);
+  flex: none;
+}
+.autoCatTitle {
+  font-weight: 700;
+  font-size: 13px;
+}
+.autoCatText {
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* Formulaire catégorie (drawer/sheet) : sélecteur de couleur cat-N. */
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.colorRow {
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.swatchOn {
+  border-color: var(--ink);
+}
+.sw1 { background: var(--cat-1); }
+.sw2 { background: var(--cat-2); }
+.sw3 { background: var(--cat-3); }
+.sw4 { background: var(--cat-4); }
+.sw5 { background: var(--cat-5); }
+.sw6 { background: var(--cat-6); }
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.deleteBtn {
+  justify-content: center;
+  color: var(--neg);
+  border-color: var(--neg);
+}
+
+/* ───────────── Import / Export ───────────── */
+.dropIco {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.dropTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.dropSub {
+  font-size: 12px;
+  margin-top: 4px;
+}
+.dropBtn {
+  margin: 14px auto 0;
+}
+.cardTitleMb {
+  margin-bottom: 14px;
+}
+
+/* ───────────── Centre d'aide ───────────── */
+.guideGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .guideGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.guideIco {
+  width: 38px;
+  height: 38px;
+  background: var(--accent-wash);
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.guideTitle {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.guideSub {
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.faqQ {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+}
+.contactRow {
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .contactRow {
+    flex-direction: column;
+  }
+}
+.contactCard {
+  gap: 11px;
+  flex: 1;
+}
+.contactTitle {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.contactSub {
+  font-size: 10.5px;
+}
+.emptyHelp {
+  font-size: 12.5px;
+  padding: 8px 0;
+}
+.importFormats {
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (max-width: 900px) {
+  .importFormats {
+    flex-direction: column;
+  }
+}
+.importFmtCard {
+  gap: 10px;
+  flex: 1;
+}
+.importFmtIco {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.exportBtn {
+  margin-top: 14px;
+}
+.readonlyInput {
+  color: var(--ink-soft);
 }

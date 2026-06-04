@@ -2,22 +2,9 @@ import { Link } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { Card, Switch } from '../../components/ui'
 import { SettingRow, FixedValue } from './parts'
+import { SettingsNav } from './SettingsNav'
 import { initial, type BlockedSummary } from './useSettings'
 import styles from './settings.module.css'
-
-/** Nav latérale SET_NAV (1:1 wireframe). Profil/Préférences/Sécurité = ancres vers les
- *  sections présentes ; les 4 autres sont « à venir » (atténuées, non cliquables). */
-const NAV_ANCHORS = [
-  { icon: 'user', label: 'Profil', href: '#profil' },
-  { icon: 'gear', label: 'Préférences', href: '#preferences' },
-  { icon: 'shield', label: 'Sécurité', href: '#securite' },
-] as const
-const NAV_SOON = [
-  { icon: 'tag', label: 'Catégories' },
-  { icon: 'download', label: 'Import / Export' },
-  { icon: 'card', label: 'Sauvegarde' },
-  { icon: 'help', label: "Centre d'aide" },
-] as const
 
 interface Props {
   name: string | undefined
@@ -25,6 +12,7 @@ interface Props {
   dark: boolean
   setDark: (v: boolean) => void
   blocked: BlockedSummary
+  onEditProfile: () => void
   onEditPassword: () => void
   onLogout: () => void
   className?: string
@@ -37,6 +25,7 @@ export function SettingsDesktop({
   dark,
   setDark,
   blocked,
+  onEditProfile,
   onEditPassword,
   onLogout,
   className = '',
@@ -49,23 +38,12 @@ export function SettingsDesktop({
       </div>
 
       <div className={styles.grid}>
-        {/* nav latérale */}
-        <nav className="set-nav" aria-label="Sections des paramètres">
-          {NAV_ANCHORS.map((n) => (
-            <a key={n.label} href={n.href} className="si2">
-              <Icon name={n.icon} size={17} /> {n.label}
-            </a>
-          ))}
-          {NAV_SOON.map((n) => (
-            <span key={n.label} className={`si2 ${styles.soon}`} aria-disabled="true" title="Bientôt disponible">
-              <Icon name={n.icon} size={17} /> {n.label}
-            </span>
-          ))}
-        </nav>
+        {/* nav latérale partagée (Catégories / Import-Export / Centre d'aide réels) */}
+        <SettingsNav onMain />
 
         {/* colonne de contenu */}
         <div className={styles.content}>
-          {/* Profil — lecture seule (nom + email réels de la session) */}
+          {/* Profil — nom + email réels ; « Modifier » édite le nom (updateUser) */}
           <Card id="profil" className={`r between ${styles.profileCard}`}>
             <div className={`r ${styles.profileLeft}`}>
               <div className={`avatar ${styles.avatarLg}`}>{initial(name)}</div>
@@ -74,7 +52,7 @@ export function SettingsDesktop({
                 <div className={`t-faint ${styles.profileMeta}`}>{email ?? '—'}</div>
               </div>
             </div>
-            <button type="button" className={`btn ${styles.soon}`} disabled title="Bientôt disponible">
+            <button type="button" className="btn" onClick={onEditProfile}>
               <Icon name="edit" size={15} /> Modifier
             </button>
           </Card>

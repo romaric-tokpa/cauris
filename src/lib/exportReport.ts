@@ -125,6 +125,24 @@ export function buildReportCsv(
 /** Nom de fichier : `cauris-analytics-2026-05.csv`. */
 export const reportFilename = (period: string): string => `cauris-analytics-${period}.csv`
 
+/** Ligne minimale d'opération pour l'export « tout l'historique » (Import/Export). */
+export interface ExportTxnRow {
+  occurredAt: string
+  label: string
+  categoryName: string | null
+  accountName: string | null
+  amount: number // entier FCFA signé
+  type: string
+}
+
+/** CSV de toutes les opérations (entiers FCFA bruts). En-têtes francophones. */
+export function buildTransactionsCsv(rows: ExportTxnRow[]): string {
+  const lines = [row(['Date', 'Libellé', 'Catégorie', 'Compte', 'Montant', 'Type'])]
+  for (const t of rows)
+    lines.push(row([t.occurredAt, t.label, t.categoryName ?? '', t.accountName ?? '', t.amount, t.type]))
+  return lines.join('\n')
+}
+
 /** Déclenche le téléchargement réel du CSV (BOM UTF-8 pour Excel). */
 export function downloadCsv(filename: string, csv: string): void {
   const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })

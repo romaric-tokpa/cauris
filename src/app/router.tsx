@@ -11,7 +11,7 @@ import { Pret } from '../screens/pret'
 import { Analytics } from '../screens/analytics'
 import { Notifications } from '../screens/notifications'
 import { Assistant, Previsions, Anomalies } from '../screens/assistant'
-import { Settings } from '../screens/settings'
+import { Settings, CategoriesPage, ImportExportPage, HelpPage } from '../screens/settings'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
 import { Signup } from '../screens/auth/Signup'
@@ -64,6 +64,10 @@ const appRoutes: RouteObject[] = [
   // Onglets du module IA (AISub) — pages pleines sous le shell.
   { path: 'assistant-ia/previsions', element: <Previsions /> },
   { path: 'assistant-ia/anomalies', element: <Anomalies /> },
+  // Sous-pages Paramètres (page pleine, nav latérale partagée).
+  { path: 'parametres/categories', element: <CategoriesPage /> },
+  { path: 'parametres/import-export', element: <ImportExportPage /> },
+  { path: 'parametres/aide', element: <HelpPage /> },
 ]
 
 export const router = createBrowserRouter([

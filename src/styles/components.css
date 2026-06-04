@@ -969,6 +969,32 @@ button.tab {
   font-family: var(--sans);
   text-align: left;
 }
+/* .si2 porté sur un lien réel (sous-pages Paramètres) : pas de soulignement. */
+.set-nav a.si2 {
+  text-decoration: none;
+}
+
+/* Import/Export — zone de dépôt (portée 1:1 Wireframes Formulaires.html). */
+.dropzone {
+  border: 1.5px dashed var(--line);
+  border-radius: 14px;
+  padding: 26px;
+  text-align: center;
+  background: var(--panel);
+}
+
+/* Centre d'aide — ligne de FAQ (portée 1:1). */
+.faq-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 0;
+  border-top: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+.faq-row:first-child {
+  border-top: none;
+}
 
 /* ---- auth / onboarding / states ---- */
 .steps {

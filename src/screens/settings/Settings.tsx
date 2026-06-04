@@ -6,6 +6,7 @@ import { useSession, signOut } from '../../lib/auth-client'
 import { SettingsDesktop } from './SettingsDesktop'
 import { SettingsMobile } from './SettingsMobile'
 import { PasswordForm } from './PasswordForm'
+import { ProfileForm } from './ProfileForm'
 import { useBlockedAccounts, useIsMobile } from './useSettings'
 import styles from './settings.module.css'
 
@@ -23,6 +24,7 @@ export function Settings() {
   const { summary: blocked } = useBlockedAccounts()
   const isMobile = useIsMobile()
   const [pwdOpen, setPwdOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const onLogout = () => {
     void signOut().finally(() => window.location.assign('/auth'))
@@ -34,6 +36,7 @@ export function Settings() {
     dark: theme.dark,
     setDark: theme.setDark,
     blocked,
+    onEditProfile: () => setProfileOpen(true),
     onEditPassword: () => setPwdOpen(true),
     onLogout,
   }
@@ -51,6 +54,16 @@ export function Settings() {
       ) : (
         <Drawer open={pwdOpen} onClose={() => setPwdOpen(false)} title="Modifier le mot de passe">
           <PasswordForm onClose={() => setPwdOpen(false)} />
+        </Drawer>
+      )}
+
+      {isMobile ? (
+        <BottomSheet open={profileOpen} onClose={() => setProfileOpen(false)} title="Modifier le profil">
+          <ProfileForm initialName={data?.user?.name ?? ''} email={data?.user?.email} onClose={() => setProfileOpen(false)} />
+        </BottomSheet>
+      ) : (
+        <Drawer open={profileOpen} onClose={() => setProfileOpen(false)} title="Modifier le profil">
+          <ProfileForm initialName={data?.user?.name ?? ''} email={data?.user?.email} onClose={() => setProfileOpen(false)} />
         </Drawer>
       )}
     </>

@@ -11,6 +11,7 @@ interface Props {
   dark: boolean
   setDark: (v: boolean) => void
   blocked: BlockedSummary
+  onEditProfile: () => void
   onEditPassword: () => void
   onLogout: () => void
   className?: string
@@ -23,6 +24,7 @@ export function SettingsMobile({
   dark,
   setDark,
   blocked,
+  onEditProfile,
   onEditPassword,
   onLogout,
   className = '',
@@ -38,10 +40,9 @@ export function SettingsMobile({
         </div>
         <button
           type="button"
-          className={`icon-btn ${styles.soon}`}
-          disabled
+          className="icon-btn"
           aria-label="Modifier le profil"
-          title="Bientôt disponible"
+          onClick={onEditProfile}
         >
           <Icon name="edit" size={15} />
         </button>
@@ -95,25 +96,45 @@ export function SettingsMobile({
         />
       </Card>
 
-      {/* Données — fonctionnalités à venir (honnêtes) */}
+      {/* Données — Catégories / Import-Export / Centre d'aide réels ; Sauvegarde à venir */}
       <Card>
         <div className={`t-eyebrow ${styles.groupTitle}`}>Données</div>
-        {[
-          { icon: 'download', label: 'Import / Export' },
-          { icon: 'card', label: 'Sauvegarde & restauration' },
-          { icon: 'help', label: "Centre d'aide" },
-        ].map((r) => (
-          <SettingRow
-            key={r.label}
-            icon={r.icon as 'download' | 'card' | 'help'}
-            label={r.label}
-            right={
-              <span className={styles.soonTag} aria-disabled="true" title="Bientôt disponible">
-                Bientôt
-              </span>
-            }
-          />
-        ))}
+        <SettingRow
+          icon="tag"
+          label="Catégories"
+          right={
+            <Link to="/parametres/categories" className="card-link" aria-label="Gérer les catégories">
+              <Icon name="chevron" size={16} className="t-faint" />
+            </Link>
+          }
+        />
+        <SettingRow
+          icon="download"
+          label="Import / Export"
+          right={
+            <Link to="/parametres/import-export" className="card-link" aria-label="Import / Export">
+              <Icon name="chevron" size={16} className="t-faint" />
+            </Link>
+          }
+        />
+        <SettingRow
+          icon="card"
+          label="Sauvegarde & restauration"
+          right={
+            <span className={styles.soonTag} aria-disabled="true" title="Bientôt disponible">
+              Bientôt
+            </span>
+          }
+        />
+        <SettingRow
+          icon="help"
+          label="Centre d'aide"
+          right={
+            <Link to="/parametres/aide" className="card-link" aria-label="Centre d'aide">
+              <Icon name="chevron" size={16} className="t-faint" />
+            </Link>
+          }
+        />
       </Card>
 
       <button type="button" className={`btn block ${styles.dangerBtn}`} onClick={onLogout}>
