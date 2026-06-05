@@ -691,7 +691,100 @@ export async function createContribution(userId: string, input: ContributionWrit
 
 /* ──────────────────────────────── Prêts ──────────────────────────────── */
 export function listLoans(userId: string) {
-  return db.select().from(loans).where(eq(loans.userId, userId)).orderBy(asc(loans.createdAt))
+  return db
+    .select()
+    .from(loans)
+    .where(and(eq(loans.userId, userId), eq(loans.archived, false)))
+    .orderBy(asc(loans.createdAt))
+}
+
+/** Prêt scopé (null si absent / à autrui) — vérif d'appartenance avant écriture. */
+export async function getLoanById(userId: string, id: string) {
+  const rows = await db
+    .select()
+    .from(loans)
+    .where(and(eq(loans.id, id), eq(loans.userId, userId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Ligne d'échéancier prête à persister (dates déjà dérivées côté route). */
+export interface LoanScheduleRow {
+  periodMonth: string
+  principalPart: number
+  interestPart: number
+  taxPart: number | null
+  insurancePart: number | null
+  remainingAfter: number
+  dueDate: string
+  status: string
+}
+export interface LoanWriteInput {
+  loan: Omit<typeof loans.$inferInsert, 'userId'>
+  schedule: LoanScheduleRow[]
+}
+
+/** Insère l'échéancier (amortization + loan_payments) d'un prêt. Scopé. */
+async function insertLoanSchedule(userId: string, loanId: string, schedule: LoanScheduleRow[]) {
+  if (!schedule.length) return
+  await db.insert(amortization).values(
+    schedule.map((r, i) => ({
+      userId,
+      loanId,
+      periodMonth: r.periodMonth,
+      principalPart: r.principalPart,
+      interestPart: r.interestPart,
+      taxPart: r.taxPart,
+      insurancePart: r.insurancePart,
+      remainingAfter: r.remainingAfter,
+      sort: i,
+    })),
+  )
+  await db.insert(loanPayments).values(
+    schedule.map((r) => ({
+      userId,
+      loanId,
+      periodMonth: r.periodMonth,
+      amount: r.principalPart + r.interestPart + (r.taxPart ?? 0) + (r.insurancePart ?? 0),
+      dueDate: r.dueDate,
+      status: r.status,
+    })),
+  )
+}
+
+/** Crée un prêt + son échéancier. Scopé. */
+export async function createLoan(userId: string, input: LoanWriteInput) {
+  const [created] = await db.insert(loans).values({ ...input.loan, userId }).returning()
+  await insertLoanSchedule(userId, created.id, input.schedule)
+  return created
+}
+
+/** Édite un prêt : remplace ses champs + RÉGÉNÈRE l'échéancier. Null si absent/à autrui. */
+export async function updateLoanWithSchedule(userId: string, id: string, input: LoanWriteInput) {
+  const [updated] = await db
+    .update(loans)
+    .set(input.loan)
+    .where(and(eq(loans.id, id), eq(loans.userId, userId)))
+    .returning()
+  if (!updated) return null
+  await db.delete(amortization).where(and(eq(amortization.userId, userId), eq(amortization.loanId, id)))
+  await db.delete(loanPayments).where(and(eq(loanPayments.userId, userId), eq(loanPayments.loanId, id)))
+  await insertLoanSchedule(userId, id, input.schedule)
+  return updated
+}
+
+/** Archivage / réactivation scopé (réversible). */
+export function setLoanArchived(userId: string, id: string, archived: boolean) {
+  return db
+    .update(loans)
+    .set({ archived })
+    .where(and(eq(loans.id, id), eq(loans.userId, userId)))
+    .returning()
+}
+
+/** Suppression scopée (cascade amortization + loan_payments via FK). */
+export function deleteLoan(userId: string, id: string) {
+  return db.delete(loans).where(and(eq(loans.id, id), eq(loans.userId, userId))).returning()
 }
 
 export function listAmortization(userId: string, loanId: string) {

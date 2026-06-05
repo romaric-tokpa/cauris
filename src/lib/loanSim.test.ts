@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { monthlyRate, scheduleStats, paymentFor, simulate } from './loanSim'
+import { monthlyRate, scheduleStats, paymentFor, simulate, amortizeAllInclusive } from './loanSim'
 
 /**
  * Le prêt seedé (server/db/seed.ts) est COHÉRENT : la mensualité dérive de la formule
@@ -80,5 +80,52 @@ describe('simulate() — scénarios déterministes sur le prêt seedé', () => {
 
   it('renvoie null si le prêt de base n’est pas amortissable', () => {
     expect(simulate({ remaining: 3200000, rateBps: 950, monthlyPayment: 10000, type: 'anticipe' })).toBeNull()
+  })
+})
+
+describe('amortizeAllInclusive — fixtures du PDF SGCI réel (preuve au franc près)', () => {
+  const SGCI = {
+    principal: 4_500_000,
+    payment: 94_179,
+    rateBps: 750, // 7,5 %
+    taxBps: 1000, // 10 % sur intérêts
+    insuranceBps: 110, // 1,1 %/an
+    term: 60,
+    firstPeriodDays: 29,
+    fees: 108_900,
+  }
+  const r = amortizeAllInclusive(SGCI)
+  const line = (n: number) => r.lines.find((l) => l.n === n)!
+
+  it('ligne 002 (1ʳᵉ échéance, prorata 29 j) : 59 116 / 27 187 / 2 719 / 3 987 → reste 4 440 884', () => {
+    expect(line(1)).toMatchObject({
+      interest: 27_187,
+      tax: 2_719,
+      insurance: 3_987,
+      principal: 59_116,
+      payment: 93_009,
+      remainingAfter: 4_440_884,
+    })
+  })
+
+  it('ligne 061 (dernière) : 93 450 / 585 / 58 / 86 → reste 0', () => {
+    expect(line(60)).toMatchObject({
+      interest: 585,
+      tax: 58,
+      insurance: 86,
+      principal: 93_450,
+      payment: 94_179,
+      remainingAfter: 0,
+    })
+  })
+
+  it('totaux : capital 4 500 000 · intérêts 922 110 · taxes 92 216 · assurance 135 244 · échéances 5 758 470', () => {
+    expect(r.totals).toEqual({
+      principal: 4_500_000,
+      interest: 922_110,
+      tax: 92_216,
+      insurance: 135_244,
+      payments: 5_758_470,
+    })
   })
 })

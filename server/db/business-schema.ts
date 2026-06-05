@@ -229,6 +229,15 @@ export const loans = sqliteTable(
     termMonths: integer('term_months').notNull(),
     monthsRemaining: integer('months_remaining').notNull(),
     nextDueDate: text('next_due_date'), // YYYY-MM-DD | null
+    // Type/libellé (auto, immobilier, conso…). Vide pour les prêts legacy.
+    kind: text('kind').default('').notNull(),
+    // Mode « tout-compris » (SGCI) — défauts 0 = prêt simple (amortissement classique, ex. Aïcha).
+    taxBps: integer('tax_bps').default(0).notNull(), // taxe sur intérêts (1000 = 10 %)
+    insuranceBps: integer('insurance_bps').default(0).notNull(), // assurance/an (110 = 1,1 %)
+    feesUpfront: integer('fees_upfront').default(0).notNull(), // frais de dossier (ligne 0)
+    firstDueDate: text('first_due_date'), // YYYY-MM-DD | null — 1ʳᵉ échéance
+    firstPeriodDays: integer('first_period_days').default(30).notNull(), // prorata 1ʳᵉ période
+    archived: integer('archived', { mode: 'boolean' }).default(false).notNull(),
     ...timestamps(),
   },
   (t) => [index('loans_user_idx').on(t.userId)],
@@ -246,6 +255,9 @@ export const amortization = sqliteTable(
     periodMonth: text('period_month').notNull(), // YYYY-MM
     principalPart: integer('principal_part').notNull(),
     interestPart: integer('interest_part').notNull(),
+    // Mode tout-compris : parts taxe/assurance par échéance (null = prêt simple).
+    taxPart: integer('tax_part'),
+    insurancePart: integer('insurance_part'),
     remainingAfter: integer('remaining_after').notNull(),
     sort: integer('sort').default(0).notNull(),
   },

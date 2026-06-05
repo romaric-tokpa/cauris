@@ -65,6 +65,12 @@ import {
   createContribution,
   listLoans,
   getLoanWithSchedule,
+  getLoanById,
+  createLoan,
+  updateLoanWithSchedule,
+  setLoanArchived,
+  deleteLoan,
+  type LoanWriteInput,
   listNotifications,
   getNotificationById,
   countUnreadNotifications,
@@ -836,7 +842,7 @@ api.get('/ai/anomalies', async (c) => {
 api.get('/coach/context', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const [balances, accts, recs, buds, gls, months, envs] = await Promise.all([
+  const [balances, accts, recs, buds, gls, months, envs, loanRows] = await Promise.all([
     computeAccountBalances(userId),
     listAccounts(userId),
     listRecurrences(userId),
@@ -844,6 +850,7 @@ api.get('/coach/context', async (c) => {
     listGoals(userId),
     listMonthlySummaries(userId),
     listEnvelopes(userId),
+    listLoans(userId), // actifs seulement → leurs échéances comptent dans la marge du coach
   ])
   const env = envs[0] ?? null
   return c.json({
@@ -853,6 +860,11 @@ api.get('/coach/context', async (c) => {
     goals: gls.map((g) => ({ target: g.targetAmount, current: g.currentAmount, targetDate: g.targetDate })), // prettier-ignore
     months: months.map((m) => ({ month: m.month, epargne: m.epargne, depenses: m.depenses })),
     cashEnvelope: env ? { accountId: env.accountId, lastReconciledAt: env.lastReconciledAt } : null,
+    // Prêts : échéance mensuelle (constante) + ancre + durée → le client dérive si une
+    // échéance tombe ce mois (anti-double-saisie : le prêt n'est pas une récurrence manuelle).
+    loans: loanRows
+      .map((l) => ({ monthlyPayment: l.monthlyPayment, anchorDate: l.firstDueDate ?? l.nextDueDate, termMonths: l.termMonths })) // prettier-ignore
+      .filter((l) => l.anchorDate != null),
   })
 })
 
@@ -1774,6 +1786,11 @@ function projectLoan(l: LoanRow) {
     termMonths: l.termMonths,
     monthsRemaining: l.monthsRemaining,
     nextDueDate: l.nextDueDate,
+    kind: l.kind,
+    taxBps: l.taxBps,
+    insuranceBps: l.insuranceBps,
+    feesUpfront: l.feesUpfront,
+    firstDueDate: l.firstDueDate,
     progress,
   }
 }
@@ -1811,6 +1828,164 @@ api.get('/loans/:id', async (c) => {
     payments: data.payments,
     stats: loanStats(data.loan),
   })
+})
+
+/* ───────── Écritures prêts (création / édition / cycle de vie) — Lot prêt SGCI ─────────
+ * FRONTIÈRE DE CONFIANCE : la MATH (échéancier) est calculée + TESTÉE au CLIENT (loanSim) ;
+ * le serveur ne fait pas confiance aux lignes reçues — il valide les INVARIANTS (sommes,
+ * cohérence, bornes), PAS les formules. Scopées session ; appartenance (SELECT → 404). */
+
+const MAX_LOAN_TERM = 360
+const SCHEDULE_KEYS = ['n', 'interest', 'tax', 'insurance', 'principal', 'payment', 'remainingAfter'] as const // prettier-ignore
+type ClientLine = Record<(typeof SCHEDULE_KEYS)[number], number>
+
+/** « YYYY-MM-DD » + n mois (jour conservé). */
+function addMonths(iso: string, n: number): string {
+  const total = Number(iso.slice(0, 4)) * 12 + (Number(iso.slice(5, 7)) - 1) + n
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}-${iso.slice(8, 10)}`
+}
+
+/**
+ * Valide le payload prêt + son échéancier par INVARIANTS (pas de re-calcul de formule) :
+ * nb de lignes = term (+ frais), Σ amort == capital, dernier reste == 0, reste décroissant
+ * & cohérent ligne à ligne, composantes entières ≥ 0, bornes. → input persistable ou message.
+ */
+function parseLoanInput(body: unknown): { input: LoanWriteInput } | { error: string } {
+  if (typeof body !== 'object' || body === null) return { error: 'Corps de requête invalide.' }
+  const b = body as Record<string, unknown>
+  const intOk = (v: unknown, min = 0) => typeof v === 'number' && Number.isInteger(v) && v >= min
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  if (!name) return { error: 'Nom du prêt requis.' }
+  if (!intOk(b.principal, 1)) return { error: 'Montant : entier FCFA strictement positif requis.' }
+  if (!intOk(b.termMonths, 1) || (b.termMonths as number) > MAX_LOAN_TERM)
+    return { error: `Durée : 1 à ${MAX_LOAN_TERM} échéances.` }
+  if (!intOk(b.monthlyPayment, 1)) return { error: 'Mensualité : entier FCFA positif requis.' }
+  if (!intOk(b.rateBps) || !intOk(b.taxBps) || !intOk(b.insuranceBps) || !intOk(b.feesUpfront))
+    return { error: 'Taux / options invalides (entiers ≥ 0).' }
+  if (typeof b.firstDueDate !== 'string' || !ISO_DATE.test(b.firstDueDate))
+    return { error: 'Date de 1ʳᵉ échéance invalide (AAAA-MM-JJ).' }
+  if (!intOk(b.firstPeriodDays, 1) || (b.firstPeriodDays as number) > 31)
+    return { error: 'Prorata 1ʳᵉ période invalide (1–31 jours).' }
+  if (!Array.isArray(b.schedule)) return { error: 'Échéancier manquant.' }
+
+  const principal = b.principal as number
+  const term = b.termMonths as number
+  const fees = b.feesUpfront as number
+  const raw = b.schedule
+  if (raw.length > MAX_LOAN_TERM + 1) return { error: 'Échéancier trop volumineux.' }
+  if (raw.length !== term + (fees > 0 ? 1 : 0))
+    return { error: `Échéancier incohérent : ${raw.length} lignes pour ${term} échéances.` }
+
+  const lines: ClientLine[] = []
+  for (const r of raw) {
+    if (typeof r !== 'object' || r === null) return { error: 'Ligne d’échéancier invalide.' }
+    const l = r as Record<string, unknown>
+    for (const k of SCHEDULE_KEYS) {
+      const v = l[k]
+      if (typeof v !== 'number' || !Number.isInteger(v) || (k !== 'n' && v < 0))
+        return { error: 'Échéancier : composantes entières ≥ 0 requises.' }
+    }
+    lines.push(l as unknown as ClientLine)
+  }
+
+  // ── INVARIANTS (sommes & cohérence, jamais la formule) ──
+  const regular = lines.filter((l) => l.n >= 1)
+  if (regular.length !== term) return { error: 'Nombre d’échéances incohérent.' }
+  const sumAmort = regular.reduce((s, l) => s + l.principal, 0)
+  if (sumAmort !== principal)
+    return { error: `Σ amortissements (${sumAmort}) ≠ capital emprunté (${principal}).` }
+  if (regular[regular.length - 1].remainingAfter !== 0)
+    return { error: 'Le capital doit être soldé à 0 à la dernière échéance.' }
+  let prev = principal
+  for (const l of regular) {
+    if (l.remainingAfter < 0 || l.remainingAfter > prev)
+      return { error: 'Capital restant incohérent (croissant ou négatif).' }
+    if (prev - l.principal !== l.remainingAfter)
+      return { error: `Échéance ${l.n} : reste(n−1) − amortissement ≠ reste(n).` }
+    prev = l.remainingAfter
+  }
+
+  const taxBps = b.taxBps as number
+  const insuranceBps = b.insuranceBps as number
+  const allInclusive = taxBps > 0 || insuranceBps > 0
+  const firstDueDate = b.firstDueDate
+  const input: LoanWriteInput = {
+    loan: {
+      name,
+      kind: typeof b.kind === 'string' ? b.kind.trim() : '',
+      principal,
+      remaining: principal,
+      rateBps: b.rateBps as number,
+      monthlyPayment: b.monthlyPayment as number,
+      termMonths: term,
+      monthsRemaining: term,
+      nextDueDate: firstDueDate,
+      taxBps,
+      insuranceBps,
+      feesUpfront: fees,
+      firstDueDate,
+      firstPeriodDays: b.firstPeriodDays as number,
+      archived: false,
+    },
+    schedule: lines.map((l) => {
+      const dueDate = l.n === 0 ? firstDueDate : addMonths(firstDueDate, l.n - 1)
+      return {
+        periodMonth: dueDate.slice(0, 7),
+        principalPart: l.principal,
+        interestPart: l.interest,
+        taxPart: allInclusive ? l.tax : null,
+        insurancePart: allInclusive ? l.insurance : null,
+        remainingAfter: l.remainingAfter,
+        dueDate,
+        status: 'upcoming',
+      }
+    }),
+  }
+  return { input }
+}
+
+// Création.
+api.post('/loans', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const parsed = parseLoanInput(await c.req.json().catch(() => null))
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const created = await createLoan(userId, parsed.input)
+  return c.json({ loan: projectLoan(created) }, 201)
+})
+
+// Édition (régénère l'échéancier). Appartenance → 404.
+api.patch('/loans/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  if (!(await getLoanById(userId, id))) return c.json({ error: 'not found' }, 404)
+  const parsed = parseLoanInput(await c.req.json().catch(() => null))
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400)
+  const updated = await updateLoanWithSchedule(userId, id, parsed.input)
+  if (!updated) return c.json({ error: 'not found' }, 404)
+  return c.json({ loan: projectLoan(updated) })
+})
+
+// Cycle de vie : archiver (réversible) / supprimer (dur, cascade échéancier). Appartenance → 404.
+api.post('/loans/:id/archive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [row] = await setLoanArchived(userId, c.req.param('id'), true)
+  return row ? c.json({ loan: projectLoan(row) }) : c.json({ error: 'not found' }, 404)
+})
+api.post('/loans/:id/unarchive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [row] = await setLoanArchived(userId, c.req.param('id'), false)
+  return row ? c.json({ loan: projectLoan(row) }) : c.json({ error: 'not found' }, 404)
+})
+api.delete('/loans/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [row] = await deleteLoan(userId, c.req.param('id'))
+  return row ? c.json({ ok: true }) : c.json({ error: 'not found' }, 404)
 })
 
 app.route('/api', api)

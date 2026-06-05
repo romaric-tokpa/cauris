@@ -1,13 +1,29 @@
+import { useEffect, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
-import { Card } from '../../components/ui'
+import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { EmptyState } from '../../components/states'
 import { useSetPageTitle } from '../../components/shell/pageTitle'
-import { useLoans, useLoan, type LoanDetailResponse } from './useLoans'
+import { useLoans, useLoan, type LoanRow, type LoanDetailResponse } from './useLoans'
 import { DEFAULT_TAB } from './tabs'
+import { LoanForm } from './LoanForm'
 import { PretDesktop } from './PretDesktop'
 import { PretMobile } from './PretMobile'
 import styles from './pret.module.css'
+
+/** Vrai sous le breakpoint shell (mobile) — Drawer vs BottomSheet. */
+function useIsMobile(): boolean {
+  const [m, setM] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const onChange = () => setM(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return m
+}
 
 function Skeleton() {
   return (
@@ -49,51 +65,149 @@ export function Pret() {
     )
   }
 
-  // Domaine : un prêt unique. On lit la liste puis le détail du prêt primaire.
+  const isMobile = useIsMobile()
   const list = useLoans()
-  const primaryId = list.data?.loans[0]?.id ?? ''
-  const detail = useLoan(primaryId)
+  const loans = list.data?.loans ?? []
+  const [pickedId, setPickedId] = useState<string | undefined>(undefined)
+  // Prêt courant = choisi (s'il existe encore) sinon le premier.
+  const selectedId = (pickedId && loans.some((l) => l.id === pickedId) ? pickedId : loans[0]?.id) ?? ''
+  const detail = useLoan(selectedId)
 
-  if (list.isPending || (primaryId && detail.isPending)) return <Skeleton />
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<LoanRow | undefined>(undefined)
+  const openAdd = () => {
+    setEditing(undefined)
+    setFormOpen(true)
+  }
+  const openEdit = () => {
+    if (detail.data) {
+      setEditing(detail.data.loan)
+      setFormOpen(true)
+    }
+  }
+  const close = () => {
+    setFormOpen(false)
+    setEditing(undefined)
+  }
+  // Après archive/suppression : repartir du premier prêt (le courant n'existe plus).
+  const onExit = () => {
+    setPickedId(undefined)
+    close()
+  }
+
+  if (list.isPending || (selectedId && detail.isPending)) return <Skeleton />
   if (list.isError) return <ErrorCard onRetry={() => void list.refetch()} />
 
-  // Aucun prêt en cours → état vide soigné.
-  if (!primaryId) {
+  const drawer = isMobile ? (
+    <BottomSheet open={formOpen} onClose={close} title={editing ? 'Modifier le prêt' : 'Nouveau prêt'}>
+      <LoanForm key={editing?.id ?? 'new'} initial={editing} onClose={close} onExit={onExit} />
+    </BottomSheet>
+  ) : (
+    <Drawer open={formOpen} onClose={close} title={editing ? 'Modifier le prêt' : 'Ajouter un prêt'}>
+      <LoanForm key={editing?.id ?? 'new'} initial={editing} onClose={close} onExit={onExit} />
+    </Drawer>
+  )
+
+  // Cold start réparé : état vide + action « Ajouter un prêt ».
+  if (!selectedId) {
     return (
       <>
-        <div>
-          <div className="t-eyebrow">Prêt / Dette</div>
-          <h1 className={styles.pageTitle}>Prêt / Dette</h1>
+        <div className={`r between ${styles.topBar}`}>
+          <div>
+            <div className="t-eyebrow">Prêt / Dette</div>
+            <h1 className={styles.pageTitle}>Prêt / Dette</h1>
+          </div>
         </div>
         <EmptyState
           icon="bank"
           title="Aucun prêt en cours"
-          text="Vous n'avez aucun crédit suivi pour le moment."
+          text="Suivez un crédit et son tableau d'amortissement réel."
+          actions={
+            <button type="button" className="btn primary" onClick={openAdd}>
+              <Icon name="plus" size={16} /> Ajouter un prêt
+            </button>
+          }
         />
+        {drawer}
       </>
     )
   }
 
   if (detail.isError || !detail.data) return <ErrorCard onRetry={() => void detail.refetch()} />
 
-  return <LoanView data={detail.data} tab={tab} setTab={setTab} />
+  return (
+    <LoanView
+      data={detail.data}
+      loans={loans}
+      selectedId={selectedId}
+      onSelect={setPickedId}
+      onAdd={openAdd}
+      onEdit={openEdit}
+      tab={tab}
+      setTab={setTab}
+      drawer={drawer}
+    />
+  )
 }
 
 function LoanView({
   data,
+  loans,
+  selectedId,
+  onSelect,
+  onAdd,
+  onEdit,
   tab,
   setTab,
+  drawer,
 }: {
   data: LoanDetailResponse
+  loans: LoanRow[]
+  selectedId: string
+  onSelect: (id: string) => void
+  onAdd: () => void
+  onEdit: () => void
   tab: string
   setTab: (t: string) => void
+  drawer: ReactNode
 }) {
   useSetPageTitle(data.loan.name)
   return (
     <>
       <h1 className={styles.srOnly}>Prêt / Dette — {data.loan.name}</h1>
+
+      {/* Barre : sélecteur multi-prêts (si ≥ 2) + actions. */}
+      <div className={`r between ${styles.topBar}`}>
+        {loans.length > 1 ? (
+          <div className={`r ${styles.loanChips}`} role="group" aria-label="Choisir un prêt">
+            {loans.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className={`chip${l.id === selectedId ? ' on' : ''}`}
+                aria-pressed={l.id === selectedId}
+                onClick={() => onSelect(l.id)}
+              >
+                {l.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="t-eyebrow">Prêt / Dette</div>
+        )}
+        <div className={`r ${styles.topActions}`}>
+          <button type="button" className="btn" onClick={onEdit}>
+            <Icon name="edit" size={15} /> Modifier
+          </button>
+          <button type="button" className="btn primary" onClick={onAdd}>
+            <Icon name="plus" size={15} /> Ajouter un prêt
+          </button>
+        </div>
+      </div>
+
       <PretDesktop data={data} tab={tab} setTab={setTab} className={styles.desktop} />
       <PretMobile data={data} tab={tab} setTab={setTab} className={styles.mobile} />
+      {drawer}
     </>
   )
 }

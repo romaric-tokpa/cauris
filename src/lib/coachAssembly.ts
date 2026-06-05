@@ -26,6 +26,8 @@ export interface CoachContext {
   goals: { target: number; current: number; targetDate: string | null }[]
   months: { month: string; epargne: number | null; depenses: number | null }[]
   cashEnvelope: { accountId: string; lastReconciledAt: string | null } | null
+  /** Prêts actifs : échéance mensuelle + ancre (1ʳᵉ échéance) + durée → charges dérivées. */
+  loans: { monthlyPayment: number; anchorDate: string; termMonths: number }[]
 }
 
 export interface CoachAnswer {
@@ -65,14 +67,25 @@ function coachInput(
   completenessScore: number,
 ): CoachInput {
   const ym = today.slice(0, 7)
+  const todayIdx = monthIndex(today)
+  // Échéances de prêt actives ce mois → charges (zéro double-saisie : pas de récurrence manuelle).
+  const loanCharges = ctx.loans
+    .filter((l) => {
+      const a = monthIndex(l.anchorDate)
+      return a <= todayIdx && todayIdx <= a + l.termMonths - 1
+    })
+    .map((l) => ({ amount: -l.monthlyPayment, dueThisMonth: true }))
   return {
     scenario,
     amount: scenario === 'afford' ? amount : 0,
     accounts: ctx.accounts,
-    recurrences: ctx.recurrences.map((r) => ({
-      amount: r.amount,
-      dueThisMonth: r.nextDate.slice(0, 7) === ym, // échéance dans le mois courant
-    })),
+    recurrences: [
+      ...ctx.recurrences.map((r) => ({
+        amount: r.amount,
+        dueThisMonth: r.nextDate.slice(0, 7) === ym, // échéance dans le mois courant
+      })),
+      ...loanCharges,
+    ],
     budgets: ctx.budgets,
     goals: ctx.goals.map((g) => ({
       target: g.target,

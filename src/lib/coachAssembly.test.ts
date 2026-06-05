@@ -22,6 +22,7 @@ function context(over: Partial<CoachContext> = {}): CoachContext {
       { month: '2026-04', epargne: 200_000, depenses: -620_000 },
     ],
     cashEnvelope: { accountId: 'acc-especes', lastReconciledAt: '2026-05-24' },
+    loans: [],
     ...over,
   }
 }
@@ -40,6 +41,20 @@ describe('computeCoachAnswer — dérivation des dates & enchaînement', () => {
   it('today injecté plus tôt (27/05) → cash réconcilié il y a 3 j ≤ 7 → pas de déficit cash', () => {
     const a = computeCoachAnswer(context(), 'survive', 0, '2026-05-27')
     expect(a.completeness.deficits.some((d) => d.key === 'cash')).toBe(false)
+  })
+
+  it('prêt actif ce mois → sa mensualité (94 179) baisse la marge du coach (option a)', () => {
+    const sgci = { monthlyPayment: 94_179, anchorDate: '2025-02-25', termMonths: 60 } // juin 2026 ∈ plage
+    const without = computeCoachAnswer(context({ loans: [] }), 'survive', 0, '2026-06-05')
+    const withLoan = computeCoachAnswer(context({ loans: [sgci] }), 'survive', 0, '2026-06-05')
+    expect(without.verdict.disponible - withLoan.verdict.disponible).toBe(94_179)
+  })
+
+  it('prêt hors plage (terminé) → aucune charge ajoutée', () => {
+    const ended = { monthlyPayment: 94_179, anchorDate: '2020-01-25', termMonths: 12 } // fini en 2020
+    const without = computeCoachAnswer(context({ loans: [] }), 'survive', 0, '2026-06-05')
+    const withEnded = computeCoachAnswer(context({ loans: [ended] }), 'survive', 0, '2026-06-05')
+    expect(withEnded.verdict.disponible).toBe(without.verdict.disponible)
   })
 
   it('afford : même disponible, marge après = disponible − montant', () => {

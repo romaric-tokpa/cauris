@@ -363,3 +363,50 @@
   justify-content: center;
   min-height: 50vh;
 }
+
+/* ───────────── Multi-prêts + form (chantier prêt SGCI) ───────────── */
+.topBar {
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.loanChips {
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.topActions {
+  gap: 8px;
+}
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.previewRow {
+  font-size: 12.5px;
+}
+.archiveBtn {
+  justify-content: center;
+  color: var(--ink-soft);
+}
+.deleteBtn {
+  justify-content: center;
+  color: var(--neg);
+  border-color: var(--neg);
+}
