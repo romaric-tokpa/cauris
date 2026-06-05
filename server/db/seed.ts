@@ -285,6 +285,16 @@ async function seed() {
     { l: 'Pharmacie Plateau', a: 'wave', c: 'sante', m: -22600, d: '2026-05-16', t: 'Dépense' },
     { l: 'Consultation médicale', a: 'courant', c: 'sante', m: -18000, d: '2026-05-07', t: 'Dépense' }, // prettier-ignore
   ]
+  /* Canal de paiement (Lot B1) — DÉTERMINISTE par compte source : om → Orange Money,
+     wave → Wave, courant(NSIA)/epargne(Ecobank) → Banque. Un Transfert (mouvement
+     interne) n'a pas de canal → null. (Aïcha n'a pas de compte espèces → 'cash' reste
+     un canal valide non utilisé par le seed.) */
+  const CHANNEL: Record<Acc, string> = {
+    courant: 'banque',
+    epargne: 'banque',
+    om: 'orange_money',
+    wave: 'wave',
+  }
   await db.insert(transactions).values(
     rows.map((r) => ({
       userId: uid,
@@ -295,6 +305,7 @@ async function seed() {
       amount: r.m,
       occurredAt: r.d,
       type: r.t,
+      channel: r.t === 'Transfert' ? null : CHANNEL[r.a],
     })),
   )
 
@@ -716,6 +727,14 @@ async function seed() {
     transfers === -100000,
     `transfert ${transfers} hors revenus/dépenses`,
   )
+
+  /* — Canal de paiement (Lot B1) : liste fermée. Tout Transfert a un canal null ;
+     toute autre opération a un canal ∈ { wave, orange_money, cash, banque }. — */
+  const CHANNELS = ['wave', 'orange_money', 'cash', 'banque']
+  const channelOk = all.every((t) =>
+    t.type === 'Transfert' ? t.channel === null : t.channel != null && CHANNELS.includes(t.channel),
+  )
+  check('Canal — Transfert null / autres ∈ liste fermée', channelOk, `${all.length} opérations`)
 
   /* — Mois courant : la ligne monthly_summaries ne porte PLUS de totaux (dérivés
      du ledger), seulement le delta solde. category_summaries du mois courant

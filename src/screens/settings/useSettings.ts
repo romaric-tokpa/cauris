@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useComptes, type AccountRow } from '../comptes/useComptes'
 
-/** Initiale d'avatar à partir du nom (1re lettre, majuscule) — « A » par défaut. */
-export function initial(name: string | undefined): string {
-  return (name?.trim()?.[0] ?? 'A').toUpperCase()
-}
+// Source unique du dérivé d'avatar (partagé avec le shell) — réexport pour les
+// consommateurs existants des Paramètres.
+export { initial } from '../../lib/userName'
 
 /** Vrai sous le breakpoint shell (mobile) — choisit Drawer (desktop) vs BottomSheet. */
 export function useIsMobile(): boolean {

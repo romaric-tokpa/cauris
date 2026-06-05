@@ -278,6 +278,26 @@
   background: color-mix(in srgb, var(--cat-6) 14%, var(--paper));
   color: var(--cat-6);
 }
+.cat7 {
+  background: color-mix(in srgb, var(--cat-7) 14%, var(--paper));
+  color: var(--cat-7);
+}
+.cat8 {
+  background: color-mix(in srgb, var(--cat-8) 14%, var(--paper));
+  color: var(--cat-8);
+}
+.cat9 {
+  background: color-mix(in srgb, var(--cat-9) 14%, var(--paper));
+  color: var(--cat-9);
+}
+.cat10 {
+  background: color-mix(in srgb, var(--cat-10) 14%, var(--paper));
+  color: var(--cat-10);
+}
+.cat11 {
+  background: color-mix(in srgb, var(--cat-11) 14%, var(--paper));
+  color: var(--cat-11);
+}
 .catRowText {
   flex: 1;
   min-width: 0;
@@ -339,6 +359,11 @@
 .sw4 { background: var(--cat-4); }
 .sw5 { background: var(--cat-5); }
 .sw6 { background: var(--cat-6); }
+.sw7 { background: var(--cat-7); }
+.sw8 { background: var(--cat-8); }
+.sw9 { background: var(--cat-9); }
+.sw10 { background: var(--cat-10); }
+.sw11 { background: var(--cat-11); }
 .drawerActions {
   display: flex;
   gap: 10px;

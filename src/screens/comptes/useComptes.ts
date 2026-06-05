@@ -10,6 +10,9 @@ export interface AccountRow {
   type: string
   accountNumber: string
   blocked: boolean
+  archived: boolean
+  /** Vrai si aucune opération ne référence le compte → suppression dure permise (sinon archiver). */
+  deletable: boolean
   balance: number | null
 }
 
@@ -79,5 +82,19 @@ export function useCompteMutations() {
       apiMutate<{ account: AccountRow }>(`/api/accounts/${id}/unblock`, 'POST'),
     onSuccess: invalidate,
   })
-  return { create, update, block, unblock }
+  const archive = useMutation({
+    mutationFn: (id: string) =>
+      apiMutate<{ account: AccountRow }>(`/api/accounts/${id}/archive`, 'POST'),
+    onSuccess: invalidate,
+  })
+  const unarchive = useMutation({
+    mutationFn: (id: string) =>
+      apiMutate<{ account: AccountRow }>(`/api/accounts/${id}/unarchive`, 'POST'),
+    onSuccess: invalidate,
+  })
+  const remove = useMutation({
+    mutationFn: (id: string) => apiMutate<{ ok: true }>(`/api/accounts/${id}`, 'DELETE'),
+    onSuccess: invalidate,
+  })
+  return { create, update, block, unblock, archive, unarchive, remove }
 }

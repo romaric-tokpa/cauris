@@ -47,19 +47,43 @@ export function AccountForm({
   initial,
   stacked = false,
   onClose,
+  onExit,
 }: {
   initial?: AccountRow
   stacked?: boolean
   onClose: () => void
+  /** Sortie de cycle de vie (archive/suppression) : le compte n'est plus dans la liste. */
+  onExit?: () => void
 }) {
   const [s, setS] = useState<FormState>(() => initialState(initial))
   const [error, setError] = useState('')
-  const { create, update, block, unblock } = useCompteMutations()
+  const { create, update, block, unblock, archive, remove } = useCompteMutations()
   const isEdit = Boolean(initial)
-  const submitting = create.isPending || update.isPending || block.isPending || unblock.isPending
+  const submitting =
+    create.isPending ||
+    update.isPending ||
+    block.isPending ||
+    unblock.isPending ||
+    archive.isPending ||
+    remove.isPending
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setS((p) => ({ ...p, [k]: v }))
 
   const onErr = (e: unknown) => setError(e instanceof Error ? e.message : 'Erreur réseau.')
+  const exit = onExit ?? onClose
+
+  // Archivage = clôture réversible (sort des listes & du patrimoine). Vit dans le drawer
+  // d'édition, comme « Bloquer ce compte ».
+  const onArchive = () => {
+    if (!initial) return
+    setError('')
+    archive.mutate(initial.id, { onSuccess: exit, onError: onErr })
+  }
+  // Suppression dure : offerte SEULEMENT si 0 opération ne référence le compte (sinon 409).
+  const onDelete = () => {
+    if (!initial) return
+    setError('')
+    remove.mutate(initial.id, { onSuccess: exit, onError: onErr })
+  }
 
   const submit = () => {
     setError('')
@@ -164,15 +188,37 @@ export function AccountForm({
       </div>
 
       {isEdit && (
-        <button
-          type="button"
-          className={`btn block ${styles.blockBtn}`}
-          onClick={toggleBlock}
-          disabled={submitting}
-        >
-          <Icon name={initial?.blocked ? 'unlock' : 'lock'} size={15} />{' '}
-          {initial?.blocked ? 'Débloquer ce compte' : 'Bloquer ce compte'}
-        </button>
+        <>
+          <button
+            type="button"
+            className={`btn block ${styles.blockBtn}`}
+            onClick={toggleBlock}
+            disabled={submitting}
+          >
+            <Icon name={initial?.blocked ? 'unlock' : 'lock'} size={15} />{' '}
+            {initial?.blocked ? 'Débloquer ce compte' : 'Bloquer ce compte'}
+          </button>
+          {/* Archiver (réversible, sobre) : clôture le compte (sort listes & patrimoine). */}
+          <button
+            type="button"
+            className={`btn block ${styles.archiveBtn}`}
+            onClick={onArchive}
+            disabled={submitting}
+          >
+            <Icon name="inbox" size={15} /> Archiver ce compte
+          </button>
+          {/* Supprimer (dur, --neg) : SEULEMENT si aucune opération ne référence le compte. */}
+          {initial?.deletable && (
+            <button
+              type="button"
+              className={`btn block ${styles.deleteBtn}`}
+              onClick={onDelete}
+              disabled={submitting}
+            >
+              <Icon name="trash" size={15} /> Supprimer ce compte
+            </button>
+          )}
+        </>
       )}
 
       <div className={styles.drawerActions}>

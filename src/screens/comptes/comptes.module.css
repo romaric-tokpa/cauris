@@ -301,6 +301,17 @@
   color: var(--neg);
   border-color: var(--neg);
 }
+/* Archiver (réversible) : ton sobre, pas le rouge destructif. Pleine largeur centrée. */
+.archiveBtn {
+  justify-content: center;
+  color: var(--ink-soft);
+}
+/* Supprimer (dur, sans référence) : ton destructif --neg. */
+.deleteBtn {
+  justify-content: center;
+  color: var(--neg);
+  border-color: var(--neg);
+}
 /* Bouton rendu comme un lien (card-link) — reset des styles natifs de <button>. */
 .linkBtn {
   background: none;

@@ -4,7 +4,10 @@ import { ErrorBanner } from '../onboarding/parts'
 import { useCategoryMutations, type CategoryRow } from './useCategories'
 import styles from './settings.module.css'
 
-const COLORS = ['cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'cat-6'] as const
+const COLORS = [
+  'cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'cat-6',
+  'cat-7', 'cat-8', 'cat-9', 'cat-10', 'cat-11',
+] as const
 const SWATCH: Record<string, string> = {
   'cat-1': styles.sw1,
   'cat-2': styles.sw2,
@@ -12,6 +15,11 @@ const SWATCH: Record<string, string> = {
   'cat-4': styles.sw4,
   'cat-5': styles.sw5,
   'cat-6': styles.sw6,
+  'cat-7': styles.sw7,
+  'cat-8': styles.sw8,
+  'cat-9': styles.sw9,
+  'cat-10': styles.sw10,
+  'cat-11': styles.sw11,
 }
 
 /**

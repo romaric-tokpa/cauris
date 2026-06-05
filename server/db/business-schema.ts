@@ -57,6 +57,9 @@ export const accounts = sqliteTable(
     // courant. (Peut être négatif : c'est un point de calcul, jamais affiché tel quel.)
     balance: integer('balance').notNull(),
     blocked: integer('blocked', { mode: 'boolean' }).default(false).notNull(),
+    // Compte CLÔTURÉ (réversible) : sort des listes ET du patrimoine (≠ blocked, qui
+    // reste compté + masqué). Le solde dérivé reste calculable (détail/désarchivage).
+    archived: integer('archived', { mode: 'boolean' }).default(false).notNull(),
     sort: integer('sort').default(0).notNull(),
     ...timestamps(),
   },
@@ -86,9 +89,11 @@ export const transactions = sqliteTable(
   {
     id: pk(),
     userId: userId(),
+    // RESTRICT : un compte référencé par une opération ne peut PAS être supprimé au
+    // niveau DB (filet derrière le garde 409 applicatif) — jamais détruire l'historique.
     accountId: text('account_id')
       .notNull()
-      .references(() => accounts.id, { onDelete: 'cascade' }),
+      .references(() => accounts.id, { onDelete: 'restrict' }),
     categoryId: text('category_id').references(() => categories.id, { onDelete: 'set null' }),
     // destination d'un transfert (« → Épargne ») — sinon null
     transferAccountId: text('transfer_account_id').references(() => accounts.id, {
@@ -102,6 +107,10 @@ export const transactions = sqliteTable(
     occurredAt: text('occurred_at').notNull(), // YYYY-MM-DD
     // 'Dépense' | 'Revenu' | 'Transfert' | 'Récurrente'
     type: text('type').notNull(),
+    // Canal de paiement ∈ liste FERMÉE { wave, orange_money, cash, banque } (Lot B1).
+    // NULL = Transfert (mouvement interne, pas de canal) ou ligne legacy. Validé serveur
+    // (rejet du fantôme) ; non affiché au repos (pas de ventilation analytics en B1).
+    channel: text('channel'),
     ...timestamps(),
   },
   (t) => [

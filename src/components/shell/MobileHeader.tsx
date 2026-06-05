@@ -2,6 +2,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { findNavByPath } from './nav'
 import { usePageTitle } from './pageTitle'
+import { useSession } from '../../lib/auth-client'
+import { initial } from '../../lib/userName'
 import styles from './MobileHeader.module.css'
 
 /** App bar mobile — porté 1:1 de MobShell (titre/sous-titre, cloche+dot, avatar,
@@ -21,6 +23,7 @@ export function MobileHeader({
   // Titre fourni par l'écran (ex. « Bonjour, Aïcha ») sinon libellé de la route.
   const override = usePageTitle()
   const title = override ?? findNavByPath(pathname)?.label ?? 'Cauris'
+  const name = useSession().data?.user?.name
   return (
     <div className={`r between ${styles.header} ${className}`}>
       <div className={`r ${styles.left}`}>
@@ -51,7 +54,7 @@ export function MobileHeader({
           <Icon name="bell" size={17} />
           <span className="dot" />
         </button>
-        <div className="avatar">A</div>
+        <div className="avatar">{initial(name)}</div>
       </div>
     </div>
   )

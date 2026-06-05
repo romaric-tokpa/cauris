@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../../components/primitives'
 import { Card, Drawer, BottomSheet } from '../../components/ui'
 import { EmptyState } from '../../components/states'
@@ -61,9 +61,14 @@ function Detail({ data }: { data: CompteDetailResponse }) {
   const { account: a, recentTransactions } = data
   useSetPageTitle(a.name)
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
   const { block, unblock } = useCompteMutations()
   const linkUrl = `/transactions?accountId=${a.id}`
+  // Sortie de cycle de vie : après archive/suppression, le compte n'existe plus → liste.
+  const onExit = () => {
+    void navigate('/comptes')
+  }
 
   const toggleBlock = () => {
     const m = a.blocked ? unblock : block
@@ -159,11 +164,11 @@ function Detail({ data }: { data: CompteDetailResponse }) {
 
       {isMobile ? (
         <BottomSheet open={editOpen} onClose={() => setEditOpen(false)} title="Modifier">
-          <AccountForm initial={a} stacked onClose={() => setEditOpen(false)} />
+          <AccountForm initial={a} stacked onClose={() => setEditOpen(false)} onExit={onExit} />
         </BottomSheet>
       ) : (
         <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Modifier le compte">
-          <AccountForm initial={a} onClose={() => setEditOpen(false)} />
+          <AccountForm initial={a} onClose={() => setEditOpen(false)} onExit={onExit} />
         </Drawer>
       )}
     </>

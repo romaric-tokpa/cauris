@@ -7,7 +7,7 @@
  *
  * Les écrans (phases suivantes) consomment CES fonctions, jamais `db` directement.
  */
-import { and, asc, desc, eq, gte, like, lt, lte, ne, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, like, lt, lte, ne, or, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { db } from './client'
 import {
@@ -27,12 +27,18 @@ import {
 } from './business-schema'
 
 /* ─────────────────────────────── Comptes ─────────────────────────────── */
+/** Comptes ACTIFS (archivés exclus) — listes UI + sélecteurs. Comme listGoals/listBudgets. */
 export function listAccounts(userId: string) {
   return db
     .select()
     .from(accounts)
-    .where(eq(accounts.userId, userId))
+    .where(and(eq(accounts.userId, userId), eq(accounts.archived, false)))
     .orderBy(asc(accounts.sort))
+}
+
+/** TOUS les comptes (archivés inclus) — base de la dérivation des soldes (init sans fantôme). */
+function listAllAccountsRaw(userId: string) {
+  return db.select().from(accounts).where(eq(accounts.userId, userId))
 }
 
 /** Détail d'un compte du user (null si inexistant / à autrui). Ligne brute : le
@@ -96,7 +102,7 @@ export function setAccountBlocked(userId: string, id: string, blocked: boolean) 
  */
 export async function computeAccountBalances(userId: string): Promise<Map<string, number>> {
   const [accts, txns] = await Promise.all([
-    listAccounts(userId),
+    listAllAccountsRaw(userId), // TOUS les comptes (init correcte même pour un archivé)
     db
       .select({
         accountId: transactions.accountId,
@@ -115,13 +121,64 @@ export async function computeAccountBalances(userId: string): Promise<Map<string
   return balances
 }
 
-/** Patrimoine = Σ des soldes courants dérivés (soldes RÉELS, bloqués inclus). Un transfert
- *  interne (−X source, +X dest) laisse cette somme INCHANGÉE (invariant). */
+/** Patrimoine = Σ des soldes dérivés des comptes ACTIFS (bloqués inclus & masqués ;
+ *  archivés EXCLUS — un compte clôturé sort du patrimoine). Un transfert interne
+ *  (−X source, +X dest) laisse cette somme INCHANGÉE entre comptes actifs (invariant). */
 export async function computeNetWorth(userId: string): Promise<number> {
-  const balances = await computeAccountBalances(userId)
+  const [balances, active] = await Promise.all([
+    computeAccountBalances(userId),
+    listAccounts(userId),
+  ])
   let total = 0
-  for (const v of balances.values()) total += v
+  for (const a of active) total += balances.get(a.id) ?? 0
   return total
+}
+
+/** Archivage / réactivation scopé (réversible — l'archivé sort des listes & du patrimoine). */
+export function setAccountArchived(userId: string, id: string, archived: boolean) {
+  return db
+    .update(accounts)
+    .set({ archived })
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .returning()
+}
+
+/** Références d'un compte = nombre d'opérations qui le citent (source OU destination de
+ *  transfert). Garde le DELETE (0 → supprimable ; sinon archiver). */
+export async function countAccountReferences(userId: string, id: string): Promise<number> {
+  const rows = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        or(eq(transactions.accountId, id), eq(transactions.transferAccountId, id)),
+      ),
+    )
+  return rows.length
+}
+
+/** Ensemble des comptes référencés par ≥1 opération (source ou destination) — batch pour
+ *  marquer `deletable` sur la liste sans N+1 requêtes. */
+export async function referencedAccountIds(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ a: transactions.accountId, t: transactions.transferAccountId })
+    .from(transactions)
+    .where(eq(transactions.userId, userId))
+  const set = new Set<string>()
+  for (const r of rows) {
+    set.add(r.a)
+    if (r.t) set.add(r.t)
+  }
+  return set
+}
+
+/** Suppression dure scopée (n'appeler QUE si 0 référence — cf. route + FK RESTRICT). */
+export function deleteAccount(userId: string, id: string) {
+  return db
+    .delete(accounts)
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .returning()
 }
 
 /* ───────────────────────────── Catégories ────────────────────────────── */
@@ -242,6 +299,7 @@ export function listTransactionsDetailed(userId: string, filter: TransactionFilt
       amount: transactions.amount,
       occurredAt: transactions.occurredAt,
       type: transactions.type,
+      channel: transactions.channel,
       accountName: accounts.name,
       categoryName: categories.name,
       transferAccountName: transferAcc.name,
@@ -290,6 +348,7 @@ export async function getTransactionById(userId: string, id: string) {
       amount: transactions.amount,
       occurredAt: transactions.occurredAt,
       type: transactions.type,
+      channel: transactions.channel,
       accountName: accounts.name,
       categoryName: categories.name,
       transferAccountName: transferAcc.name,
@@ -333,6 +392,8 @@ export interface TransactionWriteInput {
   categoryId: string | null
   transferAccountId: string | null
   occurredAt: string
+  // Canal de paiement ∈ liste fermée, ou null (Transfert). Validé en amont (parseTxnInput).
+  channel: string | null
 }
 
 export function createTransaction(userId: string, input: TransactionWriteInput) {

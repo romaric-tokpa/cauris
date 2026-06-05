@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { Icon } from '../primitives'
-import { signOut } from '../../lib/auth-client'
+import { signOut, useSession } from '../../lib/auth-client'
+import { initial, shortName } from '../../lib/userName'
 import { NAV_PILOTAGE, NAV_COMPTE, type NavItem } from './nav'
 import styles from './Sidebar.module.css'
 
@@ -22,6 +23,7 @@ function NavItems({ items }: { items: NavItem[] }) {
 
 /** Sidebar Cockpit (pattern A) — portée 1:1 de shell.jsx. */
 export function Sidebar({ className = '' }: { className?: string }) {
+  const name = useSession().data?.user?.name
   const onLogout = async () => {
     await signOut()
     // Rechargement complet pour repartir d'un état de session propre.
@@ -42,9 +44,9 @@ export function Sidebar({ className = '' }: { className?: string }) {
       <NavItems items={NAV_COMPTE} />
 
       <div className={`wf-card soft wf-pad-sm r ${styles.user}`}>
-        <div className="avatar sm">A</div>
+        <div className="avatar sm">{initial(name)}</div>
         <div className={styles.userMeta}>
-          <div className={styles.userName}>Aïcha K.</div>
+          <div className={styles.userName}>{shortName(name)}</div>
           <div className={`t-faint ${styles.userSub}`}>Compte personnel</div>
         </div>
         <button

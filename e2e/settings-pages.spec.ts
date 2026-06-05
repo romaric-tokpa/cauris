@@ -29,12 +29,13 @@ test('Catégories : créer → éditer → supprimer (libre) — 100 % UI', asyn
   await page.goto('/parametres/categories')
   await page.getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' })
 
-  // Créer.
+  // Créer (palette étendue : 11 couleurs cat-1..11 dont les verts « revenus »).
   await page.getByRole('button', { name: /Nouvelle catégorie/ }).click()
   const create = page.getByRole('dialog')
   await expect(create).toBeVisible()
+  await expect(create.getByRole('button', { name: /^Couleur cat-/ })).toHaveCount(11)
   await create.getByLabel('Nom de la catégorie').fill('Marché Cocody')
-  await create.getByRole('button', { name: 'Couleur cat-3' }).click()
+  await create.getByRole('button', { name: 'Couleur cat-9' }).click() // vert revenus étendu
   await create.getByRole('button', { name: /Créer la catégorie/ }).click()
   await expect(create).toBeHidden()
   await expect(page.getByText('Marché Cocody')).toBeVisible()
@@ -62,12 +63,17 @@ test('Profil : éditer le nom → le profil reflète le nouveau nom', async ({ p
   await page.goto('/parametres')
   await page.getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' })
 
+  // La sidebar (bloc bas) affiche le nom court dérivé de la session.
+  await expect(page.getByText('Aïcha K.', { exact: true })).toBeVisible()
+
   await expect(page.getByText('Aïcha Koné').first()).toBeVisible()
   await page.getByRole('button', { name: /Modifier/ }).first().click()
   const d = page.getByRole('dialog', { name: 'Modifier le profil' })
   await expect(d).toBeVisible()
-  await d.getByLabel('Nom affiché').fill('Aïcha N. Koné')
+  await d.getByLabel('Nom affiché').fill('Binta Traoré')
   await d.getByRole('button', { name: 'Enregistrer' }).click()
   await expect(d).toBeHidden()
-  await expect(page.getByText('Aïcha N. Koné').first()).toBeVisible()
+  // Le profil ET la sidebar reflètent le nouveau nom SANS rechargement (session réactive).
+  await expect(page.getByText('Binta Traoré').first()).toBeVisible()
+  await expect(page.getByText('Binta T.', { exact: true })).toBeVisible()
 })

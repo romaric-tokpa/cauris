@@ -41,6 +41,10 @@ import {
   createAccount,
   updateAccount,
   setAccountBlocked,
+  setAccountArchived,
+  countAccountReferences,
+  referencedAccountIds,
+  deleteAccount,
   computeAccountBalances,
   computeNetWorth,
   type AccountWriteInput,
@@ -163,7 +167,7 @@ function parseGoalInput(body: unknown): { input: GoalWriteInput } | { error: str
 }
 
 const CATEGORY_KINDS = new Set(['expense', 'income'])
-const COLOR_TOKEN = /^cat-[1-6]$/
+const COLOR_TOKEN = /^cat-(1[01]|[1-9])$/ // cat-1 … cat-11
 
 /** Valide l'écriture d'une catégorie : nom non vide, type dépense/revenu, couleur cat-1..6. */
 function parseCategoryInput(body: unknown): { input: CategoryWriteInput } | { error: string } {
@@ -936,6 +940,9 @@ api.post('/budgets/:id/unarchive', async (c) => {
  * dette « dérivation des agrégats », tranchée plus tard, cf. façade Phase 3). */
 
 const TXN_TYPES = ['Dépense', 'Revenu', 'Transfert', 'Récurrente']
+// Canal de paiement — liste FERMÉE (Lot B1). Tout hors-liste est rejeté (anti-fantôme).
+// Un Transfert (mouvement interne) n'a pas de canal → null.
+const TXN_CHANNELS = ['wave', 'orange_money', 'cash', 'banque']
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const intParam = (v?: string): number | undefined => {
   const n = v != null ? Number(v) : NaN
@@ -987,9 +994,20 @@ async function parseTxnInput(
     transferAccountId = t
   }
 
+  // Canal de paiement : null pour un Transfert (mouvement interne, aucun canal) ;
+  // sinon REQUIS et ∈ liste fermée (rejet du fantôme).
+  let channel: string | null = null
+  if (type !== 'Transfert') {
+    if (typeof b.channel !== 'string' || !TXN_CHANNELS.includes(b.channel))
+      return { error: 'Canal de paiement invalide.' }
+    channel = b.channel
+  }
+
   // Signe dérivé du type : seul Revenu est positif.
   const amount = type === 'Revenu' ? magnitude : -magnitude
-  return { input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt } }
+  return {
+    input: { type, label, note, amount, accountId, categoryId, transferAccountId, occurredAt, channel },
+  }
 }
 
 // Seule fréquence livrée (cf. wireframe « Chaque mois, le 1er ») — on rejette le
@@ -1048,7 +1066,7 @@ async function parseRecurrenceInput(
  * partir du flag `blocked`. (CLAUDE.md : solde masqué.)
  */
 type AccountRow = Awaited<ReturnType<typeof listAccounts>>[number]
-function maskAccount(a: AccountRow, derivedBalance: number) {
+function maskAccount(a: AccountRow, derivedBalance: number, deletable = false) {
   return {
     id: a.id,
     name: a.name,
@@ -1056,6 +1074,10 @@ function maskAccount(a: AccountRow, derivedBalance: number) {
     type: a.type,
     accountNumber: a.accountNumber,
     blocked: a.blocked,
+    archived: a.archived,
+    // `deletable` = aucune opération ne référence ce compte → suppression dure permise
+    // (sinon archiver). L'UI s'en sert pour n'afficher « Supprimer » que si c'est sûr.
+    deletable,
     balance: a.blocked ? null : derivedBalance,
   }
 }
@@ -1091,22 +1113,22 @@ function parseAccountInput(body: unknown): { input: AccountWriteInput } | { erro
 api.get('/accounts', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const [rows, months, balances] = await Promise.all([
-    listAccounts(userId),
+  const [rows, months, balances, referenced] = await Promise.all([
+    listAccounts(userId), // ACTIFS seulement (archivés sortent de la liste)
     listMonthlySummaries(userId),
     computeAccountBalances(userId),
+    referencedAccountIds(userId),
   ])
-  // Patrimoine total = Σ des soldes COURANTS dérivés (incl. bloqué), calculé SERVEUR :
-  // inclut Wave (fidèle au wireframe) sans jamais exposer son solde individuel. Un
-  // transfert interne (−X source, +X dest) laisse ce total INCHANGÉ.
+  // Patrimoine total = Σ des soldes COURANTS dérivés des comptes ACTIFS (incl. bloqué &
+  // masqué ; archivés EXCLUS). Un transfert interne (−X/+X) laisse ce total INCHANGÉ.
   let patrimoineTotal = 0
-  for (const v of balances.values()) patrimoineTotal += v
+  for (const a of rows) patrimoineTotal += balances.get(a.id) ?? 0
   // Spark = épargne CUMULÉE des mois — proxy RÉEL de la TENDANCE du patrimoine (pas
   // les soldes absolus mensuels ; le vrai historique de solde = chantier dédié futur).
   let cum = 0
   const patrimoineSpark = months.map((m) => (cum += m.epargne ?? 0))
   return c.json({
-    accounts: rows.map((a) => maskAccount(a, balances.get(a.id) ?? 0)),
+    accounts: rows.map((a) => maskAccount(a, balances.get(a.id) ?? 0, !referenced.has(a.id))),
     patrimoineTotal,
     patrimoineSpark,
   })
@@ -1184,11 +1206,15 @@ api.get('/accounts/:id', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const a = await getAccountById(userId, c.req.param('id'))
   if (!a) return c.json({ error: 'not found' }, 404)
-  const [recentTransactions, balances] = await Promise.all([
+  const [recentTransactions, balances, refCount] = await Promise.all([
     listTransactionsDetailed(userId, { accountId: a.id, limit: 5 }),
     computeAccountBalances(userId),
+    countAccountReferences(userId, a.id),
   ])
-  return c.json({ account: maskAccount(a, balances.get(a.id) ?? 0), recentTransactions })
+  return c.json({
+    account: maskAccount(a, balances.get(a.id) ?? 0, refCount === 0),
+    recentTransactions,
+  })
 })
 
 /* ───────────── Écritures comptes (création / édition / blocage) ─────────────
@@ -1203,9 +1229,9 @@ api.post('/accounts', async (c) => {
   const body: unknown = await c.req.json().catch(() => null)
   const parsed = parseAccountInput(body)
   if ('error' in parsed) return c.json({ error: parsed.error }, 400)
-  // Compte neuf = aucun mouvement → solde courant dérivé == solde initial saisi.
+  // Compte neuf = aucun mouvement → solde courant dérivé == solde initial saisi ; 0 réf.
   const [created] = await createAccount(userId, parsed.input)
-  return c.json({ account: maskAccount(created, created.balance) }, 201)
+  return c.json({ account: maskAccount(created, created.balance, true) }, 201)
 })
 
 // Édition. Appartenance → 404. RÉCONCILIATION (Modèle B, Q1) : la saisie « Solde
@@ -1225,8 +1251,9 @@ api.patch('/accounts/:id', async (c) => {
   const movementSum = (balances.get(id) ?? existing.balance) - existing.balance
   const initialBalance = parsed.input.balance - movementSum
   const [updated] = await updateAccount(userId, id, { ...parsed.input, balance: initialBalance })
+  const refCount = await countAccountReferences(userId, id)
   // Dérivé après update = initialBalance + movementSum = solde saisi.
-  return c.json({ account: maskAccount(updated, parsed.input.balance) })
+  return c.json({ account: maskAccount(updated, parsed.input.balance, refCount === 0) })
 })
 
 // Blocage. Appartenance → 404. Le solde dérivé est calculé mais masqué en sortie.
@@ -1236,8 +1263,11 @@ api.post('/accounts/:id/block', async (c) => {
   const existing = await getAccountById(userId, c.req.param('id'))
   if (!existing) return c.json({ error: 'not found' }, 404)
   const [updated] = await setAccountBlocked(userId, existing.id, true)
-  const balances = await computeAccountBalances(userId)
-  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0) })
+  const [balances, refCount] = await Promise.all([
+    computeAccountBalances(userId),
+    countAccountReferences(userId, existing.id),
+  ])
+  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0, refCount === 0) })
 })
 
 // Déblocage. Appartenance → 404.
@@ -1247,8 +1277,52 @@ api.post('/accounts/:id/unblock', async (c) => {
   const existing = await getAccountById(userId, c.req.param('id'))
   if (!existing) return c.json({ error: 'not found' }, 404)
   const [updated] = await setAccountBlocked(userId, existing.id, false)
+  const [balances, refCount] = await Promise.all([
+    computeAccountBalances(userId),
+    countAccountReferences(userId, existing.id),
+  ])
+  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0, refCount === 0) })
+})
+
+// Archivage (réversible) — un compte clôturé sort des listes ET du patrimoine, sans
+// perdre son historique. Appartenance → 404.
+api.post('/accounts/:id/archive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getAccountById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setAccountArchived(userId, existing.id, true)
   const balances = await computeAccountBalances(userId)
   return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0) })
+})
+
+// Réactivation. Appartenance → 404.
+api.post('/accounts/:id/unarchive', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getAccountById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const [updated] = await setAccountArchived(userId, existing.id, false)
+  const balances = await computeAccountBalances(userId)
+  return c.json({ account: maskAccount(updated, balances.get(updated.id) ?? 0) })
+})
+
+// Suppression DURE — autorisée UNIQUEMENT si AUCUNE opération ne référence le compte
+// (source ou destination) : on ne détruit jamais un historique → 409 (archiver plutôt).
+// Appartenance → 404. FK transactions.account_id RESTRICT = filet DB.
+api.delete('/accounts/:id', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const existing = await getAccountById(userId, c.req.param('id'))
+  if (!existing) return c.json({ error: 'not found' }, 404)
+  const refs = await countAccountReferences(userId, existing.id)
+  if (refs > 0)
+    return c.json(
+      { error: `Compte utilisé par ${refs} opération${refs > 1 ? 's' : ''} : archivez-le plutôt que de le supprimer.` },
+      409,
+    )
+  await deleteAccount(userId, existing.id)
+  return c.json({ ok: true })
 })
 
 // Liste filtrée + stats d'en-tête.

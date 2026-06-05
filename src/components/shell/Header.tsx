@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../primitives'
 import { ThemeControls } from '../../theme/ThemeControls'
 import { useUnreadCount } from '../../screens/notifications/useNotifications'
+import { useSession } from '../../lib/auth-client'
+import { initial } from '../../lib/userName'
 import styles from './Header.module.css'
 
 /** Header Cockpit — recherche, segment période (Jour/Semaine/Mois/Année, Mois actif,
@@ -11,6 +13,7 @@ export function Header({ className = '' }: { className?: string }) {
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const navigate = useNavigate()
   const unreadCount = useUnreadCount()
+  const name = useSession().data?.user?.name
   return (
     <header className={`r between ${styles.header} ${className}`}>
       <div className={`field ${styles.search}`}>
@@ -35,8 +38,9 @@ export function Header({ className = '' }: { className?: string }) {
           <button type="button" aria-pressed={false} disabled title="Bientôt disponible">
             Semaine
           </button>
+          {/* Mois actif rendu visible (mois de réf. de l'app) — honnêteté du contexte. */}
           <button type="button" className="on" aria-pressed={true}>
-            Mois
+            Mois · Mai 2026
           </button>
           <button type="button" aria-pressed={false} disabled title="Bientôt disponible">
             Année
@@ -64,7 +68,7 @@ export function Header({ className = '' }: { className?: string }) {
           {unreadCount > 0 && <span className="dot" />}
         </button>
 
-        <div className="avatar">A</div>
+        <div className="avatar">{initial(name)}</div>
       </div>
 
       <ThemeControls open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
