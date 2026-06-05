@@ -6,7 +6,7 @@ import { Dashboard } from '../screens/dashboard'
 import { Transactions } from '../screens/transactions'
 import { Budgets, BudgetDetail } from '../screens/budgets'
 import { Objectifs, ObjectifDetail } from '../screens/objectifs'
-import { Comptes, ComptesDetail } from '../screens/comptes'
+import { Comptes, ComptesDetail, EnvelopeView } from '../screens/comptes'
 import { Pret } from '../screens/pret'
 import { Analytics } from '../screens/analytics'
 import { Notifications } from '../screens/notifications'
@@ -61,6 +61,7 @@ const appRoutes: RouteObject[] = [
   { path: 'budgets/:id', element: <BudgetDetail /> },
   { path: 'objectifs/:id', element: <ObjectifDetail /> },
   { path: 'comptes/:id', element: <ComptesDetail /> },
+  { path: 'comptes/:id/enveloppe', element: <EnvelopeView /> },
   // Onglets du module IA (AISub) — pages pleines sous le shell.
   { path: 'assistant-ia/previsions', element: <Previsions /> },
   { path: 'assistant-ia/anomalies', element: <Anomalies /> },

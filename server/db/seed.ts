@@ -2,13 +2,14 @@ import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { eq, and } from 'drizzle-orm'
 import { db, client } from './client'
-import { computeAccountBalances, computeNetWorth } from './queries'
+import { computeAccountBalances, computeNetWorth, computeDisplayTotal } from './queries'
 import { auth } from '../auth'
 import { user } from './auth-schema'
 import {
   accounts,
   categories,
   transactions,
+  envelopes,
   budgets,
   goals,
   contributions,
@@ -105,12 +106,14 @@ async function seed() {
   const uid = await resolveDemoUser()
   await purge(uid)
 
-  /* ── Comptes (comptesFull) — Σ = 2 480 000, Wave bloqué ── */
+  /* ── Comptes (comptesFull) — affichage « Solde total » = 2 480 000 (hors Espèces),
+     patrimoine complet = 2 518 000 (Espèces incluse). Wave bloqué ── */
   const acc = {
     courant: randomUUID(),
     epargne: randomUUID(),
     om: randomUUID(),
     wave: randomUUID(),
+    especes: randomUUID(),
   }
   // Modèle B : `balance` = solde INITIAL. Posé à 0 ici puis BACK-CALCULÉ après l'insert
   // des transactions (cf. plus bas) pour que le solde DÉRIVÉ reproduise les cibles wireframe.
@@ -159,7 +162,30 @@ async function seed() {
       blocked: true,
       sort: 3,
     },
+    {
+      // Espèces — mode enveloppe (Lot B4). Solde 38 000 (= reste de l'enveloppe), SANS
+      // transaction (aucune pollution des dépenses/catégories de mai). Hors « Solde total »
+      // d'affichage mais DANS le patrimoine complet (computeNetWorth).
+      id: acc.especes,
+      userId: uid,
+      name: 'Espèces',
+      bank: 'Enveloppe · mode allégé',
+      type: 'Espèces',
+      accountNumber: '••',
+      balance: 38000,
+      blocked: false,
+      sort: 4,
+    },
   ])
+
+  // Enveloppe cash : plafond 100 000, reste dérivé 38 000 ⇒ dépensé 62 000 (cap − left).
+  await db.insert(envelopes).values({
+    userId: uid,
+    accountId: acc.especes,
+    cap: 100000,
+    period: '2026-05',
+    lastReconciledAt: '2026-05-24',
+  })
 
   /* ── Catégories : 6 donut (cat-1..6, ordre wireframe) + Revenu/Transfert/Retrait ── */
   const cat = {
@@ -294,6 +320,7 @@ async function seed() {
     epargne: 'banque',
     om: 'orange_money',
     wave: 'wave',
+    especes: 'cash', // (aucune transaction Espèces seedée — clé requise par le type)
   }
   await db.insert(transactions).values(
     rows.map((r) => ({
@@ -314,8 +341,9 @@ async function seed() {
      ⇒ initial = cible − Σ(mouvements). Σ(mouvements) calculé en mémoire depuis `rows`
      (même règle que computeAccountBalances : leg propre + leg destination du transfert ;
      les contributions NE comptent PAS — statu quo Phase 7). */
-  const TARGET: Record<Acc, number> = { courant: 1120000, epargne: 980000, om: 245000, wave: 135000 }
-  const movement: Record<Acc, number> = { courant: 0, epargne: 0, om: 0, wave: 0 }
+  // Espèces : pas de transaction → mouvement 0, cible = son solde direct 38 000 (back-calc neutre).
+  const TARGET: Record<Acc, number> = { courant: 1120000, epargne: 980000, om: 245000, wave: 135000, especes: 38000 } // prettier-ignore
+  const movement: Record<Acc, number> = { courant: 0, epargne: 0, om: 0, wave: 0, especes: 0 }
   for (const r of rows) {
     movement[r.a] += r.m
     if (r.tr) movement[r.tr] += -r.m
@@ -691,8 +719,14 @@ async function seed() {
   check('Solde dérivé — Épargne', derived.get(acc.epargne) === 980000, `${derived.get(acc.epargne)} = 980 000`) // prettier-ignore
   check('Solde dérivé — Orange Money', derived.get(acc.om) === 245000, `${derived.get(acc.om)} = 245 000`) // prettier-ignore
   check('Solde dérivé — Wave', derived.get(acc.wave) === 135000, `${derived.get(acc.wave)} = 135 000`) // prettier-ignore
+  check('Solde dérivé — Espèces', derived.get(acc.especes) === 38000, `${derived.get(acc.especes)} = 38 000`) // prettier-ignore
+  // Lot B4 — DISTINCTION assertée : agrégat d'affichage (hors enveloppe) ≠ patrimoine complet.
   const net = await computeNetWorth(uid)
-  check('Patrimoine (Σ soldes dérivés)', net === 2480000, `${net} = 2 480 000`)
+  check('Patrimoine COMPLET (cash inclus)', net === 2518000, `${net} = 2 518 000`)
+  const displayTotal = await computeDisplayTotal(uid)
+  check('Solde total AFFICHAGE (hors enveloppe)', displayTotal === 2480000, `${displayTotal} = 2 480 000`)
+  // Enveloppe : dépensé = cap − reste = 100 000 − 38 000.
+  check('Enveloppe espèces — dépensé (cap − left)', 100000 - (derived.get(acc.especes) ?? 0) === 62000, `${100000 - (derived.get(acc.especes) ?? 0)} = 62 000`) // prettier-ignore
 
   /* — DÉRIVABILITÉ : le ledger de MAI somme EXACTEMENT aux totaux (preuve que la
      façade pourra dériver). Transferts exclus des revenus/dépenses. — */

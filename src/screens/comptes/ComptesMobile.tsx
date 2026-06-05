@@ -96,7 +96,11 @@ export function ComptesMobile({ data, tab, setTab, onAdd, className = '' }: Prop
             c.blocked ? (
               <div key={c.id}>{card(c)}</div>
             ) : (
-              <Link to={`/comptes/${c.id}`} className="card-link-reset" key={c.id}>
+              <Link
+                to={c.type === 'Espèces' ? `/comptes/${c.id}/enveloppe` : `/comptes/${c.id}`}
+                className="card-link-reset"
+                key={c.id}
+              >
                 {card(c)}
               </Link>
             ),

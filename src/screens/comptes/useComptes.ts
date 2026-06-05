@@ -13,6 +13,8 @@ export interface AccountRow {
   archived: boolean
   /** Vrai si aucune opération ne référence le compte → suppression dure permise (sinon archiver). */
   deletable: boolean
+  /** Vrai si le compte est en mode enveloppe (cash allégé) → entrée « Mode enveloppe ». */
+  envelope: boolean
   balance: number | null
 }
 
@@ -97,4 +99,57 @@ export function useCompteMutations() {
     onSuccess: invalidate,
   })
   return { create, update, block, unblock, archive, unarchive, remove }
+}
+
+/* ─────────────────────────── Enveloppes cash (Lot B4) ─────────────────────── */
+
+/** Enveloppe d'un compte : `left`/`spent` DÉRIVÉS serveur (left = solde, spent = cap − left). */
+export interface EnvelopeRow {
+  id: string
+  accountId: string
+  accountName: string
+  cap: number
+  period: string
+  lastReconciledAt: string | null
+  left: number
+  spent: number
+}
+
+/** Enveloppe d'un compte (ou `null` si le compte n'en a pas → état « à activer »). */
+export function useEnvelope(accountId: string) {
+  return useQuery({
+    queryKey: ['envelope', accountId],
+    queryFn: () =>
+      apiFetch<{ envelope: EnvelopeRow | null }>(`/api/accounts/${accountId}/envelope`).then(
+        (r) => r.envelope,
+      ),
+  })
+}
+
+export function useEnvelopeMutations(accountId: string) {
+  const qc = useQueryClient()
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['envelope', accountId] })
+    void qc.invalidateQueries({ queryKey: ['comptes'] })
+    void qc.invalidateQueries({ queryKey: ['accounts'] })
+    void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    void qc.invalidateQueries({ queryKey: ['transactions'] })
+  }
+  // Active le mode enveloppe sur le compte (plafond périodique).
+  const create = useMutation({
+    mutationFn: (cap: number) =>
+      apiMutate<{ envelope: EnvelopeRow }>(`/api/accounts/${accountId}/envelope`, 'POST', { cap }),
+    onSuccess: invalidate,
+  })
+  // Réconciliation : « il me reste X » → dépense agrégée (left − X) au ledger + MAJ date.
+  const reconcile = useMutation({
+    mutationFn: (remaining: number) =>
+      apiMutate<{ envelope: EnvelopeRow; spend: number }>(
+        `/api/accounts/${accountId}/envelope/reconcile`,
+        'POST',
+        { remaining },
+      ),
+    onSuccess: invalidate,
+  })
+  return { create, reconcile }
 }

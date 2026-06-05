@@ -17,6 +17,7 @@ import {
   categories,
   categorySummaries,
   contributions,
+  envelopes,
   goals,
   loanPayments,
   loans,
@@ -132,6 +133,62 @@ export async function computeNetWorth(userId: string): Promise<number> {
   let total = 0
   for (const a of active) total += balances.get(a.id) ?? 0
   return total
+}
+
+/** Comptes ACTIFS portant une enveloppe (cash mode allégé) → exclus de l'AGRÉGAT D'AFFICHAGE. */
+export async function envelopeAccountIds(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ accountId: envelopes.accountId })
+    .from(envelopes)
+    .where(eq(envelopes.userId, userId))
+  return new Set(rows.map((r) => r.accountId))
+}
+
+/**
+ * AGRÉGAT D'AFFICHAGE « Solde total » (fidélité wireframe) = Σ soldes dérivés des comptes
+ * actifs **hors enveloppe**. ⚠ Ce n'est PAS le patrimoine comptable : `computeNetWorth`
+ * reste la vérité complète (cash inclus) pour le coach / la trésorerie. Distinction
+ * documentée et assertée (display 2 480 000 ≠ patrimoine complet 2 518 000).
+ */
+export async function computeDisplayTotal(userId: string): Promise<number> {
+  const [balances, active, envIds] = await Promise.all([
+    computeAccountBalances(userId),
+    listAccounts(userId),
+    envelopeAccountIds(userId),
+  ])
+  let total = 0
+  for (const a of active) if (!envIds.has(a.id)) total += balances.get(a.id) ?? 0
+  return total
+}
+
+/** Enveloppe d'un compte (ou null) — scopée. */
+export async function getEnvelopeByAccountId(userId: string, accountId: string) {
+  const rows = await db
+    .select()
+    .from(envelopes)
+    .where(and(eq(envelopes.userId, userId), eq(envelopes.accountId, accountId)))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export interface EnvelopeWriteInput {
+  accountId: string
+  cap: number
+  period: string
+  lastReconciledAt: string | null
+}
+
+export function createEnvelope(userId: string, input: EnvelopeWriteInput) {
+  return db.insert(envelopes).values({ userId, ...input }).returning()
+}
+
+/** Marque la réconciliation (date) — scopée. La dépense agrégée est une transaction à part. */
+export function setEnvelopeReconciled(userId: string, id: string, date: string) {
+  return db
+    .update(envelopes)
+    .set({ lastReconciledAt: date })
+    .where(and(eq(envelopes.id, id), eq(envelopes.userId, userId)))
+    .returning()
 }
 
 /** Archivage / réactivation scopé (réversible — l'archivé sort des listes & du patrimoine). */

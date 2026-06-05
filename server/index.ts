@@ -47,6 +47,10 @@ import {
   deleteAccount,
   computeAccountBalances,
   computeNetWorth,
+  envelopeAccountIds,
+  getEnvelopeByAccountId,
+  createEnvelope,
+  setEnvelopeReconciled,
   type AccountWriteInput,
   listGoals,
   listContributions,
@@ -253,7 +257,7 @@ api.get('/dashboard', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const month = c.req.query('month') ?? DEMO_MONTH
 
-  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, recent, cats, notifs, loanRows, balances] =
+  const [accountsRows, summary, months, breakdown, budgetRows, goalRows, recent, cats, notifs, loanRows, balances, envIds] =
     await Promise.all([
       listAccounts(userId),
       getMonthlySummary(userId, month),
@@ -266,11 +270,13 @@ api.get('/dashboard', async (c) => {
       listNotifications(userId),
       listLoans(userId),
       computeAccountBalances(userId),
+      envelopeAccountIds(userId),
     ])
 
-  // « Solde total » = Σ soldes COURANTS dérivés (Modèle B). Bouge à chaque mouvement.
+  // « Solde total » = AGRÉGAT D'AFFICHAGE wireframe : Σ soldes dérivés HORS enveloppe
+  // (le cash allégé est suivi à part). ≠ patrimoine complet (computeNetWorth, coach).
   let total = 0
-  for (const v of balances.values()) total += v
+  for (const a of accountsRows) if (!envIds.has(a.id)) total += balances.get(a.id) ?? 0
   const depenses = summary?.depenses ?? 0
 
   // Delta solde : valeur EXACTE du wireframe, stockée en dixièmes (32) → % (3,2).
@@ -315,9 +321,12 @@ api.get('/dashboard', async (c) => {
     categoryName: t.categoryId ? (catName.get(t.categoryId) ?? '') : '',
   }))
 
-  // Solde d'un compte bloqué masqué AUSSI ici (cohérence : jamais en clair). Soldes
-  // courants DÉRIVÉS (Modèle B) ; le KPI « Solde total » = Σ de ces dérivés.
-  const accounts = accountsRows.map((a) => maskAccount(a, balances.get(a.id) ?? 0))
+  // Widget comptes du dashboard = comptes hors enveloppe (cohérent avec le « Solde total »
+  // d'affichage ; le cash allégé vit sur l'écran Comptes / son enveloppe dédiée). Solde
+  // bloqué masqué AUSSI ici (jamais en clair).
+  const accounts = accountsRows
+    .filter((a) => !envIds.has(a.id))
+    .map((a) => maskAccount(a, balances.get(a.id) ?? 0))
 
   const lr = loanRows[0] ?? null
   const loan = lr
@@ -1066,7 +1075,7 @@ async function parseRecurrenceInput(
  * partir du flag `blocked`. (CLAUDE.md : solde masqué.)
  */
 type AccountRow = Awaited<ReturnType<typeof listAccounts>>[number]
-function maskAccount(a: AccountRow, derivedBalance: number, deletable = false) {
+function maskAccount(a: AccountRow, derivedBalance: number, deletable = false, envelope = false) {
   return {
     id: a.id,
     name: a.name,
@@ -1078,6 +1087,8 @@ function maskAccount(a: AccountRow, derivedBalance: number, deletable = false) {
     // `deletable` = aucune opération ne référence ce compte → suppression dure permise
     // (sinon archiver). L'UI s'en sert pour n'afficher « Supprimer » que si c'est sûr.
     deletable,
+    // `envelope` = compte en mode enveloppe (cash allégé) → l'UI affiche « Mode enveloppe ».
+    envelope,
     balance: a.blocked ? null : derivedBalance,
   }
 }
@@ -1113,22 +1124,26 @@ function parseAccountInput(body: unknown): { input: AccountWriteInput } | { erro
 api.get('/accounts', async (c) => {
   const userId = await getSessionUserId(c.req.raw.headers)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
-  const [rows, months, balances, referenced] = await Promise.all([
+  const [rows, months, balances, referenced, envIds] = await Promise.all([
     listAccounts(userId), // ACTIFS seulement (archivés sortent de la liste)
     listMonthlySummaries(userId),
     computeAccountBalances(userId),
     referencedAccountIds(userId),
+    envelopeAccountIds(userId),
   ])
-  // Patrimoine total = Σ des soldes COURANTS dérivés des comptes ACTIFS (incl. bloqué &
-  // masqué ; archivés EXCLUS). Un transfert interne (−X/+X) laisse ce total INCHANGÉ.
+  // « Solde total » = AGRÉGAT D'AFFICHAGE wireframe : Σ soldes dérivés des comptes actifs
+  // HORS enveloppe (cash allégé suivi à part). ≠ patrimoine complet (computeNetWorth).
+  // Un transfert interne (−X/+X) laisse ce total INCHANGÉ.
   let patrimoineTotal = 0
-  for (const a of rows) patrimoineTotal += balances.get(a.id) ?? 0
+  for (const a of rows) if (!envIds.has(a.id)) patrimoineTotal += balances.get(a.id) ?? 0
   // Spark = épargne CUMULÉE des mois — proxy RÉEL de la TENDANCE du patrimoine (pas
   // les soldes absolus mensuels ; le vrai historique de solde = chantier dédié futur).
   let cum = 0
   const patrimoineSpark = months.map((m) => (cum += m.epargne ?? 0))
   return c.json({
-    accounts: rows.map((a) => maskAccount(a, balances.get(a.id) ?? 0, !referenced.has(a.id))),
+    accounts: rows.map((a) =>
+      maskAccount(a, balances.get(a.id) ?? 0, !referenced.has(a.id), envIds.has(a.id)),
+    ),
     patrimoineTotal,
     patrimoineSpark,
   })
@@ -1323,6 +1338,103 @@ api.delete('/accounts/:id', async (c) => {
     )
   await deleteAccount(userId, existing.id)
   return c.json({ ok: true })
+})
+
+/* ──────────── Enveloppes cash (Lot B4) — suivi allégé + réconciliation ────────────
+ * `left` = solde dérivé du compte (Modèle B) ; `spent` = cap − left. La réconciliation
+ * (« il me reste X ») enregistre UNE dépense cash réelle au ledger — validée explicitement
+ * côté UI. Scopées session + appartenance (SELECT → 404). */
+
+const isoToday = (): string => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Détail enveloppe d'un compte (left/spent dérivés). 404 si compte non possédé / sans enveloppe.
+api.get('/accounts/:id/envelope', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const account = await getAccountById(userId, id)
+  if (!account) return c.json({ error: 'not found' }, 404)
+  const env = await getEnvelopeByAccountId(userId, id)
+  // Compte possédé mais SANS enveloppe = état vide (à activer), pas une erreur → 200 null.
+  if (!env) return c.json({ envelope: null })
+  const balances = await computeAccountBalances(userId)
+  const left = balances.get(id) ?? 0
+  return c.json({
+    envelope: {
+      id: env.id,
+      accountId: id,
+      accountName: account.name,
+      cap: env.cap,
+      period: env.period,
+      lastReconciledAt: env.lastReconciledAt,
+      left,
+      spent: env.cap - left,
+    },
+  })
+})
+
+// Création d'une enveloppe (1 par compte). Scopée + appartenance.
+api.post('/accounts/:id/envelope', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const account = await getAccountById(userId, id)
+  if (!account) return c.json({ error: 'not found' }, 404)
+  if (await getEnvelopeByAccountId(userId, id))
+    return c.json({ error: 'Ce compte a déjà une enveloppe.' }, 409)
+  const body: unknown = await c.req.json().catch(() => null)
+  const b = (body ?? {}) as Record<string, unknown>
+  if (typeof b.cap !== 'number' || !Number.isInteger(b.cap) || b.cap <= 0)
+    return c.json({ error: 'Plafond : entier FCFA strictement positif requis.' }, 400)
+  const period = typeof b.period === 'string' && /^\d{4}-\d{2}$/.test(b.period) ? b.period : DEMO_MONTH
+  const [created] = await createEnvelope(userId, {
+    accountId: id,
+    cap: b.cap,
+    period,
+    lastReconciledAt: null,
+  })
+  return c.json({ envelope: created }, 201)
+})
+
+// Réconciliation : « il me reste X » → dépense agrégée (left − X) au ledger + MAJ date.
+api.post('/accounts/:id/envelope/reconcile', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const id = c.req.param('id')
+  const account = await getAccountById(userId, id)
+  if (!account) return c.json({ error: 'not found' }, 404)
+  const env = await getEnvelopeByAccountId(userId, id)
+  if (!env) return c.json({ error: 'not found' }, 404)
+  const body: unknown = await c.req.json().catch(() => null)
+  const b = (body ?? {}) as Record<string, unknown>
+  if (typeof b.remaining !== 'number' || !Number.isInteger(b.remaining) || b.remaining < 0)
+    return c.json({ error: 'Reste : entier FCFA positif ou nul requis.' }, 400)
+  const balances = await computeAccountBalances(userId)
+  const left = balances.get(id) ?? 0
+  // Garde honnête : on ne peut pas « rester » plus que le solde connu (sinon ce n'est
+  // pas une dépense). Un ajustement à la hausse relève d'une autre opération.
+  if (b.remaining > left)
+    return c.json({ error: 'Le reste déclaré dépasse le solde connu de l’enveloppe.' }, 400)
+  const spend = left - b.remaining
+  const today = isoToday()
+  // Dépense cash réelle (Modèle B : le mouvement vit dans le ledger, pas de double-écriture).
+  if (spend > 0)
+    await createTransaction(userId, {
+      type: 'Dépense',
+      label: 'Réconciliation espèces',
+      note: null,
+      amount: -spend,
+      accountId: id,
+      categoryId: null,
+      transferAccountId: null,
+      occurredAt: today,
+      channel: 'cash',
+    })
+  const [updated] = await setEnvelopeReconciled(userId, env.id, today)
+  return c.json({ envelope: updated, spend })
 })
 
 // Liste filtrée + stats d'en-tête.

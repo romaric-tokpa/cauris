@@ -190,6 +190,30 @@ export const contributions = sqliteTable(
   ],
 )
 
+/* ──────────────────── Enveloppes cash (Lot B4) ───────────────────── */
+// Suivi « allégé » d'un compte espèces : un PLAFOND périodique + une réconciliation
+// (l'utilisateur déclare le reste → l'app enregistre la dépense agrégée au ledger).
+// `spent`/`left` ne sont PAS stockés : DÉRIVÉS (Modèle B) — `left` = solde dérivé du
+// compte, `spent` = cap − left. 1 enveloppe par compte (unique account_id).
+export const envelopes = sqliteTable(
+  'envelopes',
+  {
+    id: pk(),
+    userId: userId(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    cap: integer('cap').notNull(), // plafond périodique (entier FCFA)
+    period: text('period').notNull(), // YYYY-MM
+    lastReconciledAt: text('last_reconciled_at'), // YYYY-MM-DD | null
+    ...timestamps(),
+  },
+  (t) => [
+    index('envelopes_user_idx').on(t.userId),
+    unique('envelopes_account_uq').on(t.accountId),
+  ],
+)
+
 /* ────────────────────────────── Prêts ────────────────────────────── */
 export const loans = sqliteTable(
   'loans',
@@ -346,9 +370,14 @@ export const categorySummaries = sqliteTable(
 )
 
 /* ──────────────────────────── Relations ──────────────────────────── */
-export const accountsRelations = relations(accounts, ({ many }) => ({
+export const accountsRelations = relations(accounts, ({ many, one }) => ({
   transactions: many(transactions),
   contributions: many(contributions),
+  envelope: one(envelopes, { fields: [accounts.id], references: [envelopes.accountId] }),
+}))
+
+export const envelopesRelations = relations(envelopes, ({ one }) => ({
+  account: one(accounts, { fields: [envelopes.accountId], references: [accounts.id] }),
 }))
 
 export const categoriesRelations = relations(categories, ({ many }) => ({

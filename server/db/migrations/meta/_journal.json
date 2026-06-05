@@ -78,6 +78,13 @@
       "when": 1780647818908,
       "tag": "0010_furry_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1780658759285,
+      "tag": "0011_happy_logan",
+      "breakpoints": true
     }
   ]
 }

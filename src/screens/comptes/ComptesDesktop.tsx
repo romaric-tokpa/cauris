@@ -124,6 +124,10 @@ export function ComptesDesktop({ data, tab, setTab, onAdd, onToggleBlock, classN
                   >
                     Débloquer <Icon name="unlock" size={13} />
                   </button>
+                ) : c.type === 'Espèces' ? (
+                  <Link to={`/comptes/${c.id}/enveloppe`} className="card-link">
+                    Mode enveloppe <Icon name="chevron" size={13} />
+                  </Link>
                 ) : (
                   <Link to={`/comptes/${c.id}`} className="card-link">
                     Voir les opérations <Icon name="chevron" size={13} />

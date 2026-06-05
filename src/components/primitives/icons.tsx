@@ -303,6 +303,17 @@ export const ICONS = {
       <path d="M10.5 18.5h3" />
     </>
   ),
+  // Réglages de suivi du cash (Lot B4) — curseurs/égaliseur (absent du jeu wireframe).
+  sliders: (
+    <>
+      <path d="M4 7h7M15 7h5" />
+      <circle cx="13" cy="7" r="2" />
+      <path d="M4 12h9M17 12h3" />
+      <circle cx="15" cy="12" r="2" />
+      <path d="M4 17h5M13 17h7" />
+      <circle cx="11" cy="17" r="2" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>
 
 export type IconName = keyof typeof ICONS
