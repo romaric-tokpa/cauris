@@ -39,3 +39,20 @@ test('GET /api/budgets (+ archivés) → 200', async ({ request }) => {
   expect((await request.get('/api/budgets')).status()).toBe(200)
   expect((await request.get('/api/budgets?archived=true')).status()).toBe(200)
 })
+
+test('GET /api/coach/context → 200 + structure (assemblage C4)', async ({ request }) => {
+  const d = await ok(await request.get('/api/coach/context'))
+  for (const k of ['accounts', 'recurrences', 'budgets', 'goals', 'months', 'cashEnvelope']) {
+    expect(d, `clé manquante: ${k}`).toHaveProperty(k)
+  }
+  expect(Array.isArray(d.accounts)).toBeTruthy()
+  // Aïcha a une enveloppe Espèces (B4) → cashEnvelope non nul, daté.
+  expect(d.cashEnvelope).not.toBeNull()
+})
+
+test('GET /api/coach/context sans session → 401', async ({ playwright }) => {
+  // storageState vide explicite : sinon le contexte hérite de la session Aïcha (smoke).
+  const anon = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } })
+  expect((await anon.get('/api/coach/context')).status()).toBe(401)
+  await anon.dispose()
+})

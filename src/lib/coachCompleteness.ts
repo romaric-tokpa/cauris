@@ -32,6 +32,16 @@ export const COMPLETENESS_THRESHOLDS = {
   maxReconcileDays: 7,
 } as const
 
+/** Libellés des 6 axes (pour la checklist de complétude C4). Doivent matcher `axes()`. */
+export const COMPLETENESS_AXIS_LABELS = {
+  comptes: 'Comptes renseignés',
+  historique: "Profondeur d'historique",
+  chargesFixes: 'Charges fixes déclarées',
+  cash: 'Cash réconcilié',
+  budgets: 'Budgets définis',
+  objectifs: 'Objectifs avec échéance',
+} as const
+
 export interface CompletenessInput {
   accountsCount: number
   /** Nb de mois disposant de données (profondeur d'historique). */

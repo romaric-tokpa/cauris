@@ -209,3 +209,333 @@
 .bubbleSm {
   font-size: 12.5px;
 }
+
+/* ───────────────────────── Coach (Lot C4) ───────────────────────── */
+.coachHead {
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.qbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+.qChoices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qChoice {
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.coachSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skelCard {
+  height: 180px;
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+.coachError {
+  gap: 12px;
+  align-items: center;
+}
+
+.coachGrid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.coachMain,
+.coachRail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .coachGrid {
+    grid-template-columns: 1fr;
+  }
+  .qChoices {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qEcho {
+  gap: 12px;
+  align-items: flex-start;
+}
+.qEchoText {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+/* 4 couches */
+.fourHead {
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.fourTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.transparence {
+  gap: 6px;
+  font-size: 11.5px;
+}
+.layers {
+  display: flex;
+  flex-direction: column;
+}
+.layer {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.layer:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+.ln {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--ink-soft);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex: none;
+}
+.lnReco {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.layerBody {
+  flex: 1;
+  min-width: 0;
+}
+.layerK {
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.layerText {
+  font-size: 13px;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.layerReco {
+  font-size: 13px;
+  margin-top: 5px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.confRow {
+  gap: 10px;
+  margin-top: 7px;
+  align-items: center;
+}
+.confbar {
+  flex: 1;
+}
+.confPct {
+  font-weight: 600;
+  font-size: 13px;
+}
+.optionsBlock {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.optionChips {
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+/* Complétude (rail) */
+.complHead {
+  margin-bottom: 12px;
+}
+.complRow {
+  gap: 16px;
+  align-items: center;
+}
+.complList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.complItem {
+  font-size: 12px;
+}
+.complLeft {
+  gap: 8px;
+  align-items: center;
+}
+.complDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.complOk {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.complWarn {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+/* Niveau d'intervention (rail) */
+.interSub,
+.matSub {
+  font-size: 11.5px;
+  margin: 4px 0 12px;
+}
+.levels {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.levelRow {
+  gap: 11px;
+  align-items: center;
+}
+.levelDim {
+  opacity: 0.5;
+}
+.levelBody {
+  flex: 1;
+}
+.levelL {
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.levelLActive {
+  font-weight: 700;
+}
+.lvl_none,
+.lvl_warn,
+.lvl_ok,
+.lvl_over {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+.lvl_none {
+  background: var(--panel-2);
+  color: var(--ink-soft);
+}
+.lvl_warn {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+.lvl_ok {
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.lvl_over {
+  background: var(--neg-wash);
+  color: var(--neg);
+}
+
+/* Maturité (rail) */
+.mat {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.matBar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+}
+.matBarOn {
+  background: var(--pos);
+}
+.matCur {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pos);
+}
+.matLbl {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+/* Ton non moralisateur (rail) */
+.tonCard {
+  gap: 12px;
+  align-items: flex-start;
+}
+.tonIco {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  background: var(--pos-wash);
+  color: var(--pos);
+}
+.tonTitle {
+  font-weight: 700;
+  font-size: 13px;
+}
+.tonText {
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+/* Dégradation : actions de fiabilisation */
+.reliabList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+.reliabTile {
+  gap: 11px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+}
+.reliabStatic {
+  opacity: 0.75;
+}
+.reliabIco {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+.reliabText {
+  flex: 1;
+  min-width: 0;
+}
+.reliabTitle {
+  font-weight: 700;
+  font-size: 13px;
+}

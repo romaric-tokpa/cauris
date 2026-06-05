@@ -161,6 +161,11 @@ export async function computeDisplayTotal(userId: string): Promise<number> {
   return total
 }
 
+/** Toutes les enveloppes du user (0 ou 1 en pratique) — scopée. */
+export function listEnvelopes(userId: string) {
+  return db.select().from(envelopes).where(eq(envelopes.userId, userId))
+}
+
 /** Enveloppe d'un compte (ou null) — scopée. */
 export async function getEnvelopeByAccountId(userId: string, accountId: string) {
   const rows = await db

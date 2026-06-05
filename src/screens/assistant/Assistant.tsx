@@ -1,24 +1,12 @@
-import { useSetPageTitle } from '../../components/shell/pageTitle'
-import { useAssistant } from './useAssistant'
-import { AssistantDesktop } from './AssistantDesktop'
-import { AssistantMobile } from './AssistantMobile'
-import styles from './assistant.module.css'
+import { Coach } from './Coach'
 
 /**
- * Écran Assistant IA (Phase 12, sous-bloc 1). Chat conversationnel branché sur
- * `/api/ai/chat` (stub déterministe pour l'instant). État local (le fil est
- * éphémère) partagé entre desktop et mobile via `useAssistant`. SUGGESTION ONLY :
- * l'écran n'affiche que du texte (+ barres lecture seule), aucun bouton n'exécute
- * d'action financière.
+ * Écran Assistant IA (Lot C4) — **Avis du coach** : question (liste fermée) → réponse
+ * « 4 couches » déterministe (verdict C1 + complétude C2 + reformulation C3), branchée
+ * aux vraies données (`/api/coach/context`). Remplace l'ancien chat libre (placeholder) ;
+ * Prévisions / Anomalies restent en sous-onglets. SUGGESTION ONLY : aucune action financière
+ * déclenchée — seules les actions de fiabilisation NAVIGUENT vers les écrans concernés.
  */
 export function Assistant() {
-  const state = useAssistant()
-  useSetPageTitle('Assistant')
-  return (
-    <>
-      <h1 className={styles.srOnly}>Assistant financier</h1>
-      <AssistantDesktop {...state} className={styles.desktop} />
-      <AssistantMobile {...state} className={styles.mobile} />
-    </>
-  )
+  return <Coach />
 }

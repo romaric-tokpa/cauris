@@ -48,6 +48,7 @@ import {
   computeAccountBalances,
   computeNetWorth,
   envelopeAccountIds,
+  listEnvelopes,
   getEnvelopeByAccountId,
   createEnvelope,
   setEnvelopeReconciled,
@@ -824,6 +825,35 @@ api.get('/ai/anomalies', async (c) => {
   const input: AnomalyInput = { month: DEMO_MONTH, candidates, recurring }
   const result = await askClaude({ mode: 'anomalies', context, anomalies: input })
   return c.json(result)
+})
+
+/* ───────────────────────────────── Coach (C4) ──────────────────────────────
+ * ASSEMBLAGE des données BRUTES pour le moteur de verdicts. Le serveur ne fait que
+ * RASSEMBLER (soldes dérivés Modèle B — Espèces INCLUS, cf. amendement B4 ; récurrences,
+ * budgets, objectifs, 6 mois, enveloppe). Le calcul C1→C2→C3 et la dérivation des DATES
+ * (jours depuis réconciliation, mois jusqu'à échéance, échéance ce mois) tournent CÔTÉ
+ * CLIENT (libs `src/lib`, aucune duplication) → on renvoie les dates BRUTES. Scopée session. */
+api.get('/coach/context', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+  const [balances, accts, recs, buds, gls, months, envs] = await Promise.all([
+    computeAccountBalances(userId),
+    listAccounts(userId),
+    listRecurrences(userId),
+    listBudgets(userId, DEMO_MONTH),
+    listGoals(userId),
+    listMonthlySummaries(userId),
+    listEnvelopes(userId),
+  ])
+  const env = envs[0] ?? null
+  return c.json({
+    accounts: accts.map((a) => ({ balance: balances.get(a.id) ?? 0, type: a.type, blocked: a.blocked })), // prettier-ignore
+    recurrences: recs.map((r) => ({ amount: r.amount, nextDate: r.nextDate, known: r.known })),
+    budgets: buds.map((b) => ({ cap: b.cap, spent: b.spent })),
+    goals: gls.map((g) => ({ target: g.targetAmount, current: g.currentAmount, targetDate: g.targetDate })), // prettier-ignore
+    months: months.map((m) => ({ month: m.month, epargne: m.epargne, depenses: m.depenses })),
+    cashEnvelope: env ? { accountId: env.accountId, lastReconciledAt: env.lastReconciledAt } : null,
+  })
 })
 
 /* ───────────────────────────────── Budgets ─────────────────────────────────

@@ -87,13 +87,13 @@ test('Prêt : « Simuler » ouvre le simulateur', async ({ page }) => {
   await expect(page.locator('.card-title:visible', { hasText: 'Paramètres du scénario' })).toBeVisible()
 })
 
-test('Assistant : le composer envoie la question (bulle utilisateur)', async ({ page }) => {
+test('Assistant (Coach) : la question afford recalcule l’avis (4 couches)', async ({ page }) => {
   await bootDesktop(page)
   await page.getByRole('link', { name: 'Assistant', exact: true }).click()
-  const composer = page.getByRole('textbox', { name: 'Votre question' })
-  await composer.fill('Combien ai-je dépensé ce mois-ci ?')
-  await composer.press('Enter')
-  await expect(
-    page.locator('.msg.u .bubble:visible', { hasText: 'Combien ai-je dépensé ce mois-ci ?' }),
-  ).toBeVisible()
+  // L'avis du coach (4 couches) s'affiche par défaut (question survive).
+  await expect(page.getByText('Réponse en 4 couches')).toBeVisible()
+  // La question fermée « Puis-je dépenser un montant ? » → saisie → recalcul réel.
+  await page.getByRole('button', { name: /Puis-je dépenser un montant/ }).click()
+  await page.locator('.inp.big input').fill('250000')
+  await expect(page.getByText(/Cet achat la ramènerait à/)).toBeVisible()
 })
