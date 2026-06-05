@@ -286,6 +286,23 @@ export const ICONS = {
       <circle cx="12" cy="12" r="2.6" />
     </>
   ),
+  // Note vocale (Lot B2) — micro, stop, smartphone : glyphes maison ajoutés (absents du
+  // jeu wireframe d'origine ; le wireframe capture les nomme `mic`/`stop`/`phone`).
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M6 11a6 6 0 0 0 12 0" />
+      <path d="M12 17v4" />
+      <path d="M9 21h6" />
+    </>
+  ),
+  stop: <rect x="7" y="7" width="10" height="10" rx="2.2" />,
+  phone: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M10.5 18.5h3" />
+    </>
+  ),
 } satisfies Record<string, ReactElement>
 
 export type IconName = keyof typeof ICONS

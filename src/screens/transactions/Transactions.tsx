@@ -9,7 +9,10 @@ import { TxnDesktop } from './TxnDesktop'
 import { TxnMobile } from './TxnMobile'
 import { RecurrencesDesktop, RecurrencesMobile } from './Recurrences'
 import { TransactionForm } from './TransactionForm'
+import { VoiceCapture } from './VoiceCapture'
+import { ChatCapture } from './ChatCapture'
 import { RecurrenceForm } from './RecurrenceForm'
+import type { VoicePrefill } from '../../lib/voiceStub'
 import styles from './transactions.module.css'
 
 /** Vrai en dessous du breakpoint shell (mobile) — choisit Drawer vs BottomSheet. */
@@ -75,6 +78,10 @@ export function Transactions() {
   const isMobile = useIsMobile()
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<TxnRow | undefined>(undefined)
+  // Capture vocale (Lot B2) : le drawer d'ajout bascule entre le formulaire et le flux
+  // vocal ; `prefill` porte le brouillon dicté quand l'utilisateur choisit « Corriger ».
+  const [captureMode, setCaptureMode] = useState<'form' | 'voice' | 'chat'>('form')
+  const [prefill, setPrefill] = useState<VoicePrefill | undefined>(undefined)
   // Drawer récurrence (distinct du drawer transaction).
   const [recOpen, setRecOpen] = useState(false)
   const [recEditing, setRecEditing] = useState<RecurrenceRow | undefined>(undefined)
@@ -123,15 +130,26 @@ export function Transactions() {
 
   const openAdd = () => {
     setEditing(undefined)
+    setPrefill(undefined)
+    setCaptureMode('form')
     setFormOpen(true)
   }
   const openEdit = (row: TxnRow) => {
     setEditing(row)
+    setPrefill(undefined)
+    setCaptureMode('form')
     setFormOpen(true)
+  }
+  // Corriger : on quitte le flux vocal vers le formulaire pré-rempli avec le brouillon.
+  const onVoiceCorrect = (p: VoicePrefill) => {
+    setPrefill(p)
+    setCaptureMode('form')
   }
   const close = () => {
     setFormOpen(false)
     setEditing(undefined)
+    setPrefill(undefined)
+    setCaptureMode('form')
     if (newRequested) {
       setParams(
         (prev) => {
@@ -221,40 +239,60 @@ export function Transactions() {
       {/* Drawer transaction — se rend TOUJOURS quand on l'ouvre : si aucun compte
        *  n'existe, il explique pourquoi au lieu de laisser le bouton « Ajouter » muet
        *  (anti-inerte — un bouton agit ou se justifie, jamais cliquable sans effet). */}
-      {isMobile ? (
-        <BottomSheet open={formVisible} onClose={close} title={editing ? 'Modifier' : 'Ajouter'}>
-          {formReady ? (
-            <TransactionForm
-              key={editing?.id ?? 'new'}
-              initial={editing}
-              accounts={accounts}
-              categories={categories}
-              stacked
-              onClose={close}
-            />
-          ) : (
-            <NoAccountNotice onClose={close} />
-          )}
-        </BottomSheet>
-      ) : (
-        <Drawer
-          open={formVisible}
-          onClose={close}
-          title={editing ? 'Modifier la transaction' : 'Ajouter une transaction'}
-        >
-          {formReady ? (
-            <TransactionForm
-              key={editing?.id ?? 'new'}
-              initial={editing}
-              accounts={accounts}
-              categories={categories}
-              onClose={close}
-            />
-          ) : (
-            <NoAccountNotice onClose={close} />
-          )}
-        </Drawer>
-      )}
+      {(() => {
+        const isVoice = captureMode === 'voice'
+        const isChat = captureMode === 'chat'
+        const title = isVoice
+          ? 'Note vocale'
+          : isChat
+            ? 'Langage naturel'
+            : isMobile
+              ? editing
+                ? 'Modifier'
+                : 'Ajouter'
+              : editing
+                ? 'Modifier la transaction'
+                : 'Ajouter une transaction'
+        const body = !formReady ? (
+          <NoAccountNotice onClose={close} />
+        ) : isVoice ? (
+          <VoiceCapture
+            accounts={accounts}
+            categories={categories}
+            onCorrect={onVoiceCorrect}
+            onClose={close}
+          />
+        ) : isChat ? (
+          <ChatCapture
+            accounts={accounts}
+            categories={categories}
+            onCorrect={onVoiceCorrect}
+            onClose={close}
+          />
+        ) : (
+          <TransactionForm
+            key={editing?.id ?? (prefill ? 'voice-prefill' : 'new')}
+            initial={editing}
+            prefill={prefill}
+            accounts={accounts}
+            categories={categories}
+            stacked={isMobile}
+            onClose={close}
+            // Entrées capture visibles à la création seulement (pas en édition).
+            onVoice={editing ? undefined : () => setCaptureMode('voice')}
+            onChat={editing ? undefined : () => setCaptureMode('chat')}
+          />
+        )
+        return isMobile ? (
+          <BottomSheet open={formVisible} onClose={close} title={title}>
+            {body}
+          </BottomSheet>
+        ) : (
+          <Drawer open={formVisible} onClose={close} title={title}>
+            {body}
+          </Drawer>
+        )
+      })()}
 
       {/* Drawer récurrence (Nouvelle / Modifier). */}
       {isMobile ? (

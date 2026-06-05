@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from '../../components/primitives'
+import { Icon, type IconName } from '../../components/primitives'
 import { Switch } from '../../components/ui'
 import { money } from '../../lib/money'
 import { MoneyInput, ErrorBanner } from '../onboarding/parts'
@@ -12,10 +12,39 @@ import {
   type CategoryRef,
   type TxnWritePayload,
 } from './useTransactions'
+import type { VoicePrefill } from '../../lib/voiceStub'
 import styles from './transactions.module.css'
 
 const BASE_TYPES = ['Dépense', 'Revenu', 'Transfert']
 const DEFAULT_DATE = '2026-05-31' // mois de démo
+
+/**
+ * Canaux de paiement — liste FERMÉE (Lot B1), 1:1 avec `D.canaux` du wireframe.
+ * Icônes : le wireframe utilise `card` pour Wave ET Orange Money (mobile money) et
+ * `cash`/`bank` pour les deux autres — substitution conservée telle quelle.
+ */
+const CHANNELS: { id: string; label: string; icon: IconName }[] = [
+  { id: 'wave', label: 'Wave', icon: 'card' },
+  { id: 'orange_money', label: 'Orange Money', icon: 'card' },
+  { id: 'cash', label: 'Cash', icon: 'cash' },
+  { id: 'banque', label: 'Banque', icon: 'bank' },
+]
+
+/**
+ * Canal par défaut DÉRIVÉ du compte source (un chip est toujours actif, fidèle au
+ * wireframe) : Espèces → cash ; nom/banque ~ Wave → wave ; ~ Orange → orange_money ;
+ * autre mobile money → wave (1er chip mobile) ; sinon banque. L'utilisateur peut
+ * surcharger au clic — le défaut ne se recale alors plus (cf. `channelTouched`).
+ */
+function defaultChannel(a: AccountRef | undefined): string {
+  if (!a) return 'cash'
+  const hay = `${a.name} ${a.bank}`.toLowerCase()
+  if (a.type === 'Espèces' || /esp[eè]ce|cash/.test(hay)) return 'cash'
+  if (/wave/.test(hay)) return 'wave'
+  if (/orange/.test(hay)) return 'orange_money'
+  if (a.type === 'Mobile money') return 'wave'
+  return 'banque'
+}
 
 /** `2026-05-31` → `2026-06-01` (1er du mois suivant, pour un transfert récurrent). */
 function firstOfNextMonth(iso: string): string {
@@ -35,19 +64,44 @@ interface FormState {
   occurredAt: string
   note: string
   recurring: boolean // transfert récurrent (création uniquement)
+  channel: string // canal de paiement (toujours valide en état ; null émis au submit si Transfert)
 }
 
-function initialState(initial: TxnRow | undefined, accounts: AccountRef[]): FormState {
+function initialState(
+  initial: TxnRow | undefined,
+  accounts: AccountRef[],
+  prefill?: VoicePrefill,
+): FormState {
+  // Pré-remplissage vocal (Lot B2) : on garde le compte VIDE s'il n'a pas été résolu
+  // (« compte à choisir ») et le canal DICTÉ tel quel (pas de re-dérivation).
+  if (prefill && !initial) {
+    return {
+      type: prefill.type,
+      label: prefill.label,
+      amount: prefill.amount,
+      accountId: prefill.accountId, // '' si non résolu → placeholder « Choisir un compte »
+      categoryId: prefill.categoryId,
+      transferAccountId: '',
+      occurredAt: prefill.occurredAt,
+      note: '',
+      recurring: false,
+      channel: prefill.channel,
+    }
+  }
+  const accountId = initial?.accountId ?? accounts[0]?.id ?? ''
   return {
     type: initial?.type ?? 'Dépense',
     label: initial?.label ?? '',
     amount: initial ? Math.abs(initial.amount) : 0,
-    accountId: initial?.accountId ?? accounts[0]?.id ?? '',
+    accountId,
     categoryId: initial?.categoryId ?? '',
     transferAccountId: initial?.transferAccountId ?? '',
     occurredAt: initial?.occurredAt ?? DEFAULT_DATE,
     note: initial?.note ?? '',
     recurring: false,
+    // Round-trip : un canal stocké (Dépense/Revenu) se pré-remplit ; sinon (Transfert
+    // → null, ou nouvelle saisie) on dérive du compte → un chip est toujours actif.
+    channel: initial?.channel ?? defaultChannel(accounts.find((a) => a.id === accountId)),
   }
 }
 
@@ -57,9 +111,9 @@ function initialState(initial: TxnRow | undefined, accounts: AccountRef[]): Form
  * (colonne unique). Le segment Type fait muter le corps : `Transfert` → layout dédié
  * Depuis/Vers + soldes après transfert (+ option récurrente, desktop, à la création).
  *
- * NB : « Canal de paiement » du wireframe v2 N'EST PAS porté en A1 (aucune colonne
- * `channel` en base → un chip serait un faux champ) — différé au Lot B (migration +
- * chips + ventilation analytics). Ce n'est PAS une omission définitive.
+ * « Canal de paiement » (Lot B1) : chips Dépense/Revenu, défaut dérivé du compte
+ * (un chip toujours actif), null pour un Transfert. La ventilation analytics par canal
+ * reste à venir (le champ `channel` existe en base, prêt à être agrégé).
  */
 export function TransactionForm({
   initial,
@@ -67,15 +121,27 @@ export function TransactionForm({
   categories,
   stacked = false,
   onClose,
+  onVoice,
+  onChat,
+  prefill,
 }: {
   initial?: TxnRow
   accounts: AccountRef[]
   categories: CategoryRef[]
   stacked?: boolean
   onClose: () => void
+  /** Entrée « Note vocale » (Lot B2) — rangée Capture rapide, création uniquement. */
+  onVoice?: () => void
+  /** Entrée « Langage naturel » (Lot B3) — rangée Capture rapide, création uniquement. */
+  onChat?: () => void
+  /** Pré-remplissage issu de la capture vocale/conversationnelle (Corriger) — création. */
+  prefill?: VoicePrefill
 }) {
-  const [s, setS] = useState<FormState>(() => initialState(initial, accounts))
+  const [s, setS] = useState<FormState>(() => initialState(initial, accounts, prefill))
   const [error, setError] = useState('')
+  // Tant que l'utilisateur n'a pas cliqué un chip, le canal suit le compte choisi.
+  // Un canal DICTÉ (prefill vocal) est considéré « touché » → non re-dérivé.
+  const [channelTouched, setChannelTouched] = useState(Boolean(prefill))
   // Le transfert a réussi mais la récurrence a échoué : on ne ré-émet PAS le
   // transfert au re-clic (pas de doublon) — on ne retente que la récurrence.
   const [transferCommitted, setTransferCommitted] = useState(false)
@@ -101,6 +167,14 @@ export function TransactionForm({
   const showBalances = isTransfer && Boolean(s.accountId && s.transferAccountId)
 
   const onErr = (e: unknown) => setError(e instanceof Error ? e.message : 'Erreur réseau.')
+
+  /** Changement de compte source : recale le canal par défaut TANT QUE non surchargé. */
+  const onAccountChange = (v: string) =>
+    setS((p) => ({
+      ...p,
+      accountId: v,
+      channel: channelTouched ? p.channel : defaultChannel(accounts.find((a) => a.id === v)),
+    }))
 
   /** 2ᵉ appel d'un transfert récurrent : crée la récurrence liée. Échec → message clair. */
   const createLinkedRecurrence = () =>
@@ -144,6 +218,7 @@ export function TransactionForm({
         categoryId: null,
         transferAccountId: s.transferAccountId,
         occurredAt: s.occurredAt,
+        channel: null, // Transfert = mouvement interne, pas de canal
       }
       if (isEdit && initial) {
         update.mutate({ id: initial.id, data: payload }, { onSuccess: onClose, onError: onErr })
@@ -172,6 +247,7 @@ export function TransactionForm({
       categoryId: s.categoryId || null,
       transferAccountId: null,
       occurredAt: s.occurredAt,
+      channel: s.channel,
     }
     if (isEdit && initial)
       update.mutate({ id: initial.id, data: payload }, { onSuccess: onClose, onError: onErr })
@@ -203,6 +279,39 @@ export function TransactionForm({
       }}
     >
       {error && <ErrorBanner message={error} />}
+
+      {/* Capture rapide — création uniquement. Note vocale (B2) + Langage naturel (B3)
+          RÉELS ; SMS honnêtement désactivé (capture IA à venir). Anti-bouton-mort. */}
+      {(onVoice || onChat) && !isEdit && (
+        <div>
+          <span className="lbl">Capture rapide</span>
+          <div className={`r ${styles.captureRow}`}>
+            <button type="button" className={`btn block ${styles.captureBtn}`} onClick={onVoice}>
+              <Icon name="mic" size={17} /> <span>Note vocale</span>
+            </button>
+            <button
+              type="button"
+              className={`btn block ${styles.captureBtn}`}
+              onClick={onChat}
+            >
+              <Icon name="message" size={17} /> <span>Langage naturel</span>
+            </button>
+            <button
+              type="button"
+              className={`btn block ${styles.captureBtn}`}
+              disabled
+              title="Bientôt disponible"
+            >
+              <Icon name="phone" size={17} /> <span>Depuis un SMS</span>
+            </button>
+          </div>
+          <div className={`r ${styles.captureDivider}`}>
+            <span className={styles.captureHr} />
+            <span className="t-faint">ou saisie manuelle</span>
+            <span className={styles.captureHr} />
+          </div>
+        </div>
+      )}
 
       <div>
         <span className="lbl">Type</span>
@@ -237,6 +346,33 @@ export function TransactionForm({
 
       <MoneyInput label="Montant" value={s.amount} onChange={(v) => set('amount', v)} />
 
+      {/* Canal de paiement — distinct du compte/catégorie (wireframe v2). Dépense/Revenu
+          uniquement ; un Transfert (mouvement interne) n'a pas de canal. */}
+      {!isTransfer && (
+        <div>
+          <span className="lbl">Canal de paiement</span>
+          <div className={`r ${styles.channelRow}`} role="group" aria-label="Canal de paiement">
+            {CHANNELS.map((ch) => {
+              const on = s.channel === ch.id
+              return (
+                <button
+                  key={ch.id}
+                  type="button"
+                  className={`chip${on ? ' on' : ''}`}
+                  aria-pressed={on}
+                  onClick={() => {
+                    setChannelTouched(true)
+                    set('channel', ch.id)
+                  }}
+                >
+                  <Icon name={ch.icon} size={13} /> {ch.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {isTransfer ? (
         <>
           {/* Depuis → Vers (fidèle à TransferDesk) */}
@@ -266,7 +402,9 @@ export function TransactionForm({
             label="Compte"
             value={s.accountId}
             options={accountOpts}
-            onChange={(v) => set('accountId', v)}
+            onChange={onAccountChange}
+            // Pré-remplissage vocal non résolu (accountId vide) → invite explicite à choisir.
+            placeholder={s.accountId ? undefined : 'Choisir un compte'}
           />
           <SelectField
             label="Catégorie"

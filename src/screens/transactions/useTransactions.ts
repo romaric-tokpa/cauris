@@ -11,6 +11,7 @@ export interface TxnRow {
   amount: number // entier FCFA signé
   occurredAt: string // YYYY-MM-DD
   type: string
+  channel: string | null // canal de paiement (liste fermée) ; null = Transfert/legacy
   accountName: string | null
   categoryName: string | null
   transferAccountName: string | null
@@ -53,6 +54,7 @@ export interface TxnWritePayload {
   categoryId: string | null
   transferAccountId: string | null
   occurredAt: string
+  channel: string | null // canal de paiement (liste fermée) ; null = Transfert
 }
 
 /** Filtres = clés stables pour la queryKey (dérivées de l'URL). */
