@@ -5,7 +5,7 @@ import styles from './assistant.module.css'
 
 /* Barres de répartition d'une réponse — ILLUSTRATIVES (lecture seule). Fill par
    token catégorie (var(--cat-N)) pour rester cohérent avec le donut. */
-function MessageBars({ bars, compact }: { bars: AiBar[]; compact: boolean }) {
+export function MessageBars({ bars, compact = false }: { bars: AiBar[]; compact?: boolean }) {
   return (
     <div className={`c ${styles.bars}`}>
       {bars.map((b) => (

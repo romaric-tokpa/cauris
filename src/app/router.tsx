@@ -10,7 +10,7 @@ import { Comptes, ComptesDetail, EnvelopeView } from '../screens/comptes'
 import { Pret } from '../screens/pret'
 import { Analytics } from '../screens/analytics'
 import { Notifications } from '../screens/notifications'
-import { Assistant, Previsions, Anomalies } from '../screens/assistant'
+import { Assistant, Chat, Previsions, Anomalies } from '../screens/assistant'
 import { Settings, CategoriesPage, ImportExportPage, HelpPage } from '../screens/settings'
 import { AuthLayout } from '../screens/auth/AuthLayout'
 import { Login } from '../screens/auth/Login'
@@ -63,6 +63,7 @@ const appRoutes: RouteObject[] = [
   { path: 'comptes/:id', element: <ComptesDetail /> },
   { path: 'comptes/:id/enveloppe', element: <EnvelopeView /> },
   // Onglets du module IA (AISub) — pages pleines sous le shell.
+  { path: 'assistant-ia/chat', element: <Chat /> },
   { path: 'assistant-ia/previsions', element: <Previsions /> },
   { path: 'assistant-ia/anomalies', element: <Anomalies /> },
   // Sous-pages Paramètres (page pleine, nav latérale partagée).

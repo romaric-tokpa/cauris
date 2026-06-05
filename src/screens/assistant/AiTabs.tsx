@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import styles from './assistant.module.css'
 
 /** Onglet du module IA — 1:1 wireframe AISub (`.subnav`/`.si`/`.si.on`). */
-type AiTab = 'Assistant' | 'Prévisions' | 'Anomalies'
+type AiTab = 'Assistant' | 'Chat' | 'Prévisions' | 'Anomalies'
 
 /**
  * Sous-navigation du module IA (AISub de screens-ai.jsx). « Insights » vit sur le
@@ -14,6 +14,7 @@ export function AiTabs({ active }: { active: AiTab }) {
   return (
     <div className="subnav">
       <Tab label="Assistant" to="/assistant-ia" active={active === 'Assistant'} />
+      <Tab label="Chat" to="/assistant-ia/chat" active={active === 'Chat'} />
       <span className={`si ${styles.soon}`} title="Disponible sur le tableau de bord" aria-disabled="true">
         Insights
       </span>

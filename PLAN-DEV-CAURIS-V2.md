@@ -80,11 +80,18 @@ Source : `screens-coach.jsx`. **Moteur déterministe + reformulation LLM**, sur 
 - **C2 — Score de complétude + dégradation gracieuse** : calcule un score de complétude des données ; sous un seuil → « analyse partielle / confiance faible », et le coach **refuse de conclure solidement** (cf. wireframe « Je ne peux pas conclure… »). Affiche maturité du coach.
 - **C3 — Réponse « 4 couches »** : verdict (déterministe) → transparence (données utilisées) → options → reformulation langage clair (LLM). Niveau de confiance (high/med/low) affiché. Niveau d'intervention calibré (contradiction rare).
 - **C4 — Écran Coach** porté 1:1 (remplace/étend l'assistant actuel) : question → réponse en couches, complétude, recommandations reliées à un objectif concret, suggestions d'actions de fiabilisation (« réconcilier le cash », « déclarer une charge fixe »).
-- **C5 — Mémoire financière** : persister habitudes/recommandations passées/réponses (suivies|ignorées) — modèle scopé, alimente le contexte du coach.
+- **C5 — Mémoire financière** : ~~persister habitudes/recommandations passées/réponses (suivies|ignorées)~~. **DIFFÉRÉ délibérément (post-livraison)** : pas d'UI wireframée + valeur conditionnée à un usage réel ; à designer si le besoin émerge. La **mémoire passive** (récurrences, historique 6 mois, objectifs) est **déjà consommée** par le coach via `/api/coach/context`.
 
 **DoD Lot C** : verdicts **déterministes et testés** (le LLM ne fait que reformuler, n'invente aucun chiffre/verdict) ; §1.6 + posture (franc, non moralisateur, contradiction rare argumentée) ; dégradation gracieuse réelle (confiance faible quand données manquent) ; suggestion-only.
 
 ### LOT D — Livraison
+
+**Registre des BASCULES stub → réel** (chaque bascule est isolée, documentée à son point d'usage) :
+1. **`askClaude` (`server/ai.ts`)** → vrai LLM Anthropic (clé **serveur**) : reformulation du coach (C3), chat (`/api/ai/chat`), insights, budget-advice, goal-projection, forecasts, anomalies. Le moteur déterministe reste le **garant** (le LLM ne fait que reformuler).
+2. **Routage du chat (`src/lib/coachChat.ts`)** → mapping LLM question→intention (survive / afford+montant / data / unknown). Aujourd'hui regex fermées ; demain le LLM classe l'intention, **le moteur décide toujours les chiffres**. L'aveu honnête « je ne sais pas encore » reste le repli.
+3. **`COACH_TODAY` (`src/lib/coachAssembly.ts`)** → vraie date (`now()`) — **1 ligne** (les tests injectent déjà `today` en paramètre).
+4. **`simulateTranscription` (`src/lib/voiceStub.ts`)** → vrai speech-to-text (note vocale B2).
+5. **`SIMULATED_SMS` (`src/lib/voiceStub.ts`)** → vraie passerelle SMS Android (B5).
 
 - **Décision stub → vraie API Anthropic** (clé, bascule `askClaude` + STT + extraction, validation des champs `icon`/format, budget tokens).
 - Tests e2e des parcours v2 (capture texte/voix, comprendre son mois, anticiper fin de mois, objectif, échéance dette, **demander l'avis du coach**, réconcilier cash).

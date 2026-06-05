@@ -539,3 +539,19 @@
   font-weight: 700;
   font-size: 13px;
 }
+
+/* Chat routé (Lot D) */
+.coachTag {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11px;
+}
+.fallbackChips {
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
