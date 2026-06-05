@@ -554,3 +554,81 @@
     opacity: 1;
   }
 }
+
+/* ───────────────── SMS Android — boîte simulée (B5) ───────────────── */
+.smsHeadCard {
+  gap: 11px;
+  align-items: flex-start;
+}
+.smsHeadIco {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-wash);
+  color: var(--accent);
+  flex: none;
+}
+.smsHeadTitle {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.smsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.smsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.smsFrom {
+  gap: 7px;
+  align-items: center;
+}
+.smsAmt {
+  margin: 0;
+  font-size: 13.5px;
+}
+.smsRaw {
+  font-size: 11.5px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.smsCardFoot {
+  align-items: center;
+}
+.smsTag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.smsVerify {
+  padding: 6px 14px;
+}
+.smsRawCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.smsBack {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  align-self: flex-start;
+}
+.smsBackIco {
+  transform: rotate(180deg);
+}

@@ -64,6 +64,38 @@ export function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/* ─────────────────────────── SMS Android (Lot B5) ─────────────────────────── */
+
+/** Un SMS transactionnel (expéditeur, heure, texte brut). */
+export interface SmsMessage {
+  from: string
+  when: string
+  raw: string
+}
+
+/**
+ * STUB SMS — boîte canonique déterministe. AUCUNE lecture réelle (permissions Android
+ * inexistantes en web). Le canal est présent DANS le texte → `extractDraft` le résout
+ * tel quel. SEUL point factice à remplacer par une vraie passerelle SMS Android.
+ */
+export const SIMULATED_SMS: SmsMessage[] = [
+  {
+    from: 'Wave',
+    when: '13:24',
+    raw: 'Paiement de 3 500 FCFA chez Resto Belleville via Wave. Solde : 131 500 FCFA.',
+  },
+  {
+    from: 'Orange Money',
+    when: 'Hier',
+    raw: 'Transfert reçu de 150 000 FCFA sur Orange Money. Nouveau solde : 395 000 FCFA.',
+  },
+]
+
+/** Renvoie la boîte SMS simulée (court délai → ressenti « lecture »). */
+export function simulateSmsInbox(): Promise<SmsMessage[]> {
+  return new Promise((resolve) => setTimeout(() => resolve(SIMULATED_SMS), 500))
+}
+
 /** Mots-clés canal → valeur B1 (liste fermée). */
 const CHANNEL_KEYWORDS: { re: RegExp; channel: string; label: string }[] = [
   { re: /\bwave\b/i, channel: 'wave', label: 'Wave' },

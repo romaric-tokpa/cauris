@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractDraft, CANNED_TRANSCRIPT } from './voiceStub'
+import { extractDraft, CANNED_TRANSCRIPT, SIMULATED_SMS } from './voiceStub'
 import type { AccountRef, CategoryRef } from '../screens/transactions/useTransactions'
 
 const acc = (id: string, name: string, bank = 'Mobile money'): AccountRef => ({
@@ -84,5 +84,26 @@ describe('extractDraft — texte libre (saisie conversationnelle B3)', () => {
     )
     expect(draft.resolved).toBe(true)
     expect(draft.prefill.accountId).toBe('a-cc')
+  })
+})
+
+describe('extractDraft — SMS canoniques (B5, canal dans le texte)', () => {
+  it('SMS Wave « Paiement de 3 500 FCFA … via Wave » → Dépense 3500 / canal wave', () => {
+    const draft = extractDraft(SIMULATED_SMS[0].raw, [acc('a-wave', 'Wave')], CATS, TODAY)
+    expect(draft.prefill).toMatchObject({ type: 'Dépense', amount: 3500, channel: 'wave', accountId: 'a-wave' }) // prettier-ignore
+    expect(draft.resolved).toBe(true)
+  })
+
+  it('SMS Orange Money « Transfert reçu de 150 000 … » → Revenu 150000 / canal orange_money', () => {
+    const draft = extractDraft(SIMULATED_SMS[1].raw, [acc('a-om', 'Orange Money')], CATS, TODAY)
+    expect(draft.prefill).toMatchObject({ type: 'Revenu', amount: 150000, channel: 'orange_money', accountId: 'a-om' }) // prettier-ignore
+    expect(draft.resolved).toBe(true)
+  })
+
+  it('SMS sans compte correspondant → NON RÉSOLU (cas normal)', () => {
+    const draft = extractDraft(SIMULATED_SMS[0].raw, [acc('a-cc', 'Compte courant', 'NSIA')], CATS, TODAY) // prettier-ignore
+    expect(draft.resolved).toBe(false)
+    expect(draft.prefill.accountId).toBe('')
+    expect(draft.prefill.channel).toBe('wave')
   })
 })

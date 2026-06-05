@@ -11,6 +11,7 @@ import { RecurrencesDesktop, RecurrencesMobile } from './Recurrences'
 import { TransactionForm } from './TransactionForm'
 import { VoiceCapture } from './VoiceCapture'
 import { ChatCapture } from './ChatCapture'
+import { SmsCapture } from './SmsCapture'
 import { RecurrenceForm } from './RecurrenceForm'
 import type { VoicePrefill } from '../../lib/voiceStub'
 import styles from './transactions.module.css'
@@ -80,7 +81,7 @@ export function Transactions() {
   const [editing, setEditing] = useState<TxnRow | undefined>(undefined)
   // Capture vocale (Lot B2) : le drawer d'ajout bascule entre le formulaire et le flux
   // vocal ; `prefill` porte le brouillon dicté quand l'utilisateur choisit « Corriger ».
-  const [captureMode, setCaptureMode] = useState<'form' | 'voice' | 'chat'>('form')
+  const [captureMode, setCaptureMode] = useState<'form' | 'voice' | 'chat' | 'sms'>('form')
   const [prefill, setPrefill] = useState<VoicePrefill | undefined>(undefined)
   // Drawer récurrence (distinct du drawer transaction).
   const [recOpen, setRecOpen] = useState(false)
@@ -242,17 +243,20 @@ export function Transactions() {
       {(() => {
         const isVoice = captureMode === 'voice'
         const isChat = captureMode === 'chat'
+        const isSms = captureMode === 'sms'
         const title = isVoice
           ? 'Note vocale'
           : isChat
             ? 'Langage naturel'
-            : isMobile
-              ? editing
-                ? 'Modifier'
-                : 'Ajouter'
-              : editing
-                ? 'Modifier la transaction'
-                : 'Ajouter une transaction'
+            : isSms
+              ? 'Depuis un SMS'
+              : isMobile
+                ? editing
+                  ? 'Modifier'
+                  : 'Ajouter'
+                : editing
+                  ? 'Modifier la transaction'
+                  : 'Ajouter une transaction'
         const body = !formReady ? (
           <NoAccountNotice onClose={close} />
         ) : isVoice ? (
@@ -264,6 +268,13 @@ export function Transactions() {
           />
         ) : isChat ? (
           <ChatCapture
+            accounts={accounts}
+            categories={categories}
+            onCorrect={onVoiceCorrect}
+            onClose={close}
+          />
+        ) : isSms ? (
+          <SmsCapture
             accounts={accounts}
             categories={categories}
             onCorrect={onVoiceCorrect}
@@ -281,6 +292,7 @@ export function Transactions() {
             // Entrées capture visibles à la création seulement (pas en édition).
             onVoice={editing ? undefined : () => setCaptureMode('voice')}
             onChat={editing ? undefined : () => setCaptureMode('chat')}
+            onSms={editing ? undefined : () => setCaptureMode('sms')}
           />
         )
         return isMobile ? (

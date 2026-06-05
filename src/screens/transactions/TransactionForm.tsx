@@ -123,6 +123,7 @@ export function TransactionForm({
   onClose,
   onVoice,
   onChat,
+  onSms,
   prefill,
 }: {
   initial?: TxnRow
@@ -134,6 +135,8 @@ export function TransactionForm({
   onVoice?: () => void
   /** Entrée « Langage naturel » (Lot B3) — rangée Capture rapide, création uniquement. */
   onChat?: () => void
+  /** Entrée « Depuis un SMS » (Lot B5) — rangée Capture rapide, création uniquement. */
+  onSms?: () => void
   /** Pré-remplissage issu de la capture vocale/conversationnelle (Corriger) — création. */
   prefill?: VoicePrefill
 }) {
@@ -281,8 +284,8 @@ export function TransactionForm({
       {error && <ErrorBanner message={error} />}
 
       {/* Capture rapide — création uniquement. Note vocale (B2) + Langage naturel (B3)
-          RÉELS ; SMS honnêtement désactivé (capture IA à venir). Anti-bouton-mort. */}
-      {(onVoice || onChat) && !isEdit && (
+          + Depuis un SMS (B5) RÉELS. Anti-bouton-mort. */}
+      {(onVoice || onChat || onSms) && !isEdit && (
         <div>
           <span className="lbl">Capture rapide</span>
           <div className={`r ${styles.captureRow}`}>
@@ -296,12 +299,7 @@ export function TransactionForm({
             >
               <Icon name="message" size={17} /> <span>Langage naturel</span>
             </button>
-            <button
-              type="button"
-              className={`btn block ${styles.captureBtn}`}
-              disabled
-              title="Bientôt disponible"
-            >
+            <button type="button" className={`btn block ${styles.captureBtn}`} onClick={onSms}>
               <Icon name="phone" size={17} /> <span>Depuis un SMS</span>
             </button>
           </div>
