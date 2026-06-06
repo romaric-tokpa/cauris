@@ -104,6 +104,9 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         API_PROXY_TARGET: E2E_SERVER_ORIGIN,
+        // Épingle la date du coach (bascule Lot D = date réelle en prod) pour que la
+        // baseline visuelle de l'écran Coach et les assertions e2e restent déterministes.
+        VITE_COACH_TODAY: '2026-06-05',
       },
     },
   ],

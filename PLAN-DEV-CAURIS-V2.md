@@ -89,9 +89,10 @@ Source : `screens-coach.jsx`. **Moteur déterministe + reformulation LLM**, sur 
 **Registre des BASCULES stub → réel** (chaque bascule est isolée, documentée à son point d'usage) :
 1. **`askClaude` (`server/ai.ts`)** → vrai LLM Anthropic (clé **serveur**) : reformulation du coach (C3), chat (`/api/ai/chat`), insights, budget-advice, goal-projection, forecasts, anomalies. Le moteur déterministe reste le **garant** (le LLM ne fait que reformuler).
 2. **Routage du chat (`src/lib/coachChat.ts`)** → mapping LLM question→intention (survive / afford+montant / data / unknown). Aujourd'hui regex fermées ; demain le LLM classe l'intention, **le moteur décide toujours les chiffres**. L'aveu honnête « je ne sais pas encore » reste le repli.
-3. **`COACH_TODAY` (`src/lib/coachAssembly.ts`)** → vraie date (`now()`) — **1 ligne** (les tests injectent déjà `today` en paramètre).
+3. ✅ **`COACH_TODAY` (`src/lib/coachAssembly.ts`)** → vraie date (`now()`) — **BASCULÉE (Lot D1)**. `new Date().toISOString().slice(0,10)` ; tests verts (ils injectent `today`). Conséquence assumée : compte démo gelé → coach « données anciennes ».
 4. **`simulateTranscription` (`src/lib/voiceStub.ts`)** → vrai speech-to-text (note vocale B2).
 5. **`SIMULATED_SMS` (`src/lib/voiceStub.ts`)** → vraie passerelle SMS Android (B5).
+6. **Dates démo gelées HORS coach** (`TransactionForm` `2026-05-31`, `Transactions` plage `2026-05-*`, `analytics DEMO_MONTH 2026-05`, `NotifRow`, `ContributionForm`) → `now()`. **Limite connue D1** : seul le coach est temporel ; le dégel global (front démo → temps réel) est un chantier ultérieur délibérément hors-scope de D1.
 
 - **Décision stub → vraie API Anthropic** (clé, bascule `askClaude` + STT + extraction, validation des champs `icon`/format, budget tokens).
 - Tests e2e des parcours v2 (capture texte/voix, comprendre son mois, anticiper fin de mois, objectif, échéance dette, **demander l'avis du coach**, réconcilier cash).

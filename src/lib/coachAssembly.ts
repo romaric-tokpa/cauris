@@ -4,18 +4,27 @@
  * de DATE ici (jours depuis réconciliation, mois jusqu'à échéance, échéance ce mois), puis
  * enchaîne `evaluateCoach` (C1) → `computeCompleteness` (C2) → `reformulateCoach` (C3).
  *
- * `today` est un PARAMÈTRE (les tests injectent leur date) ; la prod lit `COACH_TODAY`.
+ * `today` est un PARAMÈTRE (les tests injectent leur date) ; la prod lit `COACH_TODAY`
+ * (désormais la date RÉELLE — bascule Lot D, cf. ci-dessous).
  */
 import { evaluateCoach, type CoachInput, type CoachVerdict } from './coach'
 import { computeCompleteness, type CompletenessInput, type CompletenessResult } from './coachCompleteness' // prettier-ignore
 import { reformulateCoach, type CoachReformulation } from './coachReformulate'
 
 /**
- * DETTE LOT D : basculer sur la VRAIE date à la livraison (`new Date()`/`now()`), et
- * vérifier que les tests qui en dépendent INJECTENT leur date (param `today`) au lieu de
- * lire cette constante. Bascule = 1 ligne (voir registre des bascules Lot D).
+ * BASCULE LOT D EFFECTUÉE : date RÉELLE du jour (était gelée à `'2026-06-05'`).
+ * Abidjan = UTC+0 sans heure d'été → la date UTC d'`toISOString()` == la date locale.
+ * Les tests UNITAIRES injectent toujours leur `today` (param) — ils ne lisent jamais cette
+ * constante, donc ils restent déterministes malgré la bascule. Évaluée à l'import (la SPA recharge).
+ * Conséquence assumée : sur un compte démo gelé (Aïcha, mai 2026), le coach signalera
+ * « données anciennes / confiance dégradée » — c'est honnête (voir registre des bascules).
+ *
+ * SEAM E2E (pas un comportement produit) : `VITE_COACH_TODAY` épingle la date pour rendre la
+ * baseline visuelle de l'écran Coach déterministe — sinon elle dériverait chaque jour. Même
+ * patron que `API_PROXY_TARGET`/`AUTH_TRUSTED_ORIGINS`. En prod la variable est absente → date réelle.
  */
-export const COACH_TODAY = '2026-06-05'
+export const COACH_TODAY =
+  import.meta.env.VITE_COACH_TODAY ?? new Date().toISOString().slice(0, 10)
 
 export type Scenario = 'survive' | 'afford'
 

@@ -1,0 +1,28 @@
+# Cauris — backend Hono sur Fly.io.
+# À PERSONNALISER : `app` (nom unique Fly) et `primary_region` (ex. cdg = Paris, proche CI).
+# Les secrets ne vivent PAS ici → `fly secrets set` (cf. DEPLOY-CAURIS.md).
+app = "cauris-api"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Migrations Turso jouées à CHAQUE déploiement, avant de basculer le trafic.
+# Lit TURSO_DATABASE_URL / TURSO_AUTH_TOKEN depuis les secrets Fly.
+[deploy]
+  release_command = "npm run db:migrate"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
